@@ -29,7 +29,7 @@ struct PrunedFIs{V} <: StochasticAD.AbstractFIs{V}
     # directly called when propagating an existing perturbation
 end
 
-### Empty / no perturbation 
+### Empty / no perturbation
 
 PrunedFIs{V}(state::PrunedFIsState) where {V} = PrunedFIs{V}(zero(V), -1, state)
 StochasticAD.similar_empty(Δs::PrunedFIs, V::Type) = PrunedFIs{V}(PrunedFIsState(false))
@@ -76,7 +76,7 @@ StochasticAD.derivative_contribution(Δs::PrunedFIs) = pruned_value(Δs) * Δs.s
 
 perturbation(Δs::PrunedFIs) = (pruned_value(Δs), Δs.state.weight)
 
-### Unary propagation 
+### Unary propagation
 
 function Base.map(f, Δs::PrunedFIs)
     PrunedFIs(f(Δs.Δ), Δs.tag, Δs.state)
@@ -119,7 +119,7 @@ function StochasticAD.couple(::Type{<:PrunedFIs}, Δs_all; rep = nothing)
     PrunedFIs(Δ_coupled, state.active_tag, state)
 end
 
-# basically couple combined with a sum. 
+# basically couple combined with a sum.
 function StochasticAD.combine(::Type{<:PrunedFIs}, Δs_all; rep = nothing)
     state = get_pruned_state(Δs_all)
     Δ_combined = sum(pruned_value(Δs) for Δs in Δs_all)
@@ -128,9 +128,9 @@ end
 
 StochasticAD.similar_type(::Type{<:PrunedFIs}, V::Type) = PrunedFIs{V}
 
-### Miscellaneous 
+### Miscellaneous
 
-function Base.show(io::IO, Δs::PrunedFIs{V}) where {V, FIs}
+function Base.show(io::IO, Δs::PrunedFIs{V}) where {V}
     print(io, "$(pruned_value(Δs)) with probability $(Δs.state.weight)ε, tag $(Δs.tag)")
 end
 

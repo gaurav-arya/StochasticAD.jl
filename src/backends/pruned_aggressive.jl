@@ -29,7 +29,7 @@ struct PrunedFIsAggressive{V} <: StochasticAD.AbstractFIs{V}
     # directly called when propagating an existing perturbation
 end
 
-### Empty / no perturbation 
+### Empty / no perturbation
 
 function PrunedFIsAggressive{V}(state::PrunedFIsAggressiveState) where {V}
     PrunedFIsAggressive{V}(zero(V), -1, state)
@@ -86,7 +86,7 @@ StochasticAD.derivative_contribution(Δs::PrunedFIsAggressive) = pruned_value(Δ
 
 perturbations(Δs::PrunedFIsAggressive) = ((pruned_value(Δs), Δs.state.weight),)
 
-### Unary propagation 
+### Unary propagation
 
 function Base.map(f, Δs::PrunedFIsAggressive)
     PrunedFIsAggressive(f(Δs.Δ), Δs.tag, Δs.state)
@@ -114,7 +114,7 @@ function StochasticAD.couple(::Type{<:PrunedFIsAggressive}, Δs_all;
     PrunedFIsAggressive(Δ_coupled, state.active_tag, state)
 end
 
-# basically couple combined with a sum. 
+# basically couple combined with a sum.
 function StochasticAD.combine(::Type{<:PrunedFIsAggressive}, Δs_all;
                               rep = StochasticAD.get_rep(Δs_all...))
     state = rep.state
@@ -124,15 +124,15 @@ end
 
 StochasticAD.similar_type(::Type{<:PrunedFIsAggressive}, V::Type) = PrunedFIsAggressive{V}
 
-### Miscellaneous 
+### Miscellaneous
 
 # should I have a mime input?
 function Base.show(io::IO, mime::MIME"text/plain",
-                   Δs::PrunedFIsAggressive{V}) where {V, FIs}
+                   Δs::PrunedFIsAggressive{V}) where {V}
     print(io, "$(pruned_value(Δs)) with probability $(Δs.state.weight)ε, tag $(Δs.tag)")
 end
 
-function Base.show(io::IO, Δs::PrunedFIsAggressive{V}) where {V, FIs}
+function Base.show(io::IO, Δs::PrunedFIsAggressive{V}) where {V}
     print(io, "$(pruned_value(Δs)) with probability $(Δs.state.weight)ε, tag $(Δs.tag)")
 end
 

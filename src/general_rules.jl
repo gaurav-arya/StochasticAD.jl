@@ -2,9 +2,9 @@
     define_triple_overload(sig)
 
 Given a function signature, defines operator overloading rules for stochastic triples.
-Currently supports functions with all-real inputs and one real output. 
+Currently supports functions with all-real inputs and one real output.
 """
-# TODO: special case optimizations 
+# TODO: special case optimizations
 # TODO: generalizations to not-all-real inputs and/or not-one-real output
 function define_triple_overload(sig)
     opT, argTs = Iterators.peel(ExprTools.parameters(sig))
@@ -41,10 +41,10 @@ function define_triple_overload(sig)
         # Special case equality comparisons as in https://github.com/JuliaDiff/ForwardDiff.jl/pull/481
         if opT.instance == Base.:(==)
             return_value_real = quote
-                out && iszero(partial(st))
+                out && iszero(delta(st))
             end
             return_value_st = quote
-                out2 = out && (partial(st1) == partial(st2))
+                out2 = out && (delta(st1) == delta(st2))
             end
         else
             return_value_real = quote
@@ -94,7 +94,7 @@ function define_triple_overload(sig)
             end
         end
         @eval function (f::$opT)(st::StochasticTriple{T}; kwargs...) where {T}
-            args_tangent = (NoTangent(), partial(st))
+            args_tangent = (NoTangent(), delta(st))
             val, δ = frule(args_tangent, f, value(st); kwargs...)
             if !iszero(st.Δs)
                 Δs = map(Δ -> f(st.value + Δ) - val, st.Δs)
@@ -115,7 +115,7 @@ function define_triple_overload(sig)
         end
         for R in AMBIGUOUS_TYPES
             @eval function (f::$opT)(st::StochasticTriple{T}, x::$R; kwargs...) where {T}
-                args_tangent = (NoTangent(), partial(st), zero(x))
+                args_tangent = (NoTangent(), delta(st), zero(x))
                 val, δ = frule(args_tangent, f, value(st), x; kwargs...)
                 if !iszero(st.Δs)
                     Δs = map(Δ -> f(st.value + Δ, x) - val, st.Δs)
@@ -125,7 +125,7 @@ function define_triple_overload(sig)
                 return StochasticTriple{T}(val, δ, Δs)
             end
             @eval function (f::$opT)(x::$R, st::StochasticTriple{T}; kwargs...) where {T}
-                args_tangent = (NoTangent(), zero(x), partial(st))
+                args_tangent = (NoTangent(), zero(x), delta(st))
                 val, δ = frule(args_tangent, f, x, value(st); kwargs...)
                 if !iszero(st.Δs)
                     Δs = map(Δ -> f(x, st.value + Δ) - val, st.Δs)
@@ -136,7 +136,7 @@ function define_triple_overload(sig)
             end
         end
         @eval function (f::$opT)(sts::Vararg{StochasticTriple{T}, 2}; kwargs...) where {T}
-            args_tangent = (NoTangent(), partial.(sts)...)
+            args_tangent = (NoTangent(), delta.(sts)...)
             args = (f, value.(sts)...)
             val, δ = frule(args_tangent, args...; kwargs...)
 
@@ -163,7 +163,7 @@ on_new_rule(define_triple_overload, frule)
 """
     Base.getindex(C::AbstractArray, st::StochasticTriple{T})
 
-A simple prototype rule for array indexing. Assumes that underlying type of `st` can index into collection C. 
+A simple prototype rule for array indexing. Assumes that underlying type of `st` can index into collection C.
 """
 # TODO: support multiple indices, carteisian indices, non abstract array indexables, other use cases...
 function Base.getindex(C::AbstractArray, st::StochasticTriple{T}) where {T}
@@ -172,5 +172,5 @@ function Base.getindex(C::AbstractArray, st::StochasticTriple{T}) where {T}
         value(C[st.value + Δ]) - value(val)
     end
     Δs = map(do_map, st.Δs)  # TODO: what if C itself contains stochastic duals with FIs?
-    return StochasticTriple{T}(value(val), partial(val), Δs)
+    return StochasticTriple{T}(value(val), delta(val), Δs)
 end

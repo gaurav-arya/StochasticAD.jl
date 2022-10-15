@@ -75,7 +75,7 @@ end
 function Base.convert(::Type{StochasticTriple{T, V, FIs}},
                       x::StochasticTriple{T}) where {T, V, FIs}
     StochasticTriple{T, V, FIs}(convert(V, x.value), convert(V, x.δ), FIs(x.Δs))
-end 
+end
 
 # TODO: ForwardDiff's promotion rules are a little more complicated, see https://github.com/JuliaDiff/ForwardDiff.jl/issues/322
 # May need to look into why and possibly use them here too.
@@ -160,4 +160,6 @@ stochastic_triple(p::Real; kwargs...) = stochastic_triple(x -> x, p; kwargs...)
 Computes an unbiased estimate of ``\partial_p \mathbb{E}[X(p)]``, the derivative of the expectation of the random function `X(p)` with respect to its input `p`.
 The `backend` keyword argument describes the algorithm used by the third component of the stochastic triple, see [Technical details](../dev/how_it_works.md) for more details.
 """
-derivative_estimate(f, p; kwargs...) = derivative_contribution(stochastic_triple(f, p; kwargs...))
+function derivative_estimate(f, p; kwargs...)
+    derivative_contribution(stochastic_triple(f, p; kwargs...))
+end

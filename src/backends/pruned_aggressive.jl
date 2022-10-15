@@ -82,7 +82,9 @@ Base.iszero(Δs::PrunedFIsAggressive) = isempty(Δs) || iszero(Δs.Δ)
 
 # we lazily prune, so check if empty first
 pruned_value(Δs::PrunedFIsAggressive{V}) where {V} = isempty(Δs) ? zero(V) : Δs.Δ
-StochasticAD.derivative_contribution(Δs::PrunedFIsAggressive) = pruned_value(Δs) * Δs.state.weight
+function StochasticAD.derivative_contribution(Δs::PrunedFIsAggressive)
+    pruned_value(Δs) * Δs.state.weight
+end
 
 perturbations(Δs::PrunedFIsAggressive) = ((pruned_value(Δs), Δs.state.weight),)
 

@@ -35,8 +35,8 @@ const backends = [
     test_cases = collect(zip(distributions, p_ranges, out_ranges))
 
     if backend == StochasticAD.DictFIs
-        test_cases = test_cases[1:1] # Only test dictionary backend on Bernoulli to speed things up.
-                                     # (Should still cover interface.)
+        # Only test dictionary backend on Bernoulli to speed things up. Should still cover interface.
+        test_cases = test_cases[1:1]
     end
 
     for (distr, p_range, out_range) in test_cases
@@ -63,9 +63,9 @@ end end
 
 @testset "Perturbing n of binomial" begin
     function get_triple_deriv(Δ)
-        st = StochasticAD.StochasticTriple{0}(5, 0,
-                                 StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), Δ,
-                                                          3.5))
+        # Manually create a finite perturbation to avoid any randomness in its creation
+        Δs = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), Δ, 3.5)
+        st = StochasticAD.StochasticTriple{0}(5, 0, Δs)
         st_continuous = stochastic_triple(0.5)
         return derivative_contribution(rand(Binomial(st, st_continuous)))
     end

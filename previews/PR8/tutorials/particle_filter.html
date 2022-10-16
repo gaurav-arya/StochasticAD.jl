@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Differentiable particle filter · StochasticAD.jl</title><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script><link href="../assets/indigo.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../index.html">StochasticAD.jl</a></span></div><form class="docs-search" action="../search.html"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../index.html">Introduction</a></li><li><span class="tocitem">Tutorials</span><ul><li class="is-active"><a class="tocitem" href="particle_filter.html">Differentiable particle filter</a><ul class="internal"><li><a class="tocitem" href="#Setup"><span>Setup</span></a></li><li><a class="tocitem" href="#Model"><span>Model</span></a></li><li><a class="tocitem" href="#Visualization"><span>Visualization</span></a></li><li><a class="tocitem" href="#Bias"><span>Bias</span></a></li><li><a class="tocitem" href="#Benchmark"><span>Benchmark</span></a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href="particle_filter.html">Differentiable particle filter</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="particle_filter.html">Differentiable particle filter</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/gaurav-arya/StochasticAD.jl" title="View the repository on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/gaurav-arya/StochasticAD.jl/blob/main/docs/src/tutorials/particle_filter.md" title="Edit source on GitHub"><span class="docs-icon fas"></span></a><a class="docs-settings-button docs-navbar-link fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button docs-navbar-link fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Differentiable-particle-filter"><a class="docs-heading-anchor" href="#Differentiable-particle-filter">Differentiable particle filter</a><a id="Differentiable-particle-filter-1"></a><a class="docs-heading-anchor-permalink" href="#Differentiable-particle-filter" title="Permalink"></a></h1><p>Using a bootstrap particle sampler, we can approximate the posterior distributions of the states given noisy and partial observations of the state of a hidden Markov model by a cloud of <code>K</code> weighted particles with weights <code>W</code>.</p><p>In this tutorial, we are going to:</p><ul><li>implement a differentiable particle filter based on <code>StochasticAD.jl</code>.</li><li>visualize the particle filter in <span>$d = 2$</span> dimensions.</li><li>compare the gradient based on the differentiable particle filter to a biased gradient estimator as well as to the gradient of a differentiable Kalman filter.</li><li>show how to benchmark primal evaluation, forward- and reverse-mode AD of the particle filter.</li></ul><h2 id="Setup"><a class="docs-heading-anchor" href="#Setup">Setup</a><a id="Setup-1"></a><a class="docs-heading-anchor-permalink" href="#Setup" title="Permalink"></a></h2><p>We will make use of several julia packages. For example, we are going to use <code>Distributions</code> and <code>DistributionsAD</code> that implement the reparameterization trick for Gaussian distributions used in the observation and state-transition model, which we specify below. We also import <code>GaussianDistributions.jl</code> to implement the differentiable Kalman filter.</p><h3 id="Package-dependencies"><a class="docs-heading-anchor" href="#Package-dependencies">Package dependencies</a><a id="Package-dependencies-1"></a><a class="docs-heading-anchor-permalink" href="#Package-dependencies" title="Permalink"></a></h3><pre><code class="language-julia hljs"># activate tutorial project file
+
+# load dependencies
+using StochasticAD
+using Distributions
+using DistributionsAD
+using Random
+using Statistics
+using StatsBase
+using LinearAlgebra
+using Zygote
+using ForwardDiff
+using GaussianDistributions
+using GaussianDistributions: correct, ⊕
+using Measurements
+using UnPack
+using Plots
+using LaTeXStrings
+using BenchmarkTools</code></pre><h3 id="Particle-filter"><a class="docs-heading-anchor" href="#Particle-filter">Particle filter</a><a id="Particle-filter-1"></a><a class="docs-heading-anchor-permalink" href="#Particle-filter" title="Permalink"></a></h3><p>For convenience, we first introduce the new type <code>StochasticModel</code> with the following fields:</p><ul><li><code>T</code>: total number of time steps.</li><li><code>start</code>: starting distribution for the initial state. For example, in the form of a narrow  Gaussian <code>start(θ) = Gaussian(x0, 0.001 * I(d))</code>.</li><li><code>dyn</code>: pointwise differentiable stochastic program in the form of Markov transition densities.  For example, <code>dyn(x, θ) = MvNormal(reshape(θ, d, d) * x, Q(θ))</code>, where <code>Q(θ)</code> denotes the  covariance matrix.</li><li><code>obs</code>: observation model having a smooth conditional probability density depending on  current state <code>x</code> and parameters <code>θ</code>. For example, <code>obs(x, θ) = MvNormal(x, R(θ))</code>,  where <code>R(θ)</code> denotes the covariance matrix.</li></ul><p>For parameters <code>θ</code>,  <code>rand(start(θ))</code> gives a sample from the prior distribution of the starting distribution. For current state <code>x</code> and parameters <code>θ</code>, <code>xnew = rand(dyn(x, θ))</code> samples the new state (i.e. <code>dyn</code> gives for each <code>x, θ</code> a distribution-like object). Finally, <code>y = rand(obs(x, θ))</code> samples an observation.</p><p>We can then define the <code>ParticleFilter</code> type that wraps a stochastic model <code>StochM::StochasticModel</code>, a sampling strategy (with arguments <code>p, K, sump=1</code>) and observational data <code>ys</code>. For simplicity, our implementation assumes a observation-likelihood function being available via <code>pdf(obs(x, θ), y)</code>.</p><pre><code class="language-julia hljs">struct StochasticModel{TType&lt;:Integer,T1,T2,T3}
+    T::TType # time steps
+    start::T1 # prior
+    dyn::T2 # dynamical model
+    obs::T3 # observation model
+end
+
+struct ParticleFilter{mType&lt;:Integer,MType&lt;:StochasticModel,yType,sType}
+    m::mType # number of particles
+    StochM::MType # stochastic model
+    ys::yType # observations
+    sample_strategy::sType # sampling function
+end</code></pre><h3 id="Kalman-filter"><a class="docs-heading-anchor" href="#Kalman-filter">Kalman filter</a><a id="Kalman-filter-1"></a><a class="docs-heading-anchor-permalink" href="#Kalman-filter" title="Permalink"></a></h3><p>We consider a stochastic program that fulfills the assumptions of a Kalman filter. We follow <a href="https://github.com/mschauer/Kalman.jl/blob/master/README.md">Kalman.jl</a> to implement a differentiable version. Our <code>KalmanFilter</code> type wraps a stochastic model <code>StochM::StochasticModel</code> and observational data <code>ys</code>. It assumes a observation-likelihood function is implemented via <code>llikelihood(yres, S)</code>. The Kalman filter contains the following fields:</p><ul><li><code>d</code>: dimension of the state-transition matrix <span>$\Phi$</span> according to <span>$x = \Phi x + w$</span> with <span>$w \sim \operatorname{Normal}(0,Q)$</span>.</li><li><code>StochM</code>: Stochastic model of type <code>StochasticModel</code>.</li><li><code>H</code>: linear map from the state space into the observed space according to <span>$y = H x + \nu$</span> with <span>$\nu \sim \operatorname{Normal}(0,R)$</span>.</li><li><code>R</code>: covariance matrix entering the observation model according to <span>$y = H x + \nu$</span> with <span>$\nu \sim \operatorname{Normal}(0,R)$</span>.</li><li><code>Q</code>: covariance matrix entering the state-transition model according to <span>$x = \Phi x + w$</span> with <span>$w \sim \operatorname{Normal}(0,Q)$</span>.</li><li><code>ys</code>: observations.</li></ul><pre><code class="language-julia hljs">llikelihood(yres, S) = GaussianDistributions.logpdf(Gaussian(zero(yres), Symmetric(S)), yres)
+struct KalmanFilter{dType&lt;:Integer,MType&lt;:StochasticModel,HType,RType,QType,yType}
+    # H, R = obs
+    # θ, Q = dyn
+    d::dType
+    StochM::MType # stochastic model
+    H::HType # observation model, maps the true state space into the observed space
+    R::RType # observation model, covariance matrix
+    Q::QType # dynamical model, covariance matrix
+    ys::yType # observations
+end</code></pre><p>To get observations <code>ys</code> from the latent states <code>xs</code> based on the (true, potentially unknown) parameters <code>θ</code>, we simulate a single particle from the forward model returning a vector of observations (no resampling steps).</p><pre><code class="language-julia hljs">function simulate_single(StochM::StochasticModel, θ)
+    @unpack T, start, dyn, obs = StochM
+    x = rand(start(θ))
+    y = rand(obs(x, θ))
+    xs = [x]
+    ys = [y]
+    for t in 2:T
+        x = rand(dyn(x, θ))
+        y = rand(obs(x, θ))
+        push!(xs, x)
+        push!(ys, y)
+    end
+    xs, ys
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">simulate_single (generic function with 1 method)</code></pre><p>A particle filter becomes efficient if resampling steps are included. Resampling is numerically attractive because particles with small weight are discarded, so computational resources are not wasted on particles with vanishing weight.</p><p>Here, let us implement a stratified resampling strategy, see for example <a href="https://arxiv.org/abs/1202.6163">Murray (2012)</a>, where <code>p</code> denotes the probabilities of <code>K</code> particles with <code>sump = sum(p)</code>.</p><pre><code class="language-julia hljs">function sample_stratified(p, K, sump=1)
+    n = length(p)
+    U = rand()
+    is = zeros(Int, K)
+    i = 1
+    cw = p[1]
+    for k in 1:K
+        t = sump * (k - 1 + U) / K
+        while cw &lt; t &amp;&amp; i &lt; n
+            i += 1
+            @inbounds cw += p[i]
+        end
+        is[k] = i
+    end
+    return is
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">sample_stratified (generic function with 2 methods)</code></pre><p>This sampling strategy can be used within a differentiable resampling step in our particle filter using the <code>use_new_weight</code> function as implemented in <code>StochasticAD.jl</code>. The <code>resample</code> function below returns the states <code>X_new</code> and weights <code>W_new</code> of the resampled particles.</p><ul><li><code>m</code>: number of particles.</li><li><code>X</code>: current particle states.</li><li><code>W</code>: current weight vector of the particles.</li><li><code>ω == sum(W)</code> is an invariant.</li><li><code>sample_strategy</code>: specific resampling strategy to be used. For example, <code>sample_stratified</code>.</li><li><code>use_new_weight=true</code>: Allows one to switch between biased, stop-gradient method and  differentiable resampling step.</li></ul><pre><code class="language-julia hljs">function resample(m, X, W, ω, sample_strategy, use_new_weight=true)
+    js = Zygote.ignore(() -&gt; sample_strategy(W, m, ω))
+    X_new = X[js]
+    if use_new_weight
+        # differentiable resampling
+        W_chosen = W[js]
+        W_new = map(w -&gt; ω * new_weight(w / ω) / m, W_chosen)
+    else
+        # stop gradient, biased approach
+        W_new = fill(ω / m, m)
+    end
+    X_new, W_new
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">resample (generic function with 2 methods)</code></pre><p>Note that we added a <code>if</code> condition that allows us to switch between the differentiable resampling step and the stop-gradient approach.</p><p>We&#39;re now equipped with all primitive operations to set up the particle filter, which propagates particles with weights <code>W</code> preserving the invariant <code>ω == sum(W)</code>. We never normalize <code>W</code> and, therefore, <code>ω</code> in the code below contains likelihood information. The particle-filter implementation defaults to return particle positions and weights at <code>T</code> if <code>store_path=false</code> and takes the following input arguments:</p><ul><li><code>θ</code>: parameters for the stochastic program (state-transition and observation model).</li><li><code>store_path=false</code>: Option to store the path of the particles, e.g. to visualize/inspect their trajectories.</li><li><code>use_new_weight=true</code>: Option to switch between the stop-gradient and our differentiable resampling step method. Defaults to using differentiable resampling.</li><li><code>s</code>: controls the number of resampling steps according to <code>t &gt; 1 &amp;&amp; t &lt; T &amp;&amp; (t % s == 0)</code>.</li></ul><pre><code class="language-julia hljs">function (F::ParticleFilter)(θ; store_path=false, use_new_weight=true, s=1)
+    # s controls the number of resampling steps
+    @unpack m, StochM, ys, sample_strategy = F
+    @unpack T, start, dyn, obs = StochM
+
+
+    X = [rand(start(θ)) for j in 1:m] # particles
+    W = [1 / m for i in 1:m] # weights
+    ω = 1 # total weight
+    store_path &amp;&amp; (Xs = [X])
+    for (t, y) in zip(1:T, ys)
+        # update weights &amp; likelihood using observations
+        wi = map(x -&gt; pdf(obs(x, θ), y), X)
+        W = W .* wi
+        ω_old = ω
+        ω = sum(W)
+        # resample particles
+        if t &gt; 1 &amp;&amp; t &lt; T &amp;&amp; (t % s == 0) # &amp;&amp; 1 / sum((W / ω) .^ 2) &lt; length(W) ÷ 32
+            X, W = resample(m, X, W, ω, sample_strategy, use_new_weight)
+        end
+        # update particle states
+        if t &lt; T
+            X = map(x -&gt; rand(dyn(x, θ)), X)
+            store_path &amp;&amp; Zygote.ignore(() -&gt; push!(Xs, X))
+        end
+    end
+    (store_path ? Xs : X), W
+end</code></pre><p>Following <a href="https://github.com/mschauer/Kalman.jl/blob/master/README.md">Kalman.jl</a>, we implement a differentiable Kalman filter to check the ground-truth gradient. Our Kalman filter returns an updated posterior state estimate and the log-likelihood and takes the parameters of the stochastic program as an input.</p><pre><code class="language-julia hljs">function (F::KalmanFilter)(θ)
+    @unpack d, StochM, H, R, Q = F
+    @unpack start = StochM
+
+    x = start(θ)
+    Φ = reshape(θ, d, d)
+
+    x, yres, S = GaussianDistributions.correct(x, ys[1] + R, H)
+    ll = llikelihood(yres, S)
+    xs = Any[x]
+    for i in 2:length(ys)
+        x = Φ * x ⊕ Q
+        x, yres, S = GaussianDistributions.correct(x, ys[i] + R, H)
+        ll += llikelihood(yres, S)
+
+        push!(xs, x)
+    end
+    xs, ll
+end</code></pre><p>For both filters, it is straightforward to obtain the log-likelihood via:</p><pre><code class="language-julia hljs">function log_likelihood(F::ParticleFilter, θ, use_new_weight=true, s=1)
+    _, W = F(θ; store_path=false, use_new_weight=use_new_weight, s=s)
+    log(sum(W))
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">log_likelihood (generic function with 3 methods)</code></pre><p>and</p><pre><code class="language-julia hljs">function log_likelihood(F::KalmanFilter, θ)
+    _, ll = F(θ)
+    ll
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">log_likelihood (generic function with 4 methods)</code></pre><p>For convenience, we define functions for</p><ul><li>forward-mode AD (and differentiable resampling step) to compute the gradient of the log-likelihood of the particle filter.</li><li>reverse-mode AD (and differentiable resampling step) to compute the gradient of the log-likelihood of the particle filter.</li><li>forward-mode AD (and stop-gradient method) to compute the gradient of the log-likelihood of the particle filter (without the <code>new_weight</code> function).</li><li>forward-mode AD to compute the gradient of the log-likelihood of the Kalman filter.</li></ul><pre><code class="language-julia hljs">forw_grad(θ, F::ParticleFilter; s=1) = ForwardDiff.gradient(θ -&gt; log_likelihood(F, θ, true, s), θ)
+back_grad(θ, F::ParticleFilter; s=1) = Zygote.gradient(θ -&gt; log_likelihood(F, θ, true, s), θ)[1]
+forw_grad_biased(θ, F::ParticleFilter; s=1) = ForwardDiff.gradient(θ -&gt; log_likelihood(F, θ, false, s), θ)
+forw_grad_Kalman(θ, F::KalmanFilter) = ForwardDiff.gradient(θ -&gt; log_likelihood(F, θ), θ)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">forw_grad_Kalman (generic function with 1 method)</code></pre><h2 id="Model"><a class="docs-heading-anchor" href="#Model">Model</a><a id="Model-1"></a><a class="docs-heading-anchor-permalink" href="#Model" title="Permalink"></a></h2><p>Having set up all core functionalities, we can now define the specific stochastic model.</p><p>We consider the following system with a <span>$d$</span>-dimensional latent process,</p><p class="math-container">\[\begin{aligned}
+x_i &amp;= \Phi x_{i-1} + w_i &amp;\text{ with } w_i \sim \operatorname{Normal}(0,Q),\\
+y_i &amp;= x_i + \nu_i &amp;\text{ with } \nu_i \sim \operatorname{Normal}(0,R),
+\end{aligned}\]</p><p>where <span>$\Phi$</span> is a <span>$d$</span>-dimensional rotation matrix.</p><pre><code class="language-julia hljs">seed = 423897
+
+### Define model
+# here: n-dimensional rotation matrix
+Random.seed!(seed)
+T = 20 # time steps
+d = 2 # dimension
+# generate a rotation matrix
+M = randn(d, d)
+c = 0.3 # scaling
+O = exp(c * (M - transpose(M)) / 2)
+@assert det(O) ≈ 1
+@assert transpose(O) * O ≈ I(d)
+θtrue = vec(O) # true parameter
+
+# observation model
+R = 0.01 * collect(I(d))
+obs(x, θ) = MvNormal(x, R) # y = H x + ν with ν ~ Normal(0, R)
+
+# dynamical model
+Q = 0.02 * collect(I(d))
+dyn(x, θ) = MvNormal(reshape(θ, d, d) * x, Q) #  x = Φ*x + w with w ~ Normal(0,Q)
+
+# starting position
+x0 = randn(d)
+# prior distribution
+start(θ) = Gaussian(x0, 0.001 * collect(I(d)))
+
+# put it all together
+stochastic_model = StochasticModel(T, start, dyn, obs)
+
+# relevant corresponding Kalman filterng defs
+H_Kalman = collect(I(d))
+R_Kalman = Gaussian(zeros(Float64, d), R)
+# Φ_Kalman = O
+Q_Kalman = Gaussian(zeros(Float64, d), Q)
+###
+
+### simulate model
+Random.seed!(seed)
+xs, ys = simulate_single(stochastic_model, θtrue)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">([[-0.22612130354931972, -0.7397777673606599], [0.10257548053663232, -0.8756662640277066], [0.30533725356730024, -0.9316721009820816], [0.35223205309819794, -0.5207494524986491], [0.731923949574323, -0.04117588915764203], [0.6201990558051171, 0.41714114015778303], [0.12690539114966076, 0.5693436288027793], [-0.08580438626833733, 0.6147923179674222], [-0.5725463662269629, 0.41983612487697086], [-0.7740386185886019, 0.3027869992339868], [-0.9261353472714029, 0.07636414522694505], [-1.088941951447555, -0.4309190648605855], [-0.8550506026781588, -0.6854567874131907], [-0.9203484058768839, -1.090191082107816], [-0.41552856810697747, -1.4245984007439214], [0.2110372613103803, -1.508291296426134], [0.7243995322070844, -1.1666428748796625], [1.4186299786585468, -0.6757136319755493], [1.5333776723943076, -0.05733606912093823], [1.566696662048116, 0.6465869841340749]], [[-0.3335699301254105, -0.6822297518733397], [0.10649860667465559, -0.9699927550775739], [0.0722098332304546, -0.8941779163980671], [0.5323611415822864, -0.4705535197109294], [0.8620176235034201, -0.07448895682829379], [0.6833355853473921, 0.43030537701154564], [0.18492848687873878, 0.3778786945156852], [-0.07727788092087362, 0.8783334059384571], [-0.7381646694408515, 0.3697701331751777], [-0.838588972553115, 0.316561705220117], [-0.8713259022393927, 0.1451328500855208], [-1.089904609366039, -0.38676533412753694], [-0.866108973417278, -0.7565340096273595], [-0.8898141908866021, -1.2102559728450686], [-0.39331068259567054, -1.424444802340321], [0.16179762463250447, -1.4410648754368116], [0.6568484699164707, -1.2687269457761554], [1.3477490358204132, -0.54759776048055], [1.4864602942860086, -0.08613761533170983], [1.3693546099408105, 0.6275404072590018]])</code></pre><h2 id="Visualization"><a class="docs-heading-anchor" href="#Visualization">Visualization</a><a id="Visualization-1"></a><a class="docs-heading-anchor-permalink" href="#Visualization" title="Permalink"></a></h2><p>Using <code>particle_filter(θ; store_path=true)</code> and <code>kalman_filter(θ)</code>, it is straightforward to visualize both filters for our observed data.</p><pre><code class="language-julia hljs">m = 1000
+kalman_filter = KalmanFilter(d, stochastic_model, H_Kalman, R_Kalman, Q_Kalman, ys)
+particle_filter = ParticleFilter(m, stochastic_model, ys, sample_stratified)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Main.ParticleFilter{Int64, Main.StochasticModel{Int64, typeof(Main.start), typeof(Main.dyn), typeof(Main.obs)}, Vector{Vector{Float64}}, typeof(Main.sample_stratified)}(1000, Main.StochasticModel{Int64, typeof(Main.start), typeof(Main.dyn), typeof(Main.obs)}(20, Main.start, Main.dyn, Main.obs), [[-0.3335699301254105, -0.6822297518733397], [0.10649860667465559, -0.9699927550775739], [0.0722098332304546, -0.8941779163980671], [0.5323611415822864, -0.4705535197109294], [0.8620176235034201, -0.07448895682829379], [0.6833355853473921, 0.43030537701154564], [0.18492848687873878, 0.3778786945156852], [-0.07727788092087362, 0.8783334059384571], [-0.7381646694408515, 0.3697701331751777], [-0.838588972553115, 0.316561705220117], [-0.8713259022393927, 0.1451328500855208], [-1.089904609366039, -0.38676533412753694], [-0.866108973417278, -0.7565340096273595], [-0.8898141908866021, -1.2102559728450686], [-0.39331068259567054, -1.424444802340321], [0.16179762463250447, -1.4410648754368116], [0.6568484699164707, -1.2687269457761554], [1.3477490358204132, -0.54759776048055], [1.4864602942860086, -0.08613761533170983], [1.3693546099408105, 0.6275404072590018]], Main.sample_stratified)</code></pre><pre><code class="language-julia hljs">### run and visualize filters
+Xs, W = particle_filter(θtrue; store_path=true)
+fig = plot(getindex.(xs, 1), getindex.(xs, 2), legend=false, xlabel=L&quot;x_1&quot;, ylabel=L&quot;x_2&quot;) # x1 and x2 are bad names..conflictng notation
+scatter!(fig, getindex.(ys, 1), getindex.(ys, 2))
+for i in 1:min(m, 100) # note that Xs has obs noise.
+    local xs = [Xs[t][i] for t in 1:T]
+    scatter!(fig, getindex.(xs, 1), getindex.(xs, 2), marker_z=1:T, color=:cool, alpha=0.1) # color to indicate time step
+end
+
+xs_Kalman, ll_Kalman = kalman_filter(θtrue)
+plot!(getindex.(mean.(xs_Kalman), 1), getindex.(mean.(xs_Kalman), 2), legend=false, color=&quot;red&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">qt.qpa.xcb: could not connect to display
+qt.qpa.plugin: Could not load the Qt platform plugin &quot;xcb&quot; in &quot;&quot; even though it was found.
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Available platform plugins are: linuxfb, minimal, offscreen, vnc, xcb.
+
+Aborted (core dumped)
+connect: Connection refused
+GKS: can&#39;t connect to GKS socket application
+
+GKS: Open failed in routine OPEN_WS
+GKS: GKS not in proper state. GKS must be either in the state WSOP or WSAC in routine ACTIVATE_WS</code></pre><p><img src="pf_1.png" alt/></p><h2 id="Bias"><a class="docs-heading-anchor" href="#Bias">Bias</a><a id="Bias-1"></a><a class="docs-heading-anchor-permalink" href="#Bias" title="Permalink"></a></h2><p>We can also investigate the distribution of the gradients from the particle filter with and without differentiable resampling step, as compared to the gradient computed by differentiating the Kalman filter.</p><pre><code class="language-julia hljs">### compute gradients
+Random.seed!(seed)
+X = [forw_grad(θtrue, particle_filter) for i in 1:200] # gradient of the particle filter *with* differentiation of the resampling step
+Random.seed!(seed)
+Xbiased = [forw_grad_biased(θtrue, particle_filter) for i in 1:200] # Gradient of the particle filter *without* differentiation of the resampling step
+# pick an arbitrary coordinate
+index = 1 # take derivative with respect to first parameter (2-dimensional example has a rotation matrix with four parameters in total)
+# plot histograms for the sampled derivative values
+fig = plot(normalize(fit(Histogram, getindex.(X, index), nbins=20), mode=:pdf), legend=false) # ours
+plot!(normalize(fit(Histogram, getindex.(Xbiased, index), nbins=20), mode=:pdf)) # biased
+vline!([mean(X)[index]], color=1)
+vline!([mean(Xbiased)[index]], color=2)
+# add derivative of differentiable Kalman filter as a comparison
+XK = forw_grad_Kalman(θtrue, kalman_filter)
+vline!([XK[index]], color=&quot;black&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">qt.qpa.xcb: could not connect to display
+qt.qpa.plugin: Could not load the Qt platform plugin &quot;xcb&quot; in &quot;&quot; even though it was found.
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Available platform plugins are: linuxfb, minimal, offscreen, vnc, xcb.
+
+Aborted (core dumped)
+connect: Connection refused
+GKS: can&#39;t connect to GKS socket application
+
+GKS: Open failed in routine OPEN_WS
+GKS: GKS not in proper state. GKS must be either in the state WSOP or WSAC in routine ACTIVATE_WS</code></pre><p><img src="pf_2.png" alt/></p><p>The estimator using the <code>new_weight</code> function agrees with the gradient value from the Kalman filter and the <a href="https://arxiv.org/abs/2106.10314">particle filter AD scheme developed by Ścibior and Wood</a>, unlike biased estimators that neglect the contribution of the derivative from the resampling step. However, the biased estimator displays a smaller variance.</p><h2 id="Benchmark"><a class="docs-heading-anchor" href="#Benchmark">Benchmark</a><a id="Benchmark-1"></a><a class="docs-heading-anchor-permalink" href="#Benchmark" title="Permalink"></a></h2><p>Finally, we can use <code>BenchmarkTools.jl</code> to benchmark the run times of the primal pass with respect to forward-mode and reverse-mode AD of the particle filter. As expected, forward-mode AD outperforms reverse-mode AD for the small number of parameters considered here.</p><pre><code class="language-julia hljs"># secs for how long the benchmark should run, see https://juliaci.github.io/BenchmarkTools.jl/stable/
+secs = 1
+
+suite = BenchmarkGroup()
+suite[&quot;scaling&quot;] = BenchmarkGroup([&quot;grads&quot;])
+
+suite[&quot;scaling&quot;][&quot;primal&quot;] = @benchmarkable log_likelihood(particle_filter, θtrue)
+suite[&quot;scaling&quot;][&quot;forward&quot;] = @benchmarkable forw_grad(θtrue, particle_filter)
+suite[&quot;scaling&quot;][&quot;backward&quot;] = @benchmarkable back_grad(θtrue, particle_filter)
+
+tune!(suite)
+results = run(suite, verbose=true, seconds=secs)
+
+t1 = measurement(mean(results[&quot;scaling&quot;][&quot;primal&quot;].times), std(results[&quot;scaling&quot;][&quot;primal&quot;].times) / sqrt(length(results[&quot;scaling&quot;][&quot;primal&quot;].times)))
+t2 = measurement(mean(results[&quot;scaling&quot;][&quot;forward&quot;].times), std(results[&quot;scaling&quot;][&quot;forward&quot;].times) / sqrt(length(results[&quot;scaling&quot;][&quot;forward&quot;].times)))
+t3 = measurement(mean(results[&quot;scaling&quot;][&quot;backward&quot;].times), std(results[&quot;scaling&quot;][&quot;backward&quot;].times) / sqrt(length(results[&quot;scaling&quot;][&quot;backward&quot;].times)))
+@show t1 t2 t3
+
+ts = (t1, t2, t3) ./ 10^6 # ms
+@show ts</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(31.2 ± 1.3, 46.1 ± 2.4, 732.0 ± 24.0)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../index.html">« Introduction</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.28.0-DEV on <span class="colophon-date" title="Sunday 16 October 2022 07:41">Sunday 16 October 2022</span>. Using Julia version 1.8.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

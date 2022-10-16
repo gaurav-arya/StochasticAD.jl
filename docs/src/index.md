@@ -2,7 +2,7 @@
 
 # StochasticAD
 
-`StochasticAD` is an experimental, research package for automatic differentiation (AD) of stochastic programs. It implements AD algorithms for handling functions which are *discrete* and *random*, based on the methodology developed in [TODO].
+[StochasticAD](https://github.com/gaurav-arya/StochasticAD.jl) is an experimental, research package for automatic differentiation (AD) of stochastic programs. It implements AD algorithms for handling functions which are *discrete* and *random*, based on the methodology developed in [TODO].
 
 ## Introduction
 
@@ -44,3 +44,8 @@ derivative = mean(samples)
 uncertainty = std(samples) / sqrt(1000)
 println("derivative of 𝔼[X(p)] = $derivative ± $uncertainty")
 ```
+
+## Index
+
+See [public API](public_api.md) for a walkthrough of the API, and the the tutorials on differentiating a [random walk](tutorials/random_walk.md), a [stochastic game of life](tutorials/game_of_life.md), and a [particle filter](tutorials/particle_filter.md). This is a prototype package with a number of [limitations](limitations.md).
+

@@ -78,7 +78,8 @@ end
 play(0.5, 0.1) # play the game with p = 0.5 and θ = 0.1
 ```
 
-Note that we did have to be careful to write this program to be compatible with the [current capabilities of `StochasticAD.jl`](link to limitations). For example, we concatenated `birth_probs` and `death_probs` into a single array `all_probs` and used the index `board[i, j] * 5 + neighbours + 1` to find the probability, rather than the more natural `if alive... else...` syntax.
+!!! note 
+    Note that we did have to be careful to write this program to be compatible with the [current capabilities of `StochasticAD`](../limitations.md). For example, we concatenated `birth_probs` and `death_probs` into a single array `all_probs` and used the index `board[i, j] * 5 + neighbours + 1` to find the probability, rather than use the more natural `if alive... else...` syntax.
 
 ## Differentiating the Game of Life
 

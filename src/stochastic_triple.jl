@@ -43,7 +43,7 @@ delta(st::StochasticTriple) = st.δ
 """
     perturbations(st::StochasticTriple)
 
-Return the finite perturbation(s) of `st`, in a format dependent on the backend `FIs`.
+Return the finite perturbation(s) of `st`, in a format dependent on the [backend](devdocs.md) used for storing perturbations.
 """
 perturbations(x::Real) = ()
 perturbations(st::StochasticTriple) = perturbations(st.Δ)
@@ -51,7 +51,7 @@ perturbations(st::StochasticTriple) = perturbations(st.Δ)
 """
     derivative_contribution(st::StochasticTriple)
 
-Return the derivative estimate given by the dual and triple components of `st`.
+Return the derivative estimate given by combining the dual and triple components of `st`.
 """
 derivative_contribution(x::Real) = zero(x)
 derivative_contribution(st::StochasticTriple) = st.δ + derivative_contribution(st.Δs)
@@ -157,8 +157,8 @@ stochastic_triple(p::Real; kwargs...) = stochastic_triple(x -> x, p; kwargs...)
 @doc raw"""
     derivative_estimate(X, p::Real; backend=StochasticAD.PrunedFIs)
 
-Computes an unbiased estimate of ``\partial_p \mathbb{E}[X(p)]``, the derivative of the expectation of the random function `X(p)` with respect to its input `p`.
-The `backend` keyword argument describes the algorithm used by the third component of the stochastic triple, see [Technical details](../dev/how_it_works.md) for more details.
+Computes an unbiased estimate of ``\frac{\mathrm{d}\mathbb{E}[X(p)]}{\mathrm{d}p}``, the derivative of the expectation of the random function `X(p)` with respect to its input `p`.
+The `backend` keyword argument describes the algorithm used by the third component of the stochastic triple, see [Technical details](devdocs.md) for more details.
 """
 function derivative_estimate(f, p; kwargs...)
     derivative_contribution(stochastic_triple(f, p; kwargs...))

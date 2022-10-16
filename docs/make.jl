@@ -20,6 +20,8 @@ pages = [
         "tutorials/game_of_life.md",
         "tutorials/particle_filter.md",
     ],
+    "Public API" => "public_api.md",
+    "Limitations" => "limitations.md",
 ]
 
 ### Make docs

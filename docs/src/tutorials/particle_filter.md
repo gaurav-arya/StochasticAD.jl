@@ -22,12 +22,15 @@ differentiable Kalman filter.
 
 ### Package dependencies
 
+```@setup particle_filter
+import Pkg
+Pkg.activate("../../../tutorials")
+Pkg.develop(path="../../..")
+Pkg.instantiate()
+```
+
 ```@example particle_filter
 # activate tutorial project file
-import Pkg # hide
-Pkg.activate("../../../tutorials") # hide
-Pkg.develop(path="../../..") # hide
-Pkg.instantiate() # hide
 
 # load dependencies
 using StochasticAD
@@ -435,7 +438,7 @@ parameters considered here.
 
 ```@example particle_filter
 # secs for how long the benchmark should run, see https://juliaci.github.io/BenchmarkTools.jl/stable/
-secs = 2
+secs = 1
 
 suite = BenchmarkGroup()
 suite["scaling"] = BenchmarkGroup(["grads"])

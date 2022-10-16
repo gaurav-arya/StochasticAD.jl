@@ -4,6 +4,7 @@ module StochasticAD
 
 export stochastic_triple, derivative_contribution # For working with stochastic triples
 export derivative_estimate # Higher level functions
+export new_weight # Particle resampling
 
 ### Imports
 
@@ -13,6 +14,7 @@ using DistributionsAD
 using ChainRulesCore
 using ChainRulesOverloadGeneration
 using ExprTools
+using ForwardDiff
 import ChainRulesCore
 # resolve conflicts while this code exists in both.
 const on_new_rule = ChainRulesOverloadGeneration.on_new_rule
@@ -36,5 +38,6 @@ include("stochastic_triple.jl") # Defines stochastic triple object and higher le
 include("general_rules.jl") # Defines rules for propagation through deterministic functions
 include("discrete_randomness.jl") # Defines rules for propagation through discrete random functions
 # TODO: add smoothing rules
+include("misc.jl") # Miscellaneous functions that do not fit in the usual flow
 
 end

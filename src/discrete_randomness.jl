@@ -65,10 +65,14 @@ for (dist, i) in [(:Geometric, :1), (:Bernoulli, :1), (:Binomial, :2), (:Poisson
 
         low = cdf(d, val - 1)
         high = cdf(d, val)
-        Δs2 = map(Δ -> convert(Signed,
-                               quantile($dist(params(d_st)[1:($i - 1)]..., st.value + Δ,
-                                              params(d_st)[($i + 1):end]...),
-                                        rand(RNG) * (high - low) + low) - val), st.Δs)
+
+        function map_func(Δ)
+            alt_d = $dist(params(d_st)[1:($i - 1)]..., st.value + Δ,
+                          params(d_st)[($i + 1):end]...)
+            alt_val = quantile(alt_d, rand(RNG) * (high - low) + low)
+            convert(Signed, alt_val - val)
+        end
+        Δs2 = map(map_func, st.Δs)
 
         StochasticTriple{T}(val, zero(val), combine((Δs2, Δs1); rep = Δs1)) # ensure that tags are in order in combine, in case backend wishes to exploit this 
     end
@@ -127,4 +131,71 @@ function Base.rand(rng::AbstractRNG,
     end
 end
 
-# TODO: add Categorical rule
+### Rule for Categorical variable
+
+function δtoΔs(d::Categorical, val::V, δs, Δs::AbstractFIs) where {V <: Signed}
+    p = params(d)[1]
+    left_sum = sum(δs[1:(val - 1)], init = zero(V))
+    right_sum = left_sum + δs[val]
+
+    if left_sum > 0
+        stop = rand() * left_sum
+        upto = zero(eltype(δs)) # The "upto" logic handles an edge case of probability 0 events that have non-zero derivative.
+        # It's a lot of logic to handle an edge case, but hopefully it's optimized away.
+        local left_nonzero
+        for i in (val - 1):-1:1
+            if !iszero(p[i]) || ((upto += δs[i]) > stop)
+                left_nonzero = i
+                break
+            end
+        end
+        Δs_left = similar_new(Δs, left_nonzero - val, left_sum / p[val])
+    else
+        Δs_left = similar_empty(Δs, typeof(val))
+    end
+
+    if right_sum < 0
+        stop = -rand() * right_sum
+        upto = zero(eltype(δs))
+        local right_nonzero
+        for i in (val + 1):length(p)
+            if !iszero(p[i]) || ((upto += δs[i]) > stop)
+                right_nonzero = i
+                break
+            end
+        end
+        Δs_right = similar_new(Δs, right_nonzero - val, -right_sum / p[val])
+    else
+        Δs_right = similar_empty(Δs, typeof(val))
+    end
+
+    return combine((Δs_left, Δs_right); rep = Δs)
+end
+
+# what if some elements in vector are not stochastic triples... promotion should take care of that?
+function Base.rand(rng::AbstractRNG,
+                   d_st::Categorical{<:StochasticTriple{T},
+                                     <:AbstractVector{<:StochasticTriple{T, V}}}) where {T,
+                                                                                         V}
+    sts = params(d_st)[1] # stochastic triple for each probability
+    p = map(st -> st.value, sts) # try to keep the same type. e.g. static array -> static array. TODO: avoid allocations 
+    d = Categorical(p)
+    val = convert(Signed, rand(rng, d))
+
+    Δs_all = map(st -> st.Δs, sts)
+    Δs_rep = get_rep(Δs_all)
+
+    Δs1 = δtoΔs(d, val, map(st -> st.δ, sts), Δs_rep)
+
+    low = cdf(d, val - 1)
+    high = cdf(d, val)
+    Δs_coupled = couple(Δs_all; rep = Δs_rep) # TODO: again, there are possible allocations here
+
+    function map_func(Δ)
+        alt_val = quantile(Categorical(p .+ Δ), rand(RNG) * (high - low) + low)
+        convert(Signed, alt_val - val)
+    end
+    Δs2 = map(map_func, Δs_coupled)
+
+    StochasticTriple{T}(val, zero(val), combine((Δs2, Δs1); rep = Δs_rep))
+end

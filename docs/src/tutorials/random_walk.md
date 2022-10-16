@@ -7,7 +7,7 @@ Pkg.develop(path="../../..")
 Pkg.instantiate()
 ```
 
-In this tutorial, we differentiate a random walk over the integers using [StochasticAD](https://github.com/gaurav-arya/StochasticAD.jl). We will need the following packages,
+In this tutorial, we differentiate a random walk over the integers using `StochasticAD`. We will need the following packages,
 
 ```@example random_walk
 using Distributions # defines several supported discrete distributions 

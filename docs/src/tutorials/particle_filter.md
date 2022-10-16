@@ -1,5 +1,9 @@
 # Differentiable particle filter
 
+```@meta
+Draft = true
+```
+
 Using a bootstrap particle sampler, we can approximate the posterior distributions
 of the states given noisy and partial observations of the state of a hidden Markov
 model by a cloud of `K` weighted particles with weights `W`.

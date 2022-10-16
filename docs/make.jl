@@ -1,16 +1,15 @@
 using Pkg
-Pkg.add(url="https://github.com/JuliaDocs/Documenter.jl") # Documenter.jl has some unreleased features I want. TODO: remove
+Pkg.add(url = "https://github.com/JuliaDocs/Documenter.jl") # Documenter.jl has some unreleased features I want. TODO: remove
 
 using Documenter, StochasticAD, DocThemeIndigo
 
 ### Formatting
 
 indigo = DocThemeIndigo.install(StochasticAD)
-format = Documenter.HTML(prettyurls = false, 
-                         assets = [indigo], 
+format = Documenter.HTML(prettyurls = false,
+                         assets = [indigo],
                          repolink = "https://github.com/gaurav-arya/StochasticAD.jl",
-                         edit_link = "main"
-                         )
+                         edit_link = "main")
 
 ### Pagination
 
@@ -34,6 +33,6 @@ makedocs(sitename = "StochasticAD.jl",
              # :autodocs_block, :cross_references, :docs_block, :eval_block, :example_block, :footnote, :meta_block, :missing_docs, :setup_block
          ])
 
-deploydocs(;
-    repo="github.com/gaurav-arya/StochasticAD.jl", devbranch="main", push_preview=true
-)
+deploydocs(repo = "github.com/gaurav-arya/StochasticAD.jl",
+           devbranch = "main",
+           push_preview = true)

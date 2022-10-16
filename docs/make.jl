@@ -15,6 +15,9 @@ format = Documenter.HTML(prettyurls = false,
 
 pages = [
     "Introduction" => "index.md",
+    "Tutorials" => [
+        "tutorials/particle_filter.md",
+    ],
 ]
 
 ### Make docs

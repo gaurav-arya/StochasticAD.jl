@@ -17,6 +17,7 @@ pages = [
     "Introduction" => "index.md",
     "Tutorials" => [
         "tutorials/random_walk.md",
+        "tutorials/game_of_life.md",
         "tutorials/particle_filter.md",
     ],
 ]

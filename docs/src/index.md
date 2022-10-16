@@ -20,10 +20,9 @@ using StochasticAD, Distributions
 f(p) = rand(Bernoulli(p)) # 1 with probability p, 0 otherwise
 stochastic_triple(f, 0.5) # Feeds 0.5 + ε into f
 ```
-The output of a [Bernoulli variable](https://en.wikipedia.org/wiki/Bernoulli_distribution) cannot change by a tiny amount: it is either `0` or `1`. But in the probabilistic world, there is another way to change by a tiny amount *on average*: jump by a large amount, with tiny probability. [StochasticAD](https://github.com/gaurav-arya/StochasticAD.jl) introduces a [`stochastic_triple`](@ref) object, which generalizes dual numbers by including a *third* component to describe these perturbations. Here, the stochastic triple says that the original random output was `0`, but given a small change `ε` in the input, the output will jump up to `1` with probability approximately `2ε`.
+The output of a [Bernoulli variable](https://en.wikipedia.org/wiki/Bernoulli_distribution) cannot change by a tiny amount: it is either `0` or `1`. But in the probabilistic world, there is another way to change by a tiny amount *on average*: jump by a large amount, with tiny probability. [StochasticAD](https://github.com/gaurav-arya/StochasticAD.jl) introduces a stochastic triple object, which generalizes dual numbers by including a *third* component to describe these perturbations. Here, the stochastic triple says that the original random output was `0`, but given a small change `ε` in the input, the output will jump up to `1` with probability approximately `2ε`.
 
-Stochastic triples can be used to construct a new random program whose average is the derivative of the average of the original program. We simply propagate stochastic triples through the program, and then sum up the "dual" and "triple" components at the end via [`derivative_contribution`](@ref). This process is
-packaged together in the function [`derivative_estimate`](@ref). Let's try a crazier example, where we mix discrete and continuous randomness!
+Stochastic triples can be used to construct a new random program whose average is the derivative of the average of the original program. We simply propagate stochastic triples through the program via [`stochastic_triple`](@ref), and then sum up the "dual" and "triple" components at the end via [`derivative_contribution`](@ref). This process is packaged together in the function [`derivative_estimate`](@ref). Let's try a crazier example, where we mix discrete and continuous randomness!
 ```@example estimate
 using StochasticAD, Distributions
 import Random # hide
@@ -47,5 +46,5 @@ println("derivative of 𝔼[X(p)] = $derivative ± $uncertainty")
 
 ## Index
 
-See [public API](public_api.md) for a walkthrough of the API, and the the tutorials on differentiating a [random walk](tutorials/random_walk.md), a [stochastic game of life](tutorials/game_of_life.md), and a [particle filter](tutorials/particle_filter.md). This is a prototype package with a number of [limitations](limitations.md).
+See the [public API](public_api.md) for a walkthrough of the API, and the tutorials on differentiating a [random walk](tutorials/random_walk.md), a [stochastic game of life](tutorials/game_of_life.md), and a [particle filter](tutorials/particle_filter.md). This is a prototype package with a number of [limitations](limitations.md).
 

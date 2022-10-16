@@ -1,0 +1,1492 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Differentiable particle filter · StochasticAD.jl</title><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script><link href="../assets/indigo.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../index.html">StochasticAD.jl</a></span></div><form class="docs-search" action="../search.html"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../index.html">Introduction</a></li><li><span class="tocitem">Tutorials</span><ul><li class="is-active"><a class="tocitem" href="particle_filter.html">Differentiable particle filter</a><ul class="internal"><li><a class="tocitem" href="#Setup"><span>Setup</span></a></li><li><a class="tocitem" href="#Model"><span>Model</span></a></li><li><a class="tocitem" href="#Visualization"><span>Visualization</span></a></li><li><a class="tocitem" href="#Bias"><span>Bias</span></a></li><li><a class="tocitem" href="#Benchmark"><span>Benchmark</span></a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href="particle_filter.html">Differentiable particle filter</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="particle_filter.html">Differentiable particle filter</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/gaurav-arya/StochasticAD.jl" title="View the repository on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/gaurav-arya/StochasticAD.jl/blob/main/docs/src/tutorials/particle_filter.md" title="Edit source on GitHub"><span class="docs-icon fas"></span></a><a class="docs-settings-button docs-navbar-link fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button docs-navbar-link fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Differentiable-particle-filter"><a class="docs-heading-anchor" href="#Differentiable-particle-filter">Differentiable particle filter</a><a id="Differentiable-particle-filter-1"></a><a class="docs-heading-anchor-permalink" href="#Differentiable-particle-filter" title="Permalink"></a></h1><p>Using a bootstrap particle sampler, we can approximate the posterior distributions of the states given noisy and partial observations of the state of a hidden Markov model by a cloud of <code>K</code> weighted particles with weights <code>W</code>.</p><p>In this tutorial, we are going to:</p><ul><li>implement a differentiable particle filter based on <code>StochasticAD.jl</code>.</li><li>visualize the particle filter in <span>$d = 2$</span> dimensions.</li><li>compare the gradient based on the differentiable particle filter to a biased gradient estimator as well as to the gradient of a differentiable Kalman filter.</li><li>show how to benchmark primal evaluation, forward- and reverse-mode AD of the particle filter.</li></ul><h2 id="Setup"><a class="docs-heading-anchor" href="#Setup">Setup</a><a id="Setup-1"></a><a class="docs-heading-anchor-permalink" href="#Setup" title="Permalink"></a></h2><p>We will make use of several julia packages. For example, we are going to use <code>Distributions</code> and <code>DistributionsAD</code> that implement the reparameterization trick for Gaussian distributions used in the observation and state-transition model, which we specify below. We also import <code>GaussianDistributions.jl</code> to implement the differentiable Kalman filter.</p><h3 id="Package-dependencies"><a class="docs-heading-anchor" href="#Package-dependencies">Package dependencies</a><a id="Package-dependencies-1"></a><a class="docs-heading-anchor-permalink" href="#Package-dependencies" title="Permalink"></a></h3><pre><code class="language-julia hljs"># activate tutorial project file
+
+# load dependencies
+using StochasticAD
+using Distributions
+using DistributionsAD
+using Random
+using Statistics
+using StatsBase
+using LinearAlgebra
+using Zygote
+using ForwardDiff
+using GaussianDistributions
+using GaussianDistributions: correct, ⊕
+using Measurements
+using UnPack
+using Plots
+using LaTeXStrings
+using BenchmarkTools</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">  Activating project at `~/work/StochasticAD.jl/StochasticAD.jl/tutorials`
+   Resolving package versions...
+   Installed x265_jll ───────────────────── v3.5.0+0
+   Installed libfdk_aac_jll ─────────────── v2.0.2+0
+   Installed JpegTurbo_jll ──────────────── v2.1.2+0
+   Installed GR_jll ─────────────────────── v0.69.1+0
+   Installed Libmount_jll ───────────────── v2.35.0+0
+   Installed OffsetArrays ───────────────── v1.12.8
+   Installed LERC_jll ───────────────────── v3.0.0+1
+   Installed Opus_jll ───────────────────── v1.3.2+0
+   Installed LoggingExtras ──────────────── v0.4.9
+   Installed RelocatableFolders ─────────── v1.0.0
+   Installed Xorg_xkbcomp_jll ───────────── v1.4.2+4
+   Installed Measures ───────────────────── v0.3.1
+   Installed Grisu ──────────────────────── v1.0.2
+   Installed Xorg_xcb_util_wm_jll ───────── v0.4.1+1
+   Installed Formatting ─────────────────── v0.4.2
+   Installed Xorg_xcb_util_image_jll ────── v0.4.0+1
+   Installed PlotUtils ──────────────────── v1.3.1
+   Installed Contour ────────────────────── v0.6.2
+   Installed CEnum ──────────────────────── v0.4.2
+   Installed RecipesPipeline ────────────── v0.6.7
+   Installed OpenSSL ────────────────────── v1.2.1
+   Installed Xorg_libpthread_stubs_jll ──── v0.1.0+3
+   Installed HTTP ───────────────────────── v1.4.1
+   Installed GPUArrays ──────────────────── v8.5.0
+   Installed Xorg_xcb_util_jll ──────────── v0.4.0+1
+   Installed Cairo_jll ──────────────────── v1.16.1+1
+   Installed Fontconfig_jll ─────────────── v2.13.93+0
+   Installed Libgpg_error_jll ───────────── v1.42.0+0
+   Installed Xorg_libxkbfile_jll ────────── v1.1.0+4
+   Installed Xorg_libXinerama_jll ───────── v1.1.4+4
+   Installed Xorg_libXau_jll ────────────── v1.0.9+4
+   Installed FFMPEG ─────────────────────── v0.4.1
+   Installed IRTools ────────────────────── v0.4.7
+   Installed LLVM ───────────────────────── v4.14.0
+   Installed Showoff ────────────────────── v1.0.3
+   Installed Qt5Base_jll ────────────────── v5.15.3+1
+   Installed Xorg_xcb_util_keysyms_jll ──── v0.4.0+1
+   Installed BenchmarkTools ─────────────── v1.3.1
+   Installed xkbcommon_jll ──────────────── v1.4.1+0
+   Installed Bzip2_jll ──────────────────── v1.0.8+0
+   Installed SimpleBufferStream ─────────── v1.1.0
+   Installed Pipe ───────────────────────── v1.3.0
+   Installed HarfBuzz_jll ───────────────── v2.8.1+1
+   Installed PlotThemes ─────────────────── v3.1.0
+   Installed fzf_jll ────────────────────── v0.29.0+0
+   Installed LZO_jll ────────────────────── v2.10.1+0
+   Installed TranscodingStreams ─────────── v0.9.9
+   Installed FriBidi_jll ────────────────── v1.0.10+0
+   Installed SnoopPrecompile ────────────── v1.0.1
+   Installed Zygote ─────────────────────── v0.6.49
+   Installed UnicodeFun ─────────────────── v0.4.1
+   Installed MbedTLS ────────────────────── v1.1.6
+   Installed x264_jll ───────────────────── v2021.5.5+0
+   Installed GLFW_jll ───────────────────── v3.3.8+0
+   Installed GaussianDistributions ──────── v0.5.2
+   Installed FreeType2_jll ──────────────── v2.10.4+0
+   Installed CodecZlib ──────────────────── v0.7.0
+   Installed JLFzf ──────────────────────── v0.1.5
+   Installed libpng_jll ─────────────────── v1.6.38+0
+   Installed Xorg_libxcb_jll ────────────── v1.13.0+3
+   Installed Colors ─────────────────────── v0.12.8
+   Installed libaom_jll ─────────────────── v3.4.0+0
+   Installed Scratch ────────────────────── v1.1.1
+   Installed Xorg_libXext_jll ───────────── v1.3.4+4
+   Installed ColorTypes ─────────────────── v0.11.4
+   Installed Zstd_jll ───────────────────── v1.5.2+0
+   Installed TensorCore ─────────────────── v0.1.1
+   Installed Plots ──────────────────────── v1.35.3
+   Installed Expat_jll ──────────────────── v2.4.8+0
+   Installed Libtiff_jll ────────────────── v4.4.0+0
+   Installed ColorSchemes ───────────────── v3.19.0
+   Installed AbstractFFTs ───────────────── v1.2.1
+   Installed ColorVectorSpace ───────────── v0.9.9
+   Installed Measurements ───────────────── v2.8.0
+   Installed Libffi_jll ─────────────────── v3.2.2+1
+   Installed Xorg_libXrender_jll ────────── v0.9.10+4
+   Installed LLVMExtra_jll ──────────────── v0.0.16+0
+   Installed Ogg_jll ────────────────────── v1.3.5+1
+   Installed XSLT_jll ───────────────────── v1.1.34+0
+   Installed Xorg_libXi_jll ─────────────── v1.7.10+4
+   Installed UnPack ─────────────────────── v1.0.2
+   Installed Xorg_libXcursor_jll ────────── v1.2.0+4
+   Installed Libuuid_jll ────────────────── v2.36.0+0
+   Installed Wayland_protocols_jll ──────── v1.25.0+0
+   Installed Pixman_jll ─────────────────── v0.40.1+0
+   Installed Xorg_xcb_util_renderutil_jll ─ v0.3.9+1
+   Installed libass_jll ─────────────────── v0.15.1+0
+   Installed Graphite2_jll ──────────────── v1.3.14+0
+   Installed XML2_jll ───────────────────── v2.9.14+0
+   Installed Gettext_jll ────────────────── v0.21.0+0
+   Installed OpenSSL_jll ────────────────── v1.1.17+0
+   Installed Wayland_jll ────────────────── v1.19.0+0
+   Installed Xorg_xtrans_jll ────────────── v1.4.0+3
+   Installed BitFlags ───────────────────── v0.1.5
+   Installed Latexify ───────────────────── v0.15.17
+   Installed FFMPEG_jll ─────────────────── v4.4.2+2
+   Installed GR ─────────────────────────── v0.69.5
+   Installed Libgcrypt_jll ──────────────── v1.8.7+0
+   Installed Xorg_libXrandr_jll ─────────── v1.5.2+4
+   Installed Xorg_xkeyboard_config_jll ──── v2.27.0+4
+   Installed Xorg_libXfixes_jll ─────────── v5.0.3+4
+   Installed FixedPointNumbers ──────────── v0.8.4
+   Installed RecipesBase ────────────────── v1.3.0
+   Installed LAME_jll ───────────────────── v3.100.1+0
+   Installed Libiconv_jll ───────────────── v1.16.1+1
+   Installed IniFile ────────────────────── v0.5.1
+   Installed Libglvnd_jll ───────────────── v1.3.0+3
+   Installed LaTeXStrings ───────────────── v1.3.0
+   Installed URIs ───────────────────────── v1.4.0
+   Installed Glib_jll ───────────────────── v2.74.0+1
+   Installed libvorbis_jll ──────────────── v1.3.7+1
+   Installed Xorg_libX11_jll ────────────── v1.6.9+4
+   Installed Xorg_libXdmcp_jll ──────────── v1.1.3+4
+   Installed Unzip ──────────────────────── v0.2.0
+    Updating `~/work/StochasticAD.jl/StochasticAD.jl/tutorials/Project.toml`
+  [6e4b80f9] + BenchmarkTools v1.3.1
+  [31c24e10] + Distributions v0.25.76
+  [ced4e74d] + DistributionsAD v0.6.43
+  [f6369f11] + ForwardDiff v0.10.32
+  [43dcc890] + GaussianDistributions v0.5.2
+  [b964fa9f] + LaTeXStrings v1.3.0
+  [eff96d63] + Measurements v2.8.0
+  [6fe1bfb0] + OffsetArrays v1.12.8
+  [91a5bcdd] + Plots v1.35.3
+  [90137ffa] + StaticArrays v1.5.9
+  [2913bbd2] + StatsBase v0.33.21
+  [e4facb34] + StochasticAD v0.1.0 `..`
+  [3a884ed6] + UnPack v1.0.2
+  [e88e6eb3] + Zygote v0.6.49
+    Updating `~/work/StochasticAD.jl/StochasticAD.jl/tutorials/Manifest.toml`
+  [621f4979] + AbstractFFTs v1.2.1
+  [79e6a3ab] + Adapt v3.4.0
+  [6e4b80f9] + BenchmarkTools v1.3.1
+  [d1d4a3ce] + BitFlags v0.1.5
+  [fa961155] + CEnum v0.4.2
+  [49dc2e85] + Calculus v0.5.1
+  [082447d4] + ChainRules v1.44.7
+  [d360d2e6] + ChainRulesCore v1.15.6
+  [f51149dc] + ChainRulesOverloadGeneration v0.1.4
+  [9e997f8a] + ChangesOfVariables v0.1.4
+  [944b1d66] + CodecZlib v0.7.0
+  [35d6a980] + ColorSchemes v3.19.0
+  [3da002f7] + ColorTypes v0.11.4
+  [c3611d14] + ColorVectorSpace v0.9.9
+  [5ae59095] + Colors v0.12.8
+  [bbf7d656] + CommonSubexpressions v0.3.0
+  [34da2185] + Compat v4.3.0
+  [d38c429a] + Contour v0.6.2
+  [9a962f9c] + DataAPI v1.12.0
+  [864edb3b] + DataStructures v0.18.13
+  [e2d170a0] + DataValueInterfaces v1.0.0
+  [b429d917] + DensityInterface v0.4.0
+  [85a47980] + Dictionaries v0.3.25
+  [163ba53b] + DiffResults v1.1.0
+  [b552c78f] + DiffRules v1.11.1
+  [31c24e10] + Distributions v0.25.76
+  [ced4e74d] + DistributionsAD v0.6.43
+  [ffbed154] + DocStringExtensions v0.9.1
+  [fa6b7ba4] + DualNumbers v0.6.8
+  [e2ba6199] + ExprTools v0.1.8
+  [c87230d0] + FFMPEG v0.4.1
+  [1a297f60] + FillArrays v0.13.4
+  [53c48c17] + FixedPointNumbers v0.8.4
+  [59287772] + Formatting v0.4.2
+  [f6369f11] + ForwardDiff v0.10.32
+  [0c68f7d7] + GPUArrays v8.5.0
+  [46192b85] + GPUArraysCore v0.1.2
+  [28b8d3ca] + GR v0.69.5
+  [43dcc890] + GaussianDistributions v0.5.2
+  [42e2da0e] + Grisu v1.0.2
+  [cd3eb016] + HTTP v1.4.1
+  [34004b35] + HypergeometricFunctions v0.3.11
+  [7869d1d1] + IRTools v0.4.7
+  [313cdc1a] + Indexing v1.1.1
+  [83e8ac13] + IniFile v0.5.1
+  [3587e190] + InverseFunctions v0.1.8
+  [92d709cd] + IrrationalConstants v0.1.1
+  [82899510] + IteratorInterfaceExtensions v1.0.0
+  [1019f520] + JLFzf v0.1.5
+  [692b3bcd] + JLLWrappers v1.4.1
+  [682c06a0] + JSON v0.21.3
+  [929cbde3] + LLVM v4.14.0
+  [b964fa9f] + LaTeXStrings v1.3.0
+  [23fbe1c1] + Latexify v0.15.17
+  [2ab3a3ac] + LogExpFunctions v0.3.18
+  [e6f89c97] + LoggingExtras v0.4.9
+  [1914dd2f] + MacroTools v0.5.10
+  [739be429] + MbedTLS v1.1.6
+  [eff96d63] + Measurements v2.8.0
+  [442fdcdd] + Measures v0.3.1
+  [e1d29d7a] + Missings v1.0.2
+  [77ba4419] + NaNMath v1.0.1
+  [6fe1bfb0] + OffsetArrays v1.12.8
+  [4d8831e6] + OpenSSL v1.2.1
+  [bac558e1] + OrderedCollections v1.4.1
+  [90014a1f] + PDMats v0.11.16
+  [69de0a69] + Parsers v2.4.2
+  [b98c9c47] + Pipe v1.3.0
+  [ccf2f8ad] + PlotThemes v3.1.0
+  [995b91a9] + PlotUtils v1.3.1
+  [91a5bcdd] + Plots v1.35.3
+  [21216c6a] + Preferences v1.3.0
+  [1fd47b50] + QuadGK v2.5.0
+  [c1ae055f] + RealDot v0.1.0
+  [3cdcf5f2] + RecipesBase v1.3.0
+  [01d81517] + RecipesPipeline v0.6.7
+  [189a3867] + Reexport v1.2.2
+  [05181044] + RelocatableFolders v1.0.0
+  [ae029012] + Requires v1.3.0
+  [79098fc4] + Rmath v0.7.0
+  [6c6a2e73] + Scratch v1.1.1
+  [992d4aef] + Showoff v1.0.3
+  [777ac1f9] + SimpleBufferStream v1.1.0
+  [66db9d55] + SnoopPrecompile v1.0.1
+  [a2af1166] + SortingAlgorithms v1.0.1
+  [276daf66] + SpecialFunctions v2.1.7
+  [90137ffa] + StaticArrays v1.5.9
+  [1e83bf80] + StaticArraysCore v1.4.0
+  [82ae8749] + StatsAPI v1.5.0
+  [2913bbd2] + StatsBase v0.33.21
+  [4c63d2b9] + StatsFuns v1.0.1
+  [e4facb34] + StochasticAD v0.1.0 `..`
+  [09ab397b] + StructArrays v0.6.12
+  [3783bdb8] + TableTraits v1.0.1
+  [bd369af6] + Tables v1.10.0
+  [62fd8b95] + TensorCore v0.1.1
+  [3bb67fe8] + TranscodingStreams v0.9.9
+  [5c2747f8] + URIs v1.4.0
+  [3a884ed6] + UnPack v1.0.2
+  [1cfade01] + UnicodeFun v0.4.1
+  [41fe7b60] + Unzip v0.2.0
+  [e88e6eb3] + Zygote v0.6.49
+  [700de1a5] + ZygoteRules v0.2.2
+  [6e34b625] + Bzip2_jll v1.0.8+0
+  [83423d85] + Cairo_jll v1.16.1+1
+  [2e619515] + Expat_jll v2.4.8+0
+  [b22a6f82] + FFMPEG_jll v4.4.2+2
+  [a3f928ae] + Fontconfig_jll v2.13.93+0
+  [d7e528f0] + FreeType2_jll v2.10.4+0
+  [559328eb] + FriBidi_jll v1.0.10+0
+  [0656b61e] + GLFW_jll v3.3.8+0
+  [d2c73de3] + GR_jll v0.69.1+0
+  [78b55507] + Gettext_jll v0.21.0+0
+  [7746bdde] + Glib_jll v2.74.0+1
+  [3b182d85] + Graphite2_jll v1.3.14+0
+  [2e76f6c2] + HarfBuzz_jll v2.8.1+1
+  [aacddb02] + JpegTurbo_jll v2.1.2+0
+  [c1c5ebd0] + LAME_jll v3.100.1+0
+  [88015f11] + LERC_jll v3.0.0+1
+  [dad2f222] + LLVMExtra_jll v0.0.16+0
+  [dd4b983a] + LZO_jll v2.10.1+0
+  [e9f186c6] + Libffi_jll v3.2.2+1
+  [d4300ac3] + Libgcrypt_jll v1.8.7+0
+  [7e76a0d4] + Libglvnd_jll v1.3.0+3
+  [7add5ba3] + Libgpg_error_jll v1.42.0+0
+  [94ce4f54] + Libiconv_jll v1.16.1+1
+  [4b2f31a3] + Libmount_jll v2.35.0+0
+  [89763e89] + Libtiff_jll v4.4.0+0
+  [38a345b3] + Libuuid_jll v2.36.0+0
+  [e7412a2a] + Ogg_jll v1.3.5+1
+  [458c3c95] + OpenSSL_jll v1.1.17+0
+  [efe28fd5] + OpenSpecFun_jll v0.5.5+0
+  [91d4177d] + Opus_jll v1.3.2+0
+  [30392449] + Pixman_jll v0.40.1+0
+  [ea2cea3b] + Qt5Base_jll v5.15.3+1
+  [f50d1b31] + Rmath_jll v0.3.0+0
+  [a2964d1f] + Wayland_jll v1.19.0+0
+  [2381bf8a] + Wayland_protocols_jll v1.25.0+0
+  [02c8fc9c] + XML2_jll v2.9.14+0
+  [aed1982a] + XSLT_jll v1.1.34+0
+  [4f6342f7] + Xorg_libX11_jll v1.6.9+4
+  [0c0b7dd1] + Xorg_libXau_jll v1.0.9+4
+  [935fb764] + Xorg_libXcursor_jll v1.2.0+4
+  [a3789734] + Xorg_libXdmcp_jll v1.1.3+4
+  [1082639a] + Xorg_libXext_jll v1.3.4+4
+  [d091e8ba] + Xorg_libXfixes_jll v5.0.3+4
+  [a51aa0fd] + Xorg_libXi_jll v1.7.10+4
+  [d1454406] + Xorg_libXinerama_jll v1.1.4+4
+  [ec84b674] + Xorg_libXrandr_jll v1.5.2+4
+  [ea2f1a96] + Xorg_libXrender_jll v0.9.10+4
+  [14d82f49] + Xorg_libpthread_stubs_jll v0.1.0+3
+  [c7cfdc94] + Xorg_libxcb_jll v1.13.0+3
+  [cc61e674] + Xorg_libxkbfile_jll v1.1.0+4
+  [12413925] + Xorg_xcb_util_image_jll v0.4.0+1
+  [2def613f] + Xorg_xcb_util_jll v0.4.0+1
+  [975044d2] + Xorg_xcb_util_keysyms_jll v0.4.0+1
+  [0d47668e] + Xorg_xcb_util_renderutil_jll v0.3.9+1
+  [c22f9ab0] + Xorg_xcb_util_wm_jll v0.4.1+1
+  [35661453] + Xorg_xkbcomp_jll v1.4.2+4
+  [33bec58e] + Xorg_xkeyboard_config_jll v2.27.0+4
+  [c5fb5394] + Xorg_xtrans_jll v1.4.0+3
+  [3161d3a3] + Zstd_jll v1.5.2+0
+⌅ [214eeab7] + fzf_jll v0.29.0+0
+  [a4ae2306] + libaom_jll v3.4.0+0
+  [0ac62f75] + libass_jll v0.15.1+0
+  [f638f0a6] + libfdk_aac_jll v2.0.2+0
+  [b53b4c65] + libpng_jll v1.6.38+0
+  [f27f6e37] + libvorbis_jll v1.3.7+1
+  [1270edf5] + x264_jll v2021.5.5+0
+  [dfaa095f] + x265_jll v3.5.0+0
+  [d8fb68d0] + xkbcommon_jll v1.4.1+0
+  [0dad84c5] + ArgTools v1.1.1
+  [56f22d72] + Artifacts
+  [2a0f44e3] + Base64
+  [ade2ca70] + Dates
+  [8bb1440f] + DelimitedFiles
+  [8ba89e20] + Distributed
+  [f43a241f] + Downloads v1.6.0
+  [7b1f6079] + FileWatching
+  [b77e0a4c] + InteractiveUtils
+  [4af54fe1] + LazyArtifacts
+  [b27032c2] + LibCURL v0.6.3
+  [76f85450] + LibGit2
+  [8f399da3] + Libdl
+  [37e2e46d] + LinearAlgebra
+  [56ddb016] + Logging
+  [d6f4376e] + Markdown
+  [a63ad114] + Mmap
+  [ca575930] + NetworkOptions v1.2.0
+  [44cfe95a] + Pkg v1.8.0
+  [de0858da] + Printf
+  [9abbd945] + Profile
+  [3fa0cd96] + REPL
+  [9a3f8284] + Random
+  [ea8e919c] + SHA v0.7.0
+  [9e88b42a] + Serialization
+  [6462fe0b] + Sockets
+  [2f01184e] + SparseArrays
+  [10745b16] + Statistics
+  [4607b0f0] + SuiteSparse
+  [fa267f1f] + TOML v1.0.0
+  [a4e569a6] + Tar v1.10.1
+  [8dfed614] + Test
+  [cf7118a7] + UUIDs
+  [4ec0a83e] + Unicode
+  [e66e0078] + CompilerSupportLibraries_jll v0.5.2+0
+  [deac9b47] + LibCURL_jll v7.84.0+0
+  [29816b5a] + LibSSH2_jll v1.10.2+0
+  [c8ffd9c3] + MbedTLS_jll v2.28.0+0
+  [14a3606d] + MozillaCACerts_jll v2022.2.1
+  [4536629a] + OpenBLAS_jll v0.3.20+0
+  [05823500] + OpenLibm_jll v0.8.1+0
+  [efcefdf7] + PCRE2_jll v10.40.0+0
+  [83775a58] + Zlib_jll v1.2.12+3
+  [8e850b90] + libblastrampoline_jll v5.1.1+0
+  [8e850ede] + nghttp2_jll v1.48.0+0
+  [3f19e933] + p7zip_jll v17.4.0+0
+        Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated -m`
+Precompiling project...
+<span class="sgr32">  ✓ </span><span class="sgr90">SnoopPrecompile</span>
+<span class="sgr32">  ✓ </span>LaTeXStrings
+<span class="sgr32">  ✓ </span><span class="sgr90">TensorCore</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">CEnum</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Contour</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Pipe</span>
+<span class="sgr32">  ✓ </span>UnPack
+<span class="sgr32">  ✓ </span><span class="sgr90">Measures</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Grisu</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">IniFile</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Unzip</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">FixedPointNumbers</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">SimpleBufferStream</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">URIs</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Formatting</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">PCRE2_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">UnicodeFun</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">BitFlags</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Scratch</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">TranscodingStreams</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">LoggingExtras</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">IRTools</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">AbstractFFTs</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">MbedTLS</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">OpenSSL_jll</span>
+<span class="sgr32">  ✓ </span>BenchmarkTools
+<span class="sgr32">  ✓ </span><span class="sgr90">Graphite2_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Libmount_jll</span>
+<span class="sgr32">  ✓ </span>OffsetArrays
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_libXau_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">libpng_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Bzip2_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">libfdk_aac_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Pixman_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">LAME_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">fzf_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">LERC_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">JpegTurbo_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_libXdmcp_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Ogg_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">x265_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">x264_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">LLVMExtra_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Zstd_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">libaom_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Opus_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">LZO_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Expat_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Libiconv_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_xtrans_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Libffi_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Wayland_protocols_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Libgpg_error_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_libpthread_stubs_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">FriBidi_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Libuuid_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Showoff</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">RecipesBase</span>
+<span class="sgr32">  ✓ </span>GaussianDistributions
+<span class="sgr32">  ✓ </span><span class="sgr90">RelocatableFolders</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">CodecZlib</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">ColorTypes</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">FreeType2_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Latexify</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">JLFzf</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">OpenSSL</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">libvorbis_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">XML2_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Libtiff_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Libgcrypt_jll</span>
+<span class="sgr32">  ✓ </span>Measurements
+<span class="sgr32">  ✓ </span><span class="sgr90">ColorVectorSpace</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Fontconfig_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">LLVM</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Colors</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Gettext_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Wayland_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">XSLT_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">HTTP</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Glib_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_libxcb_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">GPUArrays</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_xcb_util_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_libX11_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_xcb_util_image_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_xcb_util_keysyms_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_xcb_util_renderutil_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_xcb_util_wm_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_libXrender_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_libXext_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_libXfixes_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_libxkbfile_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Libglvnd_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">ColorSchemes</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_libXrandr_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_libXinerama_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Cairo_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_libXcursor_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_libXi_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_xkbcomp_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">HarfBuzz_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">GLFW_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Xorg_xkeyboard_config_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">libass_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">xkbcommon_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">FFMPEG_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">Qt5Base_jll</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">FFMPEG</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">GR_jll</span>
+<span class="sgr32">  ✓ </span>Zygote
+<span class="sgr32">  ✓ </span><span class="sgr90">GR</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">PlotUtils</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">RecipesPipeline</span>
+<span class="sgr32">  ✓ </span><span class="sgr90">PlotThemes</span>
+<span class="sgr32">  ✓ </span>Plots
+  115 dependencies successfully precompiled in 111 seconds. 64 already precompiled.</code></pre><h3 id="Particle-filter"><a class="docs-heading-anchor" href="#Particle-filter">Particle filter</a><a id="Particle-filter-1"></a><a class="docs-heading-anchor-permalink" href="#Particle-filter" title="Permalink"></a></h3><p>For convenience, we first introduce the new type <code>StochasticModel</code> with the following fields:</p><ul><li><code>T</code>: total number of time steps.</li><li><code>start</code>: starting distribution for the initial state. For example, in the form of a narrow  Gaussian <code>start(θ) = Gaussian(x0, 0.001 * I(d))</code>.</li><li><code>dyn</code>: pointwise differentiable stochastic program in the form of Markov transition densities.  For example, <code>dyn(x, θ) = MvNormal(reshape(θ, d, d) * x, Q(θ))</code>, where <code>Q(θ)</code> denotes the  covariance matrix.</li><li><code>obs</code>: observation model having a smooth conditional probability density depending on  current state <code>x</code> and parameters <code>θ</code>. For example, <code>obs(x, θ) = MvNormal(x, R(θ))</code>,  where <code>R(θ)</code> denotes the covariance matrix.</li></ul><p>For parameters <code>θ</code>,  <code>rand(start(θ))</code> gives a sample from the prior distribution of the starting distribution. For current state <code>x</code> and parameters <code>θ</code>, <code>xnew = rand(dyn(x, θ))</code> samples the new state (i.e. <code>dyn</code> gives for each <code>x, θ</code> a distribution-like object). Finally, <code>y = rand(obs(x, θ))</code> samples an observation.</p><p>We can then define the <code>ParticleFilter</code> type that wraps a stochastic model <code>StochM::StochasticModel</code>, a sampling strategy (with arguments <code>p, K, sump=1</code>) and observational data <code>ys</code>. For simplicity, our implementation assumes a observation-likelihood function being available via <code>pdf(obs(x, θ), y)</code>.</p><pre><code class="language-julia hljs">struct StochasticModel{TType&lt;:Integer,T1,T2,T3}
+    T::TType # time steps
+    start::T1 # prior
+    dyn::T2 # dynamical model
+    obs::T3 # observation model
+end
+
+struct ParticleFilter{mType&lt;:Integer,MType&lt;:StochasticModel,yType,sType}
+    m::mType # number of particles
+    StochM::MType # stochastic model
+    ys::yType # observations
+    sample_strategy::sType # sampling function
+end</code></pre><h3 id="Kalman-filter"><a class="docs-heading-anchor" href="#Kalman-filter">Kalman filter</a><a id="Kalman-filter-1"></a><a class="docs-heading-anchor-permalink" href="#Kalman-filter" title="Permalink"></a></h3><p>We consider a stochastic program that fulfills the assumptions of a Kalman filter. We follow <a href="https://github.com/mschauer/Kalman.jl/blob/master/README.md">Kalman.jl</a> to implement a differentiable version. Our <code>KalmanFilter</code> type wraps a stochastic model <code>StochM::StochasticModel</code> and observational data <code>ys</code>. It assumes a observation-likelihood function is implemented via <code>llikelihood(yres, S)</code>. The Kalman filter contains the following fields:</p><ul><li><code>d</code>: dimension of the state-transition matrix <span>$\Phi$</span> according to <span>$x = \Phi x + w$</span> with <span>$w \sim \operatorname{Normal}(0,Q)$</span>.</li><li><code>StochM</code>: Stochastic model of type <code>StochasticModel</code>.</li><li><code>H</code>: linear map from the state space into the observed space according to <span>$y = H x + \nu$</span> with <span>$\nu \sim \operatorname{Normal}(0,R)$</span>.</li><li><code>R</code>: covariance matrix entering the observation model according to <span>$y = H x + \nu$</span> with <span>$\nu \sim \operatorname{Normal}(0,R)$</span>.</li><li><code>Q</code>: covariance matrix entering the state-transition model according to <span>$x = \Phi x + w$</span> with <span>$w \sim \operatorname{Normal}(0,Q)$</span>.</li><li><code>ys</code>: observations.</li></ul><pre><code class="language-julia hljs">llikelihood(yres, S) = GaussianDistributions.logpdf(Gaussian(zero(yres), Symmetric(S)), yres)
+struct KalmanFilter{dType&lt;:Integer,MType&lt;:StochasticModel,HType,RType,QType,yType}
+    # H, R = obs
+    # θ, Q = dyn
+    d::dType
+    StochM::MType # stochastic model
+    H::HType # observation model, maps the true state space into the observed space
+    R::RType # observation model, covariance matrix
+    Q::QType # dynamical model, covariance matrix
+    ys::yType # observations
+end</code></pre><p>To get observations <code>ys</code> from the latent states <code>xs</code> based on the (true, potentially unknown) parameters <code>θ</code>, we simulate a single particle from the forward model returning a vector of observations (no resampling steps).</p><pre><code class="language-julia hljs">function simulate_single(StochM::StochasticModel, θ)
+    @unpack T, start, dyn, obs = StochM
+    x = rand(start(θ))
+    y = rand(obs(x, θ))
+    xs = [x]
+    ys = [y]
+    for t in 2:T
+        x = rand(dyn(x, θ))
+        y = rand(obs(x, θ))
+        push!(xs, x)
+        push!(ys, y)
+    end
+    xs, ys
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">simulate_single (generic function with 1 method)</code></pre><p>A particle filter becomes efficient if resampling steps are included. Resampling is numerically attractive because particles with small weight are discarded, so computational resources are not wasted on particles with vanishing weight.</p><p>Here, let us implement a stratified resampling strategy, see for example <a href="https://arxiv.org/abs/1202.6163">Murray (2012)</a>, where <code>p</code> denotes the probabilities of <code>K</code> particles with <code>sump = sum(p)</code>.</p><pre><code class="language-julia hljs">function sample_stratified(p, K, sump=1)
+    n = length(p)
+    U = rand()
+    is = zeros(Int, K)
+    i = 1
+    cw = p[1]
+    for k in 1:K
+        t = sump * (k - 1 + U) / K
+        while cw &lt; t &amp;&amp; i &lt; n
+            i += 1
+            @inbounds cw += p[i]
+        end
+        is[k] = i
+    end
+    return is
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">sample_stratified (generic function with 2 methods)</code></pre><p>This sampling strategy can be used within a differentiable resampling step in our particle filter using the <code>use_new_weight</code> function as implemented in <code>StochasticAD.jl</code>. The <code>resample</code> function below returns the states <code>X_new</code> and weights <code>W_new</code> of the resampled particles.</p><ul><li><code>m</code>: number of particles.</li><li><code>X</code>: current particle states.</li><li><code>W</code>: current weight vector of the particles.</li><li><code>ω == sum(W)</code> is an invariant.</li><li><code>sample_strategy</code>: specific resampling strategy to be used. For example, <code>sample_stratified</code>.</li><li><code>use_new_weight=true</code>: Allows one to switch between biased, stop-gradient method and  differentiable resampling step.</li></ul><pre><code class="language-julia hljs">function resample(m, X, W, ω, sample_strategy, use_new_weight=true)
+    js = Zygote.ignore(() -&gt; sample_strategy(W, m, ω))
+    X_new = X[js]
+    if use_new_weight
+        # differentiable resampling
+        W_chosen = W[js]
+        W_new = map(w -&gt; ω * new_weight(w / ω) / m, W_chosen)
+    else
+        # stop gradient, biased approach
+        W_new = fill(ω / m, m)
+    end
+    X_new, W_new
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">resample (generic function with 2 methods)</code></pre><p>Note that we added a <code>if</code> condition that allows us to switch between the differentiable resampling step and the stop-gradient approach.</p><p>We&#39;re now equipped with all primitive operations to set up the particle filter, which propagates particles with weights <code>W</code> preserving the invariant <code>ω == sum(W)</code>. We never normalize <code>W</code> and, therefore, <code>ω</code> in the code below contains likelihood information. The particle-filter implementation defaults to return particle positions and weights at <code>T</code> if <code>store_path=false</code> and takes the following input arguments:</p><ul><li><code>θ</code>: parameters for the stochastic program (state-transition and observation model).</li><li><code>store_path=false</code>: Option to store the path of the particles, e.g. to visualize/inspect their trajectories.</li><li><code>use_new_weight=true</code>: Option to switch between the stop-gradient and our differentiable resampling step method. Defaults to using differentiable resampling.</li><li><code>s</code>: controls the number of resampling steps according to <code>t &gt; 1 &amp;&amp; t &lt; T &amp;&amp; (t % s == 0)</code>.</li></ul><pre><code class="language-julia hljs">function (F::ParticleFilter)(θ; store_path=false, use_new_weight=true, s=1)
+    # s controls the number of resampling steps
+    @unpack m, StochM, ys, sample_strategy = F
+    @unpack T, start, dyn, obs = StochM
+
+
+    X = [rand(start(θ)) for j in 1:m] # particles
+    W = [1 / m for i in 1:m] # weights
+    ω = 1 # total weight
+    store_path &amp;&amp; (Xs = [X])
+    for (t, y) in zip(1:T, ys)
+        # update weights &amp; likelihood using observations
+        wi = map(x -&gt; pdf(obs(x, θ), y), X)
+        W = W .* wi
+        ω_old = ω
+        ω = sum(W)
+        # resample particles
+        if t &gt; 1 &amp;&amp; t &lt; T &amp;&amp; (t % s == 0) # &amp;&amp; 1 / sum((W / ω) .^ 2) &lt; length(W) ÷ 32
+            X, W = resample(m, X, W, ω, sample_strategy, use_new_weight)
+        end
+        # update particle states
+        if t &lt; T
+            X = map(x -&gt; rand(dyn(x, θ)), X)
+            store_path &amp;&amp; Zygote.ignore(() -&gt; push!(Xs, X))
+        end
+    end
+    (store_path ? Xs : X), W
+end</code></pre><p>Following <a href="https://github.com/mschauer/Kalman.jl/blob/master/README.md">Kalman.jl</a>, we implement a differentiable Kalman filter to check the ground-truth gradient. Our Kalman filter returns an updated posterior state estimate and the log-likelihood and takes the parameters of the stochastic program as an input.</p><pre><code class="language-julia hljs">function (F::KalmanFilter)(θ)
+    @unpack d, StochM, H, R, Q = F
+    @unpack start = StochM
+
+    x = start(θ)
+    Φ = reshape(θ, d, d)
+
+    x, yres, S = GaussianDistributions.correct(x, ys[1] + R, H)
+    ll = llikelihood(yres, S)
+    xs = Any[x]
+    for i in 2:length(ys)
+        x = Φ * x ⊕ Q
+        x, yres, S = GaussianDistributions.correct(x, ys[i] + R, H)
+        ll += llikelihood(yres, S)
+
+        push!(xs, x)
+    end
+    xs, ll
+end</code></pre><p>For both filters, it is straightforward to obtain the log-likelihood via:</p><pre><code class="language-julia hljs">function log_likelihood(F::ParticleFilter, θ, use_new_weight=true, s=1)
+    _, W = F(θ; store_path=false, use_new_weight=use_new_weight, s=s)
+    log(sum(W))
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">log_likelihood (generic function with 3 methods)</code></pre><p>and</p><pre><code class="language-julia hljs">function log_likelihood(F::KalmanFilter, θ)
+    _, ll = F(θ)
+    ll
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">log_likelihood (generic function with 4 methods)</code></pre><p>For convenience, we define functions for</p><ul><li>forward-mode AD (and differentiable resampling step) to compute the gradient of the log-likelihood of the particle filter.</li><li>reverse-mode AD (and differentiable resampling step) to compute the gradient of the log-likelihood of the particle filter.</li><li>forward-mode AD (and stop-gradient method) to compute the gradient of the log-likelihood of the particle filter (without the <code>new_weight</code> function).</li><li>forward-mode AD to compute the gradient of the log-likelihood of the Kalman filter.</li></ul><pre><code class="language-julia hljs">forw_grad(θ, F::ParticleFilter; s=1) = ForwardDiff.gradient(θ -&gt; log_likelihood(F, θ, true, s), θ)
+back_grad(θ, F::ParticleFilter; s=1) = Zygote.gradient(θ -&gt; log_likelihood(F, θ, true, s), θ)[1]
+forw_grad_biased(θ, F::ParticleFilter; s=1) = ForwardDiff.gradient(θ -&gt; log_likelihood(F, θ, false, s), θ)
+forw_grad_Kalman(θ, F::KalmanFilter) = ForwardDiff.gradient(θ -&gt; log_likelihood(F, θ), θ)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">forw_grad_Kalman (generic function with 1 method)</code></pre><h2 id="Model"><a class="docs-heading-anchor" href="#Model">Model</a><a id="Model-1"></a><a class="docs-heading-anchor-permalink" href="#Model" title="Permalink"></a></h2><p>Having set up all core functionalities, we can now define the specific stochastic model.</p><p>We consider the following system with a <span>$d$</span>-dimensional latent process,</p><p class="math-container">\[\begin{aligned}
+x_i &amp;= \Phi x_{i-1} + w_i &amp;\text{ with } w_i \sim \operatorname{Normal}(0,Q),\\
+y_i &amp;= x_i + \nu_i &amp;\text{ with } \nu_i \sim \operatorname{Normal}(0,R),
+\end{aligned}\]</p><p>where <span>$\Phi$</span> is a <span>$d$</span>-dimensional rotation matrix.</p><pre><code class="language-julia hljs">seed = 423897
+
+### Define model
+# here: n-dimensional rotation matrix
+Random.seed!(seed)
+T = 20 # time steps
+d = 2 # dimension
+# generate a rotation matrix
+M = randn(d, d)
+c = 0.3 # scaling
+O = exp(c * (M - transpose(M)) / 2)
+@assert det(O) ≈ 1
+@assert transpose(O) * O ≈ I(d)
+θtrue = vec(O) # true parameter
+
+# observation model
+R = 0.01 * collect(I(d))
+obs(x, θ) = MvNormal(x, R) # y = H x + ν with ν ~ Normal(0, R)
+
+# dynamical model
+Q = 0.02 * collect(I(d))
+dyn(x, θ) = MvNormal(reshape(θ, d, d) * x, Q) #  x = Φ*x + w with w ~ Normal(0,Q)
+
+# starting position
+x0 = randn(d)
+# prior distribution
+start(θ) = Gaussian(x0, 0.001 * collect(I(d)))
+
+# put it all together
+stochastic_model = StochasticModel(T, start, dyn, obs)
+
+# relevant corresponding Kalman filterng defs
+H_Kalman = collect(I(d))
+R_Kalman = Gaussian(zeros(Float64, d), R)
+# Φ_Kalman = O
+Q_Kalman = Gaussian(zeros(Float64, d), Q)
+###
+
+### simulate model
+Random.seed!(seed)
+xs, ys = simulate_single(stochastic_model, θtrue)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">([[-0.22612130354931972, -0.7397777673606599], [0.10257548053663229, -0.8756662640277069], [0.30533725356730024, -0.9316721009820819], [0.35223205309819794, -0.5207494524986493], [0.731923949574323, -0.0411758891576422], [0.6201990558051172, 0.4171411401577829], [0.12690539114966093, 0.5693436288027791], [-0.08580438626833706, 0.6147923179674221], [-0.5725463662269625, 0.419836124876971], [-0.7740386185886017, 0.302786999233987], [-0.9261353472714027, 0.07636414522694537], [-1.088941951447555, -0.4309190648605852], [-0.8550506026781588, -0.6854567874131904], [-0.9203484058768842, -1.0901910821078156], [-0.41552856810697797, -1.4245984007439212], [0.21103726131037975, -1.5082912964261341], [0.724399532207084, -1.166642874879663], [1.4186299786585466, -0.6757136319755501], [1.5333776723943078, -0.05733606912093908], [1.5666966620481166, 0.6465869841340743]], [[-0.3335699301254105, -0.6822297518733397], [0.10649860667465556, -0.9699927550775741], [0.0722098332304546, -0.8941779163980673], [0.5323611415822864, -0.4705535197109296], [0.8620176235034201, -0.07448895682829396], [0.6833355853473924, 0.43030537701154553], [0.18492848687873895, 0.37787869451568495], [-0.07727788092087334, 0.878333405938457], [-0.7381646694408511, 0.3697701331751778], [-0.8385889725531148, 0.31656170522011723], [-0.8713259022393924, 0.14513285008552113], [-1.089904609366039, -0.3867653341275366], [-0.866108973417278, -0.7565340096273592], [-0.8898141908866023, -1.2102559728450681], [-0.39331068259567104, -1.4244448023403207], [0.1617976246325039, -1.4410648754368118], [0.6568484699164703, -1.2687269457761559], [1.347749035820413, -0.5475977604805508], [1.4864602942860088, -0.08613761533171067], [1.3693546099408112, 0.6275404072590013]])</code></pre><h2 id="Visualization"><a class="docs-heading-anchor" href="#Visualization">Visualization</a><a id="Visualization-1"></a><a class="docs-heading-anchor-permalink" href="#Visualization" title="Permalink"></a></h2><p>Using <code>particle_filter(θ; store_path=true)</code> and <code>kalman_filter(θ)</code>, it is straightforward to visualize both filters for our observed data.</p><pre><code class="language-julia hljs">m = 1000
+kalman_filter = KalmanFilter(d, stochastic_model, H_Kalman, R_Kalman, Q_Kalman, ys)
+particle_filter = ParticleFilter(m, stochastic_model, ys, sample_stratified)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Main.ParticleFilter{Int64, Main.StochasticModel{Int64, typeof(Main.start), typeof(Main.dyn), typeof(Main.obs)}, Vector{Vector{Float64}}, typeof(Main.sample_stratified)}(1000, Main.StochasticModel{Int64, typeof(Main.start), typeof(Main.dyn), typeof(Main.obs)}(20, Main.start, Main.dyn, Main.obs), [[-0.3335699301254105, -0.6822297518733397], [0.10649860667465556, -0.9699927550775741], [0.0722098332304546, -0.8941779163980673], [0.5323611415822864, -0.4705535197109296], [0.8620176235034201, -0.07448895682829396], [0.6833355853473924, 0.43030537701154553], [0.18492848687873895, 0.37787869451568495], [-0.07727788092087334, 0.878333405938457], [-0.7381646694408511, 0.3697701331751778], [-0.8385889725531148, 0.31656170522011723], [-0.8713259022393924, 0.14513285008552113], [-1.089904609366039, -0.3867653341275366], [-0.866108973417278, -0.7565340096273592], [-0.8898141908866023, -1.2102559728450681], [-0.39331068259567104, -1.4244448023403207], [0.1617976246325039, -1.4410648754368118], [0.6568484699164703, -1.2687269457761559], [1.347749035820413, -0.5475977604805508], [1.4864602942860088, -0.08613761533171067], [1.3693546099408112, 0.6275404072590013]], Main.sample_stratified)</code></pre><pre><code class="language-julia hljs">### run and visualize filters
+Xs, W = particle_filter(θtrue; store_path=true)
+fig = plot(getindex.(xs, 1), getindex.(xs, 2), legend=false, xlabel=L&quot;x_1&quot;, ylabel=L&quot;x_2&quot;) # x1 and x2 are bad names..conflictng notation
+scatter!(fig, getindex.(ys, 1), getindex.(ys, 2))
+for i in 1:min(m, 100) # note that Xs has obs noise.
+    local xs = [Xs[t][i] for t in 1:T]
+    scatter!(fig, getindex.(xs, 1), getindex.(xs, 2), marker_z=1:T, color=:cool, alpha=0.1) # color to indicate time step
+end
+
+xs_Kalman, ll_Kalman = kalman_filter(θtrue)
+plot!(getindex.(mean.(xs_Kalman), 1), getindex.(mean.(xs_Kalman), 2), legend=false, color=&quot;red&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">qt.qpa.xcb: could not connect to display
+qt.qpa.plugin: Could not load the Qt platform plugin &quot;xcb&quot; in &quot;&quot; even though it was found.
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Available platform plugins are: linuxfb, minimal, offscreen, vnc, xcb.
+
+Aborted (core dumped)
+connect: Connection refused
+GKS: can&#39;t connect to GKS socket application
+
+GKS: Open failed in routine OPEN_WS
+GKS: GKS not in proper state. GKS must be either in the state WSOP or WSAC in routine ACTIVATE_WS
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS:
+GKS:
+GKS:
+GKS:</code></pre><p><img src="pf_1.png" alt/></p><h2 id="Bias"><a class="docs-heading-anchor" href="#Bias">Bias</a><a id="Bias-1"></a><a class="docs-heading-anchor-permalink" href="#Bias" title="Permalink"></a></h2><p>We can also investigate the distribution of the gradients from the particle filter with and without differentiable resampling step, as compared to the gradient computed by differentiating the Kalman filter.</p><pre><code class="language-julia hljs">### compute gradients
+Random.seed!(seed)
+X = [forw_grad(θtrue, particle_filter) for i in 1:200] # gradient of the particle filter *with* differentiation of the resampling step
+Random.seed!(seed)
+Xbiased = [forw_grad_biased(θtrue, particle_filter) for i in 1:200] # Gradient of the particle filter *without* differentiation of the resampling step
+# pick an arbitrary coordinate
+index = 1 # take derivative with respect to first parameter (2-dimensional example has a rotation matrix with four parameters in total)
+# plot histograms for the sampled derivative values
+fig = plot(normalize(fit(Histogram, getindex.(X, index), nbins=20), mode=:pdf), legend=false) # ours
+plot!(normalize(fit(Histogram, getindex.(Xbiased, index), nbins=20), mode=:pdf)) # biased
+vline!([mean(X)[index]], color=1)
+vline!([mean(Xbiased)[index]], color=2)
+# add derivative of differentiable Kalman filter as a comparison
+XK = forw_grad_Kalman(θtrue, kalman_filter)
+vline!([XK[index]], color=&quot;black&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">qt.qpa.xcb: could not connect to display
+qt.qpa.plugin: Could not load the Qt platform plugin &quot;xcb&quot; in &quot;&quot; even though it was found.
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Available platform plugins are: linuxfb, minimal, offscreen, vnc, xcb.
+
+Aborted (core dumped)
+connect: Connection refused
+GKS: can&#39;t connect to GKS socket application
+
+GKS: Open failed in routine OPEN_WS
+GKS: GKS not in proper state. GKS must be either in the state WSOP or WSAC in routine ACTIVATE_WS
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine TEXT
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine FILLAREA
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYMARKER
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE
+GKS: GKS not in proper state. GKS must be either in the state WSAC or SGOP in routine POLYLINE</code></pre><p><img src="pf_2.png" alt/></p><p>The estimator using the <code>new_weight</code> function agrees with the gradient value from the Kalman filter and the <a href="https://arxiv.org/abs/2106.10314">particle filter AD scheme developed by Ścibior and Wood</a>, unlike biased estimators that neglect the contribution of the derivative from the resampling step. However, the biased estimator displays a smaller variance.</p><h2 id="Benchmark"><a class="docs-heading-anchor" href="#Benchmark">Benchmark</a><a id="Benchmark-1"></a><a class="docs-heading-anchor-permalink" href="#Benchmark" title="Permalink"></a></h2><p>Finally, we can use <code>BenchmarkTools.jl</code> to benchmark the run times of the primal pass with respect to forward-mode and reverse-mode AD of the particle filter. As expected, forward-mode AD outperforms reverse-mode AD for the small number of parameters considered here.</p><pre><code class="language-julia hljs"># secs for how long the benchmark should run, see https://juliaci.github.io/BenchmarkTools.jl/stable/
+secs = 2
+
+suite = BenchmarkGroup()
+suite[&quot;scaling&quot;] = BenchmarkGroup([&quot;grads&quot;])
+
+suite[&quot;scaling&quot;][&quot;primal&quot;] = @benchmarkable log_likelihood(particle_filter, θtrue)
+suite[&quot;scaling&quot;][&quot;forward&quot;] = @benchmarkable forw_grad(θtrue, particle_filter)
+suite[&quot;scaling&quot;][&quot;backward&quot;] = @benchmarkable back_grad(θtrue, particle_filter)
+
+tune!(suite)
+results = run(suite, verbose=true, seconds=secs)
+
+t1 = measurement(mean(results[&quot;scaling&quot;][&quot;primal&quot;].times), std(results[&quot;scaling&quot;][&quot;primal&quot;].times) / sqrt(length(results[&quot;scaling&quot;][&quot;primal&quot;].times)))
+t2 = measurement(mean(results[&quot;scaling&quot;][&quot;forward&quot;].times), std(results[&quot;scaling&quot;][&quot;forward&quot;].times) / sqrt(length(results[&quot;scaling&quot;][&quot;forward&quot;].times)))
+t3 = measurement(mean(results[&quot;scaling&quot;][&quot;backward&quot;].times), std(results[&quot;scaling&quot;][&quot;backward&quot;].times) / sqrt(length(results[&quot;scaling&quot;][&quot;backward&quot;].times)))
+@show t1 t2 t3
+
+ts = (t1, t2, t3) ./ 10^6 # ms
+@show ts</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(37.8 ± 1.2, 58.1 ± 2.3, 1001.0 ± 33.0)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../index.html">« Introduction</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.28.0-DEV on <span class="colophon-date" title="Sunday 16 October 2022 03:59">Sunday 16 October 2022</span>. Using Julia version 1.8.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

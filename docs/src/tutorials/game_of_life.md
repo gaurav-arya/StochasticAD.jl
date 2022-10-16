@@ -1,6 +1,6 @@
-# Stochastic game of life
+# Stochastic Game of life
 
-We consider a stochastic version of [Conway's game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life), played on a two-dimensional board. We shall use the following packages,
+We consider a stochastic version of [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life), played on a two-dimensional board. We shall use the following packages,
 ```@setup game_of_life
 import Pkg
 Pkg.activate("../../../tutorials")
@@ -14,9 +14,9 @@ using OffsetArrays
 using StaticArrays
 ```
 
-## Setting up the stochastic game of Life
+## Setting up the stochastic Game of Life
 
-Each turn, the standard game of Life applies the following rules to each cell,
+Each turn, the standard Game of Life applies the following rules to each cell,
 ```math
 \text{dead and 3 neighbours alive} \to \text{ alive}, \\
 \text{alive and 0, 1, or 4 neighbours alive} \to \text{ dead}.
@@ -34,7 +34,7 @@ function play(p, θ=0.1, N=12, T=10; log=false)
     return play_game_of_life(p, vcat(birth_probs, death_probs), N, T; log)
 end
 ```
-We can now implement the game of life based on the specification. At the end of the game, we return the total number of alive cells.
+We can now implement the Game of Life based on the specification. At the end of the game, we return the total number of alive cells.
 ```@example game_of_life
 # A single turn of the game
 function update_state(all_probs, N, board_new, board_old)
@@ -82,7 +82,7 @@ Note that we did have to be careful to write this program to be compatible with 
 
 ## Differentiating the Game of Life
 
-Let's differentiate the game of life!
+Let's differentiate the Game of life!
 ```@example game_of_life
 @show stochastic_triple(play, 0.5) # let's take a look at a single stochastic triple
 

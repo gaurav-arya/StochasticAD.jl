@@ -21,6 +21,8 @@ const backends = [
         Bernoulli,
         Geometric,
         Poisson,
+        (p -> Categorical([p^2, 1 - p^2])),
+        (p -> Categorical([0, p^2, 0, 0, 1 - p^2])), # To check that 0's are skipped over
         (p -> Binomial(3, p)),
         (p -> Binomial(20, p)),
     ]
@@ -30,8 +32,10 @@ const backends = [
         (0.2, 0.8),
         (0.2, 0.8),
         (0.2, 0.8),
+        (0.2, 0.8),
+        (0.2, 0.8),
     ]
-    out_ranges = [0:1, 0:MAX, 0:MAX, 0:3, 0:20]
+    out_ranges = [0:1, 0:MAX, 0:MAX, 1:2, 0:5, 0:3, 0:20]
     test_cases = collect(zip(distributions, p_ranges, out_ranges))
 
     if backend == StochasticAD.DictFIs

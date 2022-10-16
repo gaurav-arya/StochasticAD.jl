@@ -11,7 +11,8 @@ anim1 = @animate for (i, board) in enumerate(history)
             c = :grays)
 end
 anim2 = @animate for (i, board) in enumerate(history)
-    heatmap(collect(StochasticAD.derivative_contribution.(board)), title = "time $i", clim = (-1, 1), c = :grays)
+    heatmap(collect(StochasticAD.derivative_contribution.(board)), title = "time $i",
+            clim = (-1, 1), c = :grays)
 end
 
 gif(anim1, "game.gif", fps = 15)

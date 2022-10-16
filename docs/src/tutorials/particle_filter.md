@@ -392,7 +392,6 @@ end
 
 xs_Kalman, ll_Kalman = kalman_filter(θtrue)
 plot!(getindex.(mean.(xs_Kalman), 1), getindex.(mean.(xs_Kalman), 2), legend=false, color="red")
-display(fig) # hide
 png("pf_1") # hide
 ```
 ![](pf_1.png)
@@ -419,7 +418,6 @@ vline!([mean(Xbiased)[index]], color=2)
 # add derivative of differentiable Kalman filter as a comparison
 XK = forw_grad_Kalman(θtrue, kalman_filter)
 vline!([XK[index]], color="black")
-display(fig) # hide
 png("pf_2") # hide
 ```
 ![](pf_2.png)

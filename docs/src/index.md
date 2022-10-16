@@ -28,7 +28,7 @@ import Random # hide
 Random.seed!(1234) # hide
 
 function X(p)
-    a = p^2 
+    a = p*(1-p) 
     b = rand(Binomial(10, p))
     c = 2 * b + 3 * rand(Bernoulli(p))
     return a * c * rand(Normal(b, a))

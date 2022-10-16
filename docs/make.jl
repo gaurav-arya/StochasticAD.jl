@@ -16,6 +16,7 @@ format = Documenter.HTML(prettyurls = false,
 pages = [
     "Introduction" => "index.md",
     "Tutorials" => [
+        "tutorials/random_walk.md",
         "tutorials/particle_filter.md",
     ],
 ]

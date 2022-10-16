@@ -1,4 +1,4 @@
-# Stochastic Game of life
+# Stochastic Game of Life
 
 We consider a stochastic version of [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life), played on a two-dimensional board. We shall use the following packages,
 ```@setup game_of_life

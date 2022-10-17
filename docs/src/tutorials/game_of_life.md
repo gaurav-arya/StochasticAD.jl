@@ -83,7 +83,7 @@ play(0.5, 0.1) # play the game with p = 0.5 and θ = 0.1
 
 ## Differentiating the Game of Life
 
-Let's differentiate the Game of life!
+Let's differentiate the Game of Life!
 ```@example game_of_life
 @show stochastic_triple(play, 0.5) # let's take a look at a single stochastic triple
 

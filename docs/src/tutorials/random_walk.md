@@ -64,7 +64,7 @@ println("derivative of 𝔼[f_squared] = $derivative ± $uncertainty")
 
 ## Computing variance
 
-A crucial figure of merit for a derivative estimator is its variance. We can graph the variance of our estimator ove ra range of `n`.
+A crucial figure of merit for a derivative estimator is its variance. We compute the standard deviation (square root of the variance) of our estimator over a range of `n`.
 ```@example random_walk
 n_range = 10:10:100 # range for testing asymptotic variance behaviour
 p_range = 2 .* n_range
@@ -78,8 +78,8 @@ for (n, p) in zip(n_range, p_range)
 end
 @show stds_triple
 ```
-For comparison with other unbiased estimators, we also compute `stds_score` and `stds_score_baseline` for
-[score function gradient estimator](https://arxiv.org/pdf/1906.10652.pdf), both without and with a variance-reducing batch-average control variate (CV). (For details, see [`core.jl`](https://github.com/gaurav-arya/StochasticAD.jl/blob/main/tutorials/random_walk/core.jl) and [`compare_score.jl`](https://github.com/gaurav-arya/StochasticAD.jl/blob/main/random_walk/compare_score.jl).) We can now graph the standard deviation of each estimator versus $n$, observing lower variance in the unbiased estimate produced by stochastic triples:
+For comparison with other unbiased estimators, we also compute `stds_score` and `stds_score_baseline` for the
+[score function gradient estimator](https://arxiv.org/pdf/1906.10652.pdf), both without and with a variance-reducing batch-average control variate (CV). (For details, see [`core.jl`](https://github.com/gaurav-arya/StochasticAD.jl/blob/main/tutorials/random_walk/core.jl) and [`compare_score.jl`](https://github.com/gaurav-arya/StochasticAD.jl/blob/main/random_walk/compare_score.jl).) We can now graph the standard deviation of each estimator versus $n$, observing lower variance in the unbiased derivative estimate produced by stochastic triples:
 
 ```@raw html
 <img src="../images/compare_score.png" width="50%"/>

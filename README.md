@@ -1,4 +1,5 @@
-![](https://github.com/gaurav-arya/StochasticAD.jl/blob/main/docs/src/images/path_skeleton.png)
+![](docs/src/images/path_skeleton.png#gh-light-mode-only)
+![](docs/src/images/path_skeleton_dark.png#gh-dark-mode-only)
 
 # StochasticAD
 

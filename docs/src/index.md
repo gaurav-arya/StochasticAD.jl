@@ -1,4 +1,7 @@
-![](images/path_skeleton.png)
+```@raw html
+<img class="display-light-only" src="images/path_skeleton.png">
+<img class="display-dark-only" src="images/path_skeleton_dark.png">
+```
 
 # StochasticAD
 

@@ -21,3 +21,26 @@ function ChainRulesCore.rrule(::typeof(new_weight), p)
     end
     return (one(p), new_weight_pullback)
 end
+
+"""
+    StochasticModel(p, X)
+
+Combine stochastic program `X` with parameter `p` into 
+a trainable model using Functors.jl (formulate as minimization
+problem).
+"""
+struct StochasticModel{S<:AbstractVector,T}
+    p::S
+    X::T
+end
+@functor StochasticModel (p,)
+
+"""
+    stochastic_gradient(m::StochasticModel)
+
+Compute gradient with respect to the trainable parameter `p` of `StochasticModel(p, X)`
+"""
+function stochastic_gradient(m::StochasticModel)
+    length(m.p) != 1 && throw(ArgumentError("`stochastic_gradient`` currently supports univariate models"))
+    fmap(p-> [derivative_estimate(m.X, p[])], m)
+end

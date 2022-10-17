@@ -7,7 +7,7 @@ using Documenter, StochasticAD, DocThemeIndigo
 
 indigo = DocThemeIndigo.install(StochasticAD)
 format = Documenter.HTML(prettyurls = false,
-                         assets = [indigo],
+                         assets = [indigo, "assets/extra_styles.css"],
                          repolink = "https://github.com/gaurav-arya/StochasticAD.jl",
                          edit_link = "main")
 

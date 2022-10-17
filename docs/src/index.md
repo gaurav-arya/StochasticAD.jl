@@ -1,9 +1,12 @@
-![](images/path_skeleton.png)
+```@raw html
+<img class="display-light-only" src="images/path_skeleton.png">
+<img class="display-dark-only" src="images/path_skeleton_dark.png">
+```
 
 # StochasticAD
 
 [StochasticAD](https://github.com/gaurav-arya/StochasticAD.jl) is an experimental, research package for automatic differentiation (AD) of stochastic programs.
-It implements AD algorithms for handling programs which can contain *discrete* randomness, based on the methodology developed in [TODO: add link].
+It implements AD algorithms for handling programs that can contain *discrete* randomness, based on the methodology developed in [TODO: add link].
 
 ## Introduction
 

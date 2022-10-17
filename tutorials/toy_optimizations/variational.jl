@@ -1,4 +1,4 @@
-# Toy variational problem: Find Poisson(p) close to Binomial(300, 0.1)
+# Toy variational problem: Find Poisson(p) close to NegativeBinomial(10, 1-30/(10+30))
 # by minimization of the Kullback Leibler distance
 cd(@__DIR__)
 using StochasticAD, Distributions, Optimisers
@@ -12,11 +12,11 @@ end
 # Sample the likelihood ratio. E[X(p)] is the Kullback-Leibler distance between the models
 function X(p)
     i = rand(Poisson(p))
-    return logpdf(Poisson(p), i) - logpdf(Binomial(300, 0.1), i)
+    return logpdf(Poisson(p), i) - logpdf(NegativeBinomial(10, 1-30/(10+30)), i)
 end
 
 
-# Minimize E[X] = KL(Poisson(p)| Binomial(300, 0.1)) using Adam and Optimize.jl
+# Minimize E[X] = KL(Poisson(p)| NegativeBinomial(10, 1-30/(10+30))) using Adam and Optimize.jl
 iterations = 5000
 p0 = [10.0]
 m = StochasticAD.StochasticModel(p0, X) # Formulate as minimization problem
@@ -44,7 +44,7 @@ if PLOT
 
     f[1, 2] = Legend(f, ax, framevisible = false)
     ylims!(ax, (-10,10))
-    ax = f[2, 1:2] = Axis(f, title="Adam Trace")
+    ax = f[2, 1:2] = Axis(f, title="Optimizer trace")
     lines!(ax, trace, color=:green, linewidth=2.0)
     save("variational.png", f)
     display(f)

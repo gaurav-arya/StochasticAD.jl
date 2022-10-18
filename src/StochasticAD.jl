@@ -15,6 +15,7 @@ using ChainRulesCore
 using ChainRulesOverloadGeneration
 using ExprTools
 using ForwardDiff
+using Functors
 import ChainRulesCore
 # resolve conflicts while this code exists in both.
 const on_new_rule = ChainRulesOverloadGeneration.on_new_rule

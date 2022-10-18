@@ -1,6 +1,6 @@
 module StochasticAD
 
-### Publc API
+### Public API
 
 export stochastic_triple, derivative_contribution # For working with stochastic triples
 export derivative_estimate # Higher level functions

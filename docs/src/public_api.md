@@ -1,6 +1,6 @@
 # API walkthrough
  
-The function [`derivative_estimate`](@ref) transforms a stochastic program containg discrete randomness into a new program whose average is the derivative of the original.
+The function [`derivative_estimate`](@ref) transforms a stochastic program containing discrete randomness into a new program whose average is the derivative of the original.
 ```@docs
 derivative_estimate
 ```

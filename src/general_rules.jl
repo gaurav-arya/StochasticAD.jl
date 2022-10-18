@@ -165,7 +165,7 @@ on_new_rule(define_triple_overload, frule)
 
 A simple prototype rule for array indexing. Assumes that underlying type of `st` can index into collection C.
 """
-# TODO: support multiple indices, carteisian indices, non abstract array indexables, other use cases...
+# TODO: support multiple indices, cartesian indices, non abstract array indexables, other use cases...
 function Base.getindex(C::AbstractArray, st::StochasticTriple{T}) where {T}
     val = C[st.value]
     function do_map(Δ)

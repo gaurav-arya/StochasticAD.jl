@@ -23,6 +23,7 @@ Distributions = "0.25"
 DistributionsAD = "0.6"
 ExprTools = "0.1"
 ForwardDiff = "0.10"
+Functors = "0.3"
 
 [extras]
 DiffResults = "163ba53b-c6d8-5494-b064-1a9d43ac40c5"

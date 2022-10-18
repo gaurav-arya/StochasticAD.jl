@@ -7,5 +7,4 @@
 [![](https://img.shields.io/badge/docs-main-blue.svg)](https://gaurav-arya.github.io/StochasticAD.jl/dev/)
 [![arXiv article](https://img.shields.io/badge/article-arXiv%3A10.48550-B31B1B)](https://arxiv.org/abs/2210.08572)
 
-
 StochasticAD is an experimental, research package for automatic differentiation (AD) of stochastic programs. It implements AD algorithms for handling programs that can contain *discrete* randomness, based on the methodology developed in [this NeurIPS 2022 paper](https://doi.org/10.48550/arXiv.2210.08572). We're still working on docs and code cleanup!

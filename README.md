@@ -15,5 +15,5 @@ The package is not yet registered, but can be installed with the repo link:
 
 ```julia
 julia> using Pkg;
-julia> Pkg.add("https://github.com/gaurav-arya/StochasticAD.jl");
+julia> Pkg.add(url="https://github.com/gaurav-arya/StochasticAD.jl");
 ```

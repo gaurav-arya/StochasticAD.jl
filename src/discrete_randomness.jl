@@ -53,7 +53,7 @@ function δtoΔps(d::Poisson, val::V, δ::Real, Δs::AbstractFIs) where {V <: Si
     end
 end
 
-### Rules for univariate single-paramter distributions
+### Rules for univariate single-parameter distributions
 
 for (dist, i) in [(:Geometric, :1), (:Bernoulli, :1), (:Binomial, :2), (:Poisson, :1)] # i = index of the parameter p
     @eval function Base.rand(rng::AbstractRNG,
@@ -82,7 +82,8 @@ end
     DiscreteDeltaStochasticTriple{T, V, FIs <: AbstractFIs}
 
 An experimental discrete stochastic triple type used internally for representing perturbations
-to non-real quantities. Currently only used to represent a finite perturbation to the Binomial n.
+to non-real quantities. Currently only used to represent a finite perturbation to the Binomial 
+parameter n.
 
 ## Constructor
 

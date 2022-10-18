@@ -7,7 +7,7 @@ Pkg.develop(path="../../..")
 Pkg.instantiate()
 ```
 
-In this tutorial, we differentiate a random walk over the integers using [StochasticAD](https://github.com/gaurav-arya/StochasticAD.jl). We will need the following packages,
+In this tutorial, we differentiate a random walk over the integers using `StochasticAD`. We will need the following packages,
 
 ```@example random_walk
 using Distributions # defines several supported discrete distributions 
@@ -37,7 +37,7 @@ Let's zoom in on the two lines where discrete randomness is involved.
 step_index = rand(Categorical(probs_here)) # which step do we take?
 step = steps[step_index] # get size of step 
 ```
-This is a cute pattern for making a discrete choice. First, we sample from a `Categorical` distribution from `Distributions.jl`, using the probabilities `probs_X` at our current position. This gives us an index between `1` and `length(steps)`, which we can use to pick the actual step to take. Stochastic triples propagate through both steps!
+This is a cute pattern for making a discrete choice. First, we sample from a `Categorical` distribution from `Distributions.jl`, using the probabilities `probs_here` at our current position. This gives us an index between `1` and `length(steps)`, which we can use to pick the actual step to take. Stochastic triples propagate through both steps!
 
 ## Differentiating the random walk
 

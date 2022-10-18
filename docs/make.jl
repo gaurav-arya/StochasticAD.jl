@@ -14,12 +14,14 @@ format = Documenter.HTML(prettyurls = false,
 ### Pagination
 
 pages = [
-    "Introduction" => "index.md",
+    "Overview" => "index.md",
     "Tutorials" => [
         "tutorials/random_walk.md",
         "tutorials/game_of_life.md",
         "tutorials/particle_filter.md",
     ],
+    "Public API" => "public_api.md",
+    "Limitations" => "limitations.md",
 ]
 
 ### Make docs

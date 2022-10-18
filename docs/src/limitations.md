@@ -7,7 +7,7 @@
 * We do not yet support `if` statements with discrete random input. A workaround can be to use array indexing to express discrete random choices (see [the random walk tutorial](tutorials/random_walk.md) for an example).
 * We do not yet support non-real values as intermediate values (e.g. a function such as `length(A[rand(Bernoulli(p))])` where `A` is an array of strings is in theory differentiable).
 * We do not support discrete random variables that are implicitly implemented using continuous random variables, e.g. `rand() < p`.
-* We support a limited assortment of discrete random variables: currently `Bernoulli`, `Binomial`, `Geometric`, `Poisson`, and `Categorical` from `Distributions.jl`. We are working on increasing coverage across `Distributions.jl` as well as other libraries providing discrete random samplers such as `MeasureTheory.jl`.
+* We support a limited assortment of discrete random variables: currently `Bernoulli`, `Binomial`, `Geometric`, `Poisson`, and `Categorical` from [Distributions](https://juliastats.org/Distributions.jl/). We are working on increasing coverage across `Distributions` as well as other libraries providing discrete random samplers such as [MeasureTheory](https://cscherrer.github.io/MeasureTheory.jl/stable/).
 * Higher-order differentiation is not supported.
 
 `StochasticAD` is still in active development! PRs are welcome.

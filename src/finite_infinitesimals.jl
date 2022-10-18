@@ -2,7 +2,7 @@
 """
     AbstractFIs{V}
 
-An abstract type for backend representations of Finite pertubations that occur with Infinitesimal probability (FIs).
+An abstract type for backend representations of Finite perturbations that occur with Infinitesimal probability (FIs).
 """
 abstract type AbstractFIs{V} end
 

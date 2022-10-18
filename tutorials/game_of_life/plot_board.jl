@@ -20,4 +20,4 @@ gif(anim2, "perturbation.gif", fps = 15)
 fig1 = heatmap(collect(StochasticAD.value.(board)), clim = (-1, 1), c = :grays)
 fig2 = heatmap(collect(derivative_contribution.(board)), clim = (-1, 1), c = :grays) # TODO: graph perturbed values instead of derivative contribution
 savefig(fig1, "board.png")
-savefig(fig2, "pertubation.png")
+savefig(fig2, "perturbation.png")

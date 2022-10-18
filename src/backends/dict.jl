@@ -30,7 +30,7 @@ Base.:isless(event1::InfinitesimalEvent, event2::InfinitesimalEvent) = event1 < 
 """
     DictFIs{V} <: StochasticAD.AbstractFIs{V}
 
-A dictionary backend which keeps entries for each perturbation that has occured without pruning. 
+A dictionary backend which keeps entries for each perturbation that has occurred without pruning. 
 Currently very unoptimized.
 """
 struct DictFIs{V} <: StochasticAD.AbstractFIs{V}

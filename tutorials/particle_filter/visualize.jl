@@ -7,7 +7,7 @@ using Plots, LaTeXStrings
 ### run and visualize filters
 Xs, W = particle_filter(θtrue; store_path = true)
 fig = plot(getindex.(xs, 1), getindex.(xs, 2), legend = false, xlabel = L"x_1",
-           ylabel = L"x_2") # x1 and x2 are bad names..conflictng notation
+           ylabel = L"x_2") # x1 and x2 are bad names..conflicting notation
 scatter!(fig, getindex.(ys, 1), getindex.(ys, 2))
 for i in 1:min(m, 100) # note that Xs has obs noise.
     local xs = [Xs[t][i] for t in 1:T]

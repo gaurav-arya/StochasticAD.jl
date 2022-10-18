@@ -6,7 +6,7 @@
 # StochasticAD
 
 [StochasticAD](https://github.com/gaurav-arya/StochasticAD.jl) is an experimental, research package for automatic differentiation (AD) of stochastic programs.
-It implements AD algorithms for handling programs that can contain *discrete* randomness, based on the methodology developed in [TODO: add link].
+It implements AD algorithms for handling programs that can contain *discrete* randomness, based on the methodology developed in [this NeurIPS 2022 paper](https://doi.org/10.48550/arXiv.2210.08572).
 
 ## Introduction
 

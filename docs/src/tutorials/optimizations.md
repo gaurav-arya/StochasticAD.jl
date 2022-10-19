@@ -85,7 +85,7 @@ end
 ```
 We can now optimize the KL divergence via stochastic gradient descent!
 ```@example optimizations
-iterations = 5000
+iterations = 1000
 p0 = [10.0]
 m = StochasticAD.StochasticModel(p0, X) # Formulate as minimization problem
 trace = Float64[]

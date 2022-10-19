@@ -14,5 +14,13 @@ StochasticAD.perturbations
 ```
 Note that [`derivative_estimate`](@ref) is simply the composition of [`stochastic_triple`](@ref) and [`derivative_contribution`](@ref). 
 
-What happens if we run [`derivative_contribution`](@ref) after each step, instead of only at the end? This is *smoothing*, which combines the second and third components of a single stochastic triple into a single dual component. Smoothing no longer has a guarantee of unbiasedness, but is surprisingly accurate in a number of situations. [*Smoothing functionality coming soon.*]
+What happens if we run [`derivative_contribution`](@ref) after each step, instead of only at the end? This is *smoothing*, which combines the second and third components of a single stochastic triple into a single dual component. Smoothing no longer has a guarantee of unbiasedness, but is surprisingly accurate in a number of situations. 
 
+[*Smoothing functionality coming soon.*]
+
+We also provide a couple utilities to make it easier to get started with forming and training a model via stochastic gradient descent:
+```@docs
+StochasticAD.StochasticModel
+StochasticAD.stochastic_gradient
+```
+These are used in the [stochastic optimizations tutorial](`tutorials/optimizations.md`).

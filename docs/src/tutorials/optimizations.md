@@ -27,7 +27,7 @@ function X(p)
 end
 ```
 
-Let's maximize $\mathbb{E}[X(p)]$! First, let's setup the problem:
+Let's maximize $\mathbb{E}[X(p)]$! First, let's setup the problem, using the [`StochasticModel`](@ref)helper utility to create a trainable model:
 ```@example optimizations
 p0 = [0.5] # initial value of p
 m = StochasticAD.StochasticModel(p0, x -> -X(x)) # Formulate as minimization problem

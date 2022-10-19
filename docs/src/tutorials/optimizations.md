@@ -56,7 +56,7 @@ derivative = [mean(derivative_estimate(X, p) for _ in 1:N) for p in ps]
 
 ## Make plots
 f = Figure()
-ax = f[1, 1] = Axis(f, title = "Estimates")
+ax = f[1, 1] = Axis(f, title = "Estimates", xlabel="Value of p")
 lines!(ax, ps, avg, label = "≈ E[X(p)]")
 lines!(ax, ps, derivative, label = "≈ d/dp E[X(p)]")
 vlines!(ax, [p_opt], label = "p_opt", color = :green, linewidth = 2.0)
@@ -64,9 +64,9 @@ hlines!(ax, [0.0], color = :black, linewidth = 1.0)
 
 f[1, 2] = Legend(f, ax, framevisible = false)
 ylims!(ax, (-50, 80))
-ax = f[2, 1:2] = Axis(f, title = "Optimizer trace")
+ax = f[2, 1:2] = Axis(f, title = "Optimizer trace", xlabel="Iterations", ylabel="Value of p")
 lines!(ax, trace, color = :green, linewidth = 2.0)
-save("crazy_opt.png", f)
+save("crazy_opt.png", f,  px_per_unit = 4)
 ```
 ![](crazy_opt.png)
 
@@ -74,7 +74,7 @@ save("crazy_opt.png", f)
 
 Let's consider a toy variational program: we find a[Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution) that is close to that of a [negative Binomial](https://en.wikipedia.org/wiki/Negative_binomial_distribution), via minimization of the [Kullback-Leibler divergence](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence) $D_{\mathrm{KL}}$. Concretly, let us solve
 ```math
-\mathrm{argmin}_{p \in \mathbb{R}} D_{\mathrm{KL}}\left(\mathrm{Pois}(p) \middle\| \mathrm{NB}(10, 0.25) \right).
+\underset{p \in \mathbb{R}}{\operatorname{argmin}} D_{\mathrm{KL}}\left(\mathrm{Pois}(p) \middle\| \mathrm{NB}(10, 0.25) \right).
 ```
 The following program produces an unbiased estimate of the objective:
 ```@example optimizations
@@ -104,7 +104,7 @@ N = 1000
 avg = [mean(X(p) for _ in 1:N) for p in ps]
 derivative = [mean(derivative_estimate(X, p) for _ in 1:N) for p in ps]
 f = Figure()
-ax = f[1, 1] = Axis(f, title = "Estimates")
+ax = f[1, 1] = Axis(f, title = "Estimates", xlabel="Value of p")
 lines!(ax, ps, avg, label = "≈ E[X(p)]")
 lines!(ax, ps, derivative, label = "≈ d/dp E[X(p)]")
 vlines!(ax, [p_opt], label = "p_opt", color = :green, linewidth = 2.0)
@@ -112,8 +112,8 @@ hlines!(ax, [0.0], color = :black, linewidth = 1.0)
 
 f[1, 2] = Legend(f, ax, framevisible = false)
 ylims!(ax, (-10, 10))
-ax = f[2, 1:2] = Axis(f, title = "Optimizer trace")
+ax = f[2, 1:2] = Axis(f, title = "Optimizer trace", ylabel="Value of p", xlabel="Iterations")
 lines!(ax, trace, color = :green, linewidth = 2.0)
-save("variational.png", f)
+save("variational.png", f, px_per_unit = 4)
 ```
 ![](variational.png)

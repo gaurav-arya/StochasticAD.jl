@@ -33,7 +33,7 @@ import Random # hide
 Random.seed!(1234) # hide
 
 function X(p)
-    a = p*(1-p) 
+    a = p * (1 - p)
     b = rand(Binomial(10, p))
     c = 2 * b + 3 * rand(Bernoulli(p))
     return a * c * rand(Normal(b, a))
@@ -50,5 +50,5 @@ println("derivative of 𝔼[X(p)] = $derivative ± $uncertainty")
 
 ## Index
 
-See the [public API](public_api.md) for a walkthrough of the API, and the tutorials on differentiating a [random walk](tutorials/random_walk.md), a [stochastic game of life](tutorials/game_of_life.md), and a [particle filter](tutorials/particle_filter.md). This is a prototype package with a number of [limitations](limitations.md).
+See the [public API](public_api.md) for a walkthrough of the API, and the tutorials on differentiating a [random walk](tutorials/random_walk.md), a [stochastic game of life](tutorials/game_of_life.md), and a [particle filter](tutorials/particle_filter.md), and solving [stochastic optimization and variational inference problems](tutorials/optimizations.md) with discreteness. This is a prototype package with a number of [limitations](limitations.md).
 

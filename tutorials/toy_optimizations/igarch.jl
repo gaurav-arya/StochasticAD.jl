@@ -11,7 +11,7 @@ end
 
 # Poisson autoregression model accumulating a likelihood for starting λ
 function igarch(a, b, c, n, λ) # todo: this should be a Turing/Tilde model
-    ℓ = logpdf(Exponential(1.0), λ)
+    ℓ = logpdf(Exponential(100.0), λ)
     z = rand(Poisson(λ))
     ℓ += logpdf(Poisson(λ), z)
     λ = a + b * z + c * λ
@@ -26,18 +26,19 @@ end
 λ0 = 5.42 # true starting value
 
 ## Generate observations
-#n = 10
-#_, _, z_obs = igarch(a,b,c,n,λ0) # 140 in first run
+n = 10
+a, b, c = [0.25, 0.9, 0.51]
+_, _, z_obs = igarch(a,b,c,n,λ0) # 140 in first run
 
 # Likelihood of parameter p=λ0 given z_obs=140 (assume we don't know)
 function X(p, z_obs = 140, n = 10)
     a, b, c = [0.25, 0.9, 0.51]
-    ℓ, λ, _ = igarch(a, b, c, n, p)
-    logpdf(Poisson(λ), z_obs)
+    ℓ, λ, _ = igarch(a, b, c, n-1, p)
+    ℓ + logpdf(Poisson(λ), z_obs)
 end
 
 # Maximize likelihood Adam and Optimize
-p0 = [0.5]
+p0 = [20.5]
 iterations = 5000
 m = StochasticAD.StochasticModel(p0, x -> -X(x)) # Formulate as minimization problem
 trace = Float64[]
@@ -68,7 +69,7 @@ if PLOT
     ax = f[2, 1:2] = Axis(f, title = "Optimizer trace")
     lines!(ax, trace, color = :green, linewidth = 2.0)
     hlines!(ax, [λ0], linestyle = :dot, linewidth = 2.0)
-    ylims!(ax, (0, 7))
+    ylims!(ax, (0, 20))
     save("igarch.png", f)
     display(f)
 end

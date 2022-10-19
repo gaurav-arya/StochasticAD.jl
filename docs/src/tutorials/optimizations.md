@@ -66,7 +66,7 @@ f[1, 2] = Legend(f, ax, framevisible = false)
 ylims!(ax, (-50, 80))
 ax = f[2, 1:2] = Axis(f, title = "Optimizer trace", xlabel="Iterations", ylabel="Value of p")
 lines!(ax, trace, color = :green, linewidth = 2.0)
-save("crazy_opt.png", f,  px_per_unit = 4)
+save("crazy_opt.png", f,  px_per_unit = 4) # hide
 ```
 ![](crazy_opt.png)
 
@@ -114,6 +114,6 @@ f[1, 2] = Legend(f, ax, framevisible = false)
 ylims!(ax, (-10, 10))
 ax = f[2, 1:2] = Axis(f, title = "Optimizer trace", ylabel="Value of p", xlabel="Iterations")
 lines!(ax, trace, color = :green, linewidth = 2.0)
-save("variational.png", f, px_per_unit = 4)
+save("variational.png", f, px_per_unit = 4) # hide
 ```
 ![](variational.png)

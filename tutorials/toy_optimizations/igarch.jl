@@ -11,16 +11,13 @@ end
 
 # Poisson autoregression model accumulating a likelihood for starting λ
 function igarch(a, b, c, n, λ) # todo: this should be a Turing/Tilde model
-    ℓ = logpdf(Exponential(100.0), λ)
     z = rand(Poisson(λ))
-    ℓ += logpdf(Poisson(λ), z)
     λ = a + b * z + c * λ
     for i in 2:n
         z = rand(Poisson(λ))
-        ℓ += logpdf(Poisson(λ), z)
         λ = a + b * z + c * λ
     end
-    return ℓ, λ, z
+    return λ, z
 end
 
 λ0 = 5.42 # true starting value
@@ -28,13 +25,13 @@ end
 ## Generate observations
 n = 10
 a, b, c = [0.25, 0.9, 0.51]
-_, _, z_obs = igarch(a, b, c, n, λ0) # 140 in first run
+_, z_obs = igarch(a, b, c, n, λ0) # 140 in first run
 
-# Likelihood of parameter p=λ0 given z_obs=140 (assume we don't know)
+# Posterior Likelihood of parameter p=λ0 given z_obs=140 (assume we don't know)
 function X(p, z_obs = 140, n = 10)
     a, b, c = [0.25, 0.9, 0.51]
-    ℓ, λ, _ = igarch(a, b, c, n - 1, p)
-    ℓ + logpdf(Poisson(λ), z_obs)
+    λ, _ = igarch(a, b, c, n - 1, p) 
+    logpdf(Exponential(100.0), λ)  + logpdf(Poisson(λ), z_obs) ## prior + likelihood
 end
 
 # Maximize likelihood Adam and Optimize

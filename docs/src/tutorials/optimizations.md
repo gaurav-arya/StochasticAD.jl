@@ -7,7 +7,7 @@ Pkg.develop(path="../../..")
 Pkg.instantiate()
 ```
 
-In this tutorial, we solve two stochastic optimization problems using `StochasticAD` where the objective contains discrete randomness. We will need the following packages:
+In this tutorial, we solve two stochastic optimization problems using `StochasticAD` where the optimization objective is formed using discrete distributions. We will need the following packages:
 ```@example optimizations
 using Distributions # defines several supported discrete distributions 
 using StochasticAD
@@ -85,6 +85,7 @@ end
 ```
 We can now optimize the KL-divergence via stochastic gradient descent!
 ```@example optimizations
+# Minimize E[X] = KL(Poisson(p)| NegativeBinomial(10, 0.25))
 iterations = 1000
 p0 = [10.0]
 m = StochasticAD.StochasticModel(p0, X) # Formulate as minimization problem
@@ -109,6 +110,7 @@ lines!(ax, ps, avg, label = "≈ E[X(p)]")
 lines!(ax, ps, derivative, label = "≈ d/dp E[X(p)]")
 vlines!(ax, [p_opt], label = "p_opt", color = :green, linewidth = 2.0)
 hlines!(ax, [0.0], color = :black, linewidth = 1.0)
+ylims!(ax, -2.5, 5)
 
 f[1, 2] = Legend(f, ax, framevisible = false)
 ylims!(ax, (-10, 10))

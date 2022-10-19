@@ -28,12 +28,12 @@ end
 ## Generate observations
 n = 10
 a, b, c = [0.25, 0.9, 0.51]
-_, _, z_obs = igarch(a,b,c,n,λ0) # 140 in first run
+_, _, z_obs = igarch(a, b, c, n, λ0) # 140 in first run
 
 # Likelihood of parameter p=λ0 given z_obs=140 (assume we don't know)
 function X(p, z_obs = 140, n = 10)
     a, b, c = [0.25, 0.9, 0.51]
-    ℓ, λ, _ = igarch(a, b, c, n-1, p)
+    ℓ, λ, _ = igarch(a, b, c, n - 1, p)
     ℓ + logpdf(Poisson(λ), z_obs)
 end
 

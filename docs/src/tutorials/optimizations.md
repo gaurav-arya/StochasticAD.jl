@@ -1,4 +1,4 @@
-# Stochastic optimization with discreteness
+# Stochastic optimizations with discrete randomness
 
 ```@setup random_walk
 import Pkg
@@ -30,18 +30,17 @@ end
 Let's maximize $\mathbb{E}[X(p)]$! First, let's setup the problem, using the [`StochasticModel`](@ref) helper utility to create a trainable model:
 ```@example optimizations
 p0 = [0.5] # initial value of p
-m = StochasticAD.StochasticModel(p0, x -> -X(x)) # formulate as minimization problem
+m = StochasticModel(p0, x -> -X(x)) # formulate as minimization problem
 ```
-Now, let's perform stochastic gradient descent using [Adam](https://arxiv.org/abs/1412.6980).
+Now, let's perform stochastic gradient descent using [Adam](https://arxiv.org/abs/1412.6980), using [`stochastic_gradient`](@ref) to obtain a gradient of the model.
 ```@example optimizations
-# Minimize E[X] = KL(Poisson(p)| NegativeBinomial(10, 1-30/(10+30)))
 iterations = 1000
 trace = Float64[]
 o = Adam() # use Adam for optimization
 s = Optimisers.setup(o, m)
 for i in 1:iterations
     # Perform a gradient step
-    Optimisers.update!(s, m, StochasticAD.stochastic_gradient(m))
+    Optimisers.update!(s, m, stochastic_gradient(m))
     push!(trace, m.p[])
 end
 p_opt = m.p[] # Our optimized value of p
@@ -61,12 +60,13 @@ lines!(ax, ps, avg, label = "≈ E[X(p)]")
 lines!(ax, ps, derivative, label = "≈ d/dp E[X(p)]")
 vlines!(ax, [p_opt], label = "p_opt", color = :green, linewidth = 2.0)
 hlines!(ax, [0.0], color = :black, linewidth = 1.0)
+ylims!(ax, (-50, 80))
 
 f[1, 2] = Legend(f, ax, framevisible = false)
-ylims!(ax, (-50, 80))
 ax = f[2, 1:2] = Axis(f, title = "Optimizer trace", xlabel="Iterations", ylabel="Value of p")
 lines!(ax, trace, color = :green, linewidth = 2.0)
 save("crazy_opt.png", f,  px_per_unit = 4) # hide
+nothing # hide
 ```
 ![](crazy_opt.png)
 
@@ -88,12 +88,12 @@ We can now optimize the KL-divergence via stochastic gradient descent!
 # Minimize E[X] = KL(Poisson(p)| NegativeBinomial(10, 0.25))
 iterations = 1000
 p0 = [10.0]
-m = StochasticAD.StochasticModel(p0, X) # Formulate as minimization problem
+m = StochasticModel(p0, X) # Formulate as minimization problem
 trace = Float64[]
 o = Adam(0.1)
 s = Optimisers.setup(o, m)
 for i in 1:iterations
-    Optimisers.update!(s, m, StochasticAD.stochastic_gradient(m))
+    Optimisers.update!(s, m, stochastic_gradient(m))
     push!(trace, m.p[])
 end
 p_opt = m.p[]
@@ -110,12 +110,12 @@ lines!(ax, ps, avg, label = "≈ E[X(p)]")
 lines!(ax, ps, derivative, label = "≈ d/dp E[X(p)]")
 vlines!(ax, [p_opt], label = "p_opt", color = :green, linewidth = 2.0)
 hlines!(ax, [0.0], color = :black, linewidth = 1.0)
-ylims!(ax, -2.5, 5)
+ylims!(ax, (-2.5, 5))
 
 f[1, 2] = Legend(f, ax, framevisible = false)
-ylims!(ax, (-10, 10))
 ax = f[2, 1:2] = Axis(f, title = "Optimizer trace", ylabel="Value of p", xlabel="Iterations")
 lines!(ax, trace, color = :green, linewidth = 2.0)
 save("variational.png", f, px_per_unit = 4) # hide
+nothing # hide
 ```
 ![](variational.png)

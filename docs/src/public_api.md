@@ -23,4 +23,4 @@ We also provide a couple utilities to make it easier to get started with forming
 StochasticAD.StochasticModel
 StochasticAD.stochastic_gradient
 ```
-These are used in the [stochastic optimizations tutorial](`tutorials/optimizations.md`).
+These are used in the [tutorial on stochastic optimization](`tutorials/optimizations.md`).

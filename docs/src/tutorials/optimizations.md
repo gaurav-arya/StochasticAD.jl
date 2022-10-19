@@ -11,7 +11,7 @@ In this tutorial, we solve two stochastic optimization problems using `Stochasti
 ```@example optimizations
 using Distributions # defines several supported discrete distributions 
 using StochasticAD
-using GLMakie # for plotting
+using CairoMakie # for plotting
 using Optimisers # for stochastic gradient descent
 ```
 

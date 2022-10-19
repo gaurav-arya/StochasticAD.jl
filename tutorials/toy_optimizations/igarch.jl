@@ -6,7 +6,7 @@ import Random
 Random.seed!(1234)
 PLOT = true
 if PLOT
-    using GLMakie
+    using CairoMakie
 end
 
 # Poisson autoregression model accumulating a likelihood for starting λ

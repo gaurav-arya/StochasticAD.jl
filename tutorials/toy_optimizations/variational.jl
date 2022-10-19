@@ -6,7 +6,7 @@ import Random # hide
 Random.seed!(1234) # hide
 PLOT = true
 if PLOT
-    using GLMakie
+    using CairoMakie
 end
 
 # Sample the likelihood ratio. E[X(p)] is the Kullback-Leibler distance between the models

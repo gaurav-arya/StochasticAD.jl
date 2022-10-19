@@ -5,7 +5,7 @@ import Random # hide
 Random.seed!(1234) # hide
 PLOT = true
 if PLOT
-    using GLMakie
+    using CairoMakie
 end
 
 # The "crazy" stochastic program from the introduction

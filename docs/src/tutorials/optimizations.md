@@ -27,10 +27,10 @@ function X(p)
 end
 ```
 
-Let's maximize $\mathbb{E}[X(p)]$! First, let's setup the problem, using the [`StochasticModel`](@ref)helper utility to create a trainable model:
+Let's maximize $\mathbb{E}[X(p)]$! First, let's setup the problem, using the [`StochasticModel`](@ref) helper utility to create a trainable model:
 ```@example optimizations
 p0 = [0.5] # initial value of p
-m = StochasticAD.StochasticModel(p0, x -> -X(x)) # Formulate as minimization problem
+m = StochasticAD.StochasticModel(p0, x -> -X(x)) # formulate as minimization problem
 ```
 Now, let's perform stochastic gradient descent using [Adam](https://arxiv.org/abs/1412.6980).
 ```@example optimizations
@@ -72,18 +72,18 @@ save("crazy_opt.png", f,  px_per_unit = 4) # hide
 
 ## Solving a variational problem
 
-Let's consider a toy variational program: we find a[Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution) that is close to that of a [negative Binomial](https://en.wikipedia.org/wiki/Negative_binomial_distribution), via minimization of the [Kullback-Leibler divergence](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence) $D_{\mathrm{KL}}$. Concretly, let us solve
+Let's consider a toy variational program: we find a [Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution) that is close to that of a [negative Binomial](https://en.wikipedia.org/wiki/Negative_binomial_distribution), via minimization of the [Kullback-Leibler divergence](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence) $D_{\mathrm{KL}}$. Concretely, let us solve
 ```math
-\underset{p \in \mathbb{R}}{\operatorname{argmin}} D_{\mathrm{KL}}\left(\mathrm{Pois}(p) \middle\| \mathrm{NB}(10, 0.25) \right).
+\underset{p \in \mathbb{R}}{\operatorname{argmin}}\; D_{\mathrm{KL}}\left(\mathrm{Pois}(p) \middle\| \mathrm{NBin}(10, 0.25) \right).
 ```
 The following program produces an unbiased estimate of the objective:
 ```@example optimizations
 function X(p)
     i = rand(Poisson(p))
-    return logpdf(Poisson(p), i) - logpdf(NegativeBinomial(10, 1 - 30 / (10 + 30)), i)
+    return logpdf(Poisson(p), i) - logpdf(NegativeBinomial(10, 0.25), i)
 end
 ```
-We can now optimize the KL divergence via stochastic gradient descent!
+We can now optimize the KL-divergence via stochastic gradient descent!
 ```@example optimizations
 iterations = 1000
 p0 = [10.0]

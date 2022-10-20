@@ -32,7 +32,7 @@ Let's maximize $\mathbb{E}[X(p)]$! First, let's setup the problem, using the [`S
 p0 = [0.5] # initial value of p
 m = StochasticModel(p0, x -> -X(x)) # formulate as minimization problem
 ```
-Now, let's perform stochastic gradient descent using [Adam](https://arxiv.org/abs/1412.6980), using [`stochastic_gradient`](@ref) to obtain a gradient of the model.
+Now, let's perform stochastic gradient descent using [Adam](https://arxiv.org/abs/1412.6980), where we use [`stochastic_gradient`](@ref) to obtain a gradient of the model.
 ```@example optimizations
 iterations = 1000
 trace = Float64[]
@@ -45,7 +45,7 @@ for i in 1:iterations
 end
 p_opt = m.p[] # Our optimized value of p
 ```
-Finally, let's plot the results of our optimization, and also perform a sweep through the parameter space to verify the accuracy of our estimate:
+Finally, let's plot the results of our optimization, and also perform a sweep through the parameter space to verify the accuracy of our estimator:
 ```@example optimizations
 ## Sweep through parameters to find average and derivative
 ps = 0.02:0.02:0.98 # values of p to sweep
@@ -72,9 +72,9 @@ nothing # hide
 
 ## Solving a variational problem
 
-Let's consider a toy variational program: we find a [Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution) that is close to that of a [negative Binomial](https://en.wikipedia.org/wiki/Negative_binomial_distribution), via minimization of the [Kullback-Leibler divergence](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence) $D_{\mathrm{KL}}$. Concretely, let us solve
+Let's consider a toy variational program: we find a [Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution) that is close to the distribution of a [negative Binomial](https://en.wikipedia.org/wiki/Negative_binomial_distribution), via minimization of the [Kullback-Leibler divergence](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence) $D_{\mathrm{KL}}$. Concretely, let us solve
 ```math
-\underset{p \in \mathbb{R}}{\operatorname{argmin}}\; D_{\mathrm{KL}}\left(\mathrm{Pois}(p) \middle\| \mathrm{NBin}(10, 0.25) \right).
+\underset{p \in \mathbb{R}}{\operatorname{argmin}}\; D_{\mathrm{KL}}\left(\mathrm{Pois}(p) \hspace{.3em}\middle\|\hspace{.3em} \mathrm{NBin}(10, 0.25) \right).
 ```
 The following program produces an unbiased estimate of the objective:
 ```@example optimizations

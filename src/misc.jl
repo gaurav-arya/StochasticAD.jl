@@ -26,8 +26,8 @@ end
     StochasticModel(p, X)
 
 Combine stochastic program `X` with parameter `p` into 
-a trainable model using Functors.jl (formulate as minimization
-problem, i.e. find p that minimizes X(p)).
+a trainable model using [Functors](https://fluxml.ai/Functors.jl/stable/) 
+(formulate as a minimization problem, i.e. find `p`` that minimizes `X(p)`).
 """
 struct StochasticModel{S <: AbstractVector, T}
     p::S

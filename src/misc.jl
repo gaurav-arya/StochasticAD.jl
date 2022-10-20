@@ -22,7 +22,7 @@ function ChainRulesCore.rrule(::typeof(new_weight), p)
     return (one(p), new_weight_pullback)
 end
 
-"""
+@doc raw"""
     StochasticModel(p, X)
 
 Combine stochastic program `X` with parameter `p` into 

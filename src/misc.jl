@@ -27,7 +27,7 @@ end
 
 Combine stochastic program `X` with parameter `p` into 
 a trainable model using [Functors](https://fluxml.ai/Functors.jl/stable/) 
-(formulate as a minimization problem, i.e. find `p`` that minimizes `X(p)`).
+(formulate as a minimization problem, i.e. find ``p`` that minimizes ``\mathbb{E}[X(p)]``).
 """
 struct StochasticModel{S <: AbstractVector, T}
     p::S

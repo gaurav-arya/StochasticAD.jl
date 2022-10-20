@@ -22,7 +22,7 @@ What happens if we run [`derivative_contribution`](@ref) after each step, instea
 
 ## Optimization
 
-We also provide a couple utilities to make it easier to get started with forming and training a model via stochastic gradient descent:
+We also provide utilities to make it easier to get started with forming and training a model via stochastic gradient descent:
 ```@docs
 StochasticAD.StochasticModel
 StochasticAD.stochastic_gradient

@@ -5,7 +5,7 @@ import Random # hide
 Random.seed!(1234) # hide
 PLOT = true
 if PLOT
-    using GLMakie
+    using CairoMakie
 end
 
 # The "crazy" stochastic program from the introduction
@@ -33,13 +33,13 @@ if PLOT
     dp = 1 / 50
     N = 1000
     ps = dp:dp:(1 - dp)
-    expected = [mean(X(p) for _ in 1:N) for p in ps]
-    slope = [mean(derivative_estimate(X, p) for _ in 1:N) for p in ps]
+    avg = [mean(X(p) for _ in 1:N) for p in ps]
+    derivative = [mean(derivative_estimate(X, p) for _ in 1:N) for p in ps]
 
     f = Figure()
     ax = f[1, 1] = Axis(f, title = "Estimates")
-    lines!(ax, ps, expected, label = "≈ E X(p)")
-    lines!(ax, ps, slope, label = "≈ (E X(p))'")
+    lines!(ax, ps, avg, label = "≈ E[X(p)]")
+    lines!(ax, ps, derivative, label = "≈ d/dp E[X(p)]")
     vlines!(ax, [p_opt], label = "p_opt", color = :green, linewidth = 2.0)
     hlines!(ax, [0.0], color = :black, linewidth = 1.0)
 

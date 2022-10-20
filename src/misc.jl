@@ -22,12 +22,12 @@ function ChainRulesCore.rrule(::typeof(new_weight), p)
     return (one(p), new_weight_pullback)
 end
 
-"""
+@doc raw"""
     StochasticModel(p, X)
 
 Combine stochastic program `X` with parameter `p` into 
-a trainable model using Functors.jl (formulate as minimization
-problem).
+a trainable model using [Functors](https://fluxml.ai/Functors.jl/stable/) 
+(formulate as a minimization problem, i.e. find ``p`` that minimizes ``\mathbb{E}[X(p)]``).
 """
 struct StochasticModel{S <: AbstractVector, T}
     p::S

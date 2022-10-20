@@ -6,7 +6,7 @@ import Random # hide
 Random.seed!(1234) # hide
 PLOT = true
 if PLOT
-    using GLMakie
+    using CairoMakie
 end
 
 # Sample the likelihood ratio. E[X(p)] is the Kullback-Leibler distance between the models
@@ -32,12 +32,12 @@ if PLOT
     dp = 1 / 2
     N = 1000
     ps = 10:dp:50
-    expected = [mean(X(p) for _ in 1:N) for p in ps]
-    slope = [mean(derivative_estimate(X, p) for _ in 1:N) for p in ps]
+    avg = [mean(X(p) for _ in 1:N) for p in ps]
+    derivative = [mean(derivative_estimate(X, p) for _ in 1:N) for p in ps]
     f = Figure()
     ax = f[1, 1] = Axis(f, title = "Estimates")
-    lines!(ax, ps, expected, label = "≈ E X(p)")
-    lines!(ax, ps, slope, label = "≈ (E X(p))'")
+    lines!(ax, ps, avg, label = "≈ E[X(p)]")
+    lines!(ax, ps, derivative, label = "≈ d/dp E[X(p)]")
     vlines!(ax, [p_opt], label = "p_opt", color = :green, linewidth = 2.0)
     hlines!(ax, [0.0], color = :black, linewidth = 1.0)
 

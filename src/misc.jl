@@ -27,7 +27,7 @@ end
 
 Combine stochastic program `X` with parameter `p` into 
 a trainable model using Functors.jl (formulate as minimization
-problem, i.e. find p that minimizes X(p)).
+problem, i.e. find p that minimizes the expectation of X(p)).
 """
 struct StochasticModel{S <: AbstractVector, T}
     p::S

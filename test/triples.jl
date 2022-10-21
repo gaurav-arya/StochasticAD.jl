@@ -132,3 +132,14 @@ end end
     exact_array_index2_deriv = ForwardDiff.derivative(array_index2_mean, p)
     @test isapprox(triple_array_index2_deriv, exact_array_index2_deriv, rtol = 5e-2)
 end
+
+@testset "Gradient with deterministic function" begin for backend in backends
+    f(x) = (x[1]*x[2]*sin(x[3])+ exp(x[1]*x[2]))/x[3]
+    x = [1,2,π/2]
+
+    stochastic_ad_grad = [derivative_contribution(f(stochastic_triple_vec(f, x, i; backend = backend))) for i in eachindex(x)]
+    fd_grad = ForwardDiff.gradient(f, x)
+    stochastic_ad_grad ≈ fd_grad
+
+    @test stochastic_ad_grad ≈ fd_grad
+end end

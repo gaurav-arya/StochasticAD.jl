@@ -171,6 +171,9 @@ function Base.getindex(C::AbstractArray, st::StochasticTriple{T}) where {T}
     function do_map(Δ)
         value(C[st.value + Δ]) - value(val)
     end
-    Δs = map(do_map, st.Δs)  # TODO: what if C itself contains stochastic duals with FIs?
+    Δs = map(do_map, st.Δs)
+    if val isa StochasticTriple
+        Δs = combine((Δs, val.Δs))
+    end
     return StochasticTriple{T}(value(val), delta(val), Δs)
 end

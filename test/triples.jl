@@ -108,3 +108,27 @@ end
     end
     @test stochastic_triple(1.0; backend = backend) != 1
 end end
+
+@testset "Array indexing" begin
+    p = 0.3
+    # Test indexing into array of floats with stochastic triple index
+    function array_index(p)
+        arr = [3.5, 5.2, 8.4]
+        index = rand(Categorical([p / 2, p / 2, 1 - p]))
+        return arr[index]
+    end
+    array_index_mean(p) = p / 2 * 3.5 + p / 2 * 5.2 + (1 - p) * 8.4
+    triple_array_index_deriv = mean(derivative_estimate(array_index, p) for i in 1:100000)
+    exact_array_index_deriv = ForwardDiff.derivative(array_index_mean, p)
+    @test isapprox(triple_array_index_deriv, exact_array_index_deriv, rtol = 5e-2)
+    # Test indexing into array of stochastic triples with stochastic triple index
+    function array_index2(p)
+        arr = [3.5 * rand(Bernoulli(p)), 5.2 * rand(Bernoulli(p)), 8.4 * rand(Bernoulli(p))]
+        index = rand(Categorical([p / 2, p / 2, 1 - p]))
+        return arr[index]
+    end
+    array_index2_mean(p) = p / 2 * 3.5p + p / 2 * 5.2p + (1 - p) * 8.4p
+    triple_array_index2_deriv = mean(derivative_estimate(array_index2, p) for i in 1:100000)
+    exact_array_index2_deriv = ForwardDiff.derivative(array_index2_mean, p)
+    @test isapprox(triple_array_index2_deriv, exact_array_index2_deriv, rtol = 5e-2)
+end

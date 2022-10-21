@@ -21,6 +21,10 @@ Each turn, the standard Game of Life applies the following rules to each cell,
 \text{dead and 3 neighbours alive} \to \text{ alive}, \\
 \text{alive and 0, 1, or 4 neighbours alive} \to \text{ dead}.
 ```
+$$
+\text{dead and 3 neighbours alive} \to \text{ alive}, \\
+\text{alive and 0, 1, or 4 neighbours alive} \to \text{ dead}.
+$$
 The cell's status does not change otherwise. In our stochastic version, these rules instead occur with probability `1-θ`, while the opposite event has probability `θ`. To initialize the board at the beginning of the game, we randomly set each cell alive with probability `p`. 
 
 The following high level function sets up the probabilities and provides them to `play_game_of_life`.

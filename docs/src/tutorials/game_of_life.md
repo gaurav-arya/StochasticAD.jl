@@ -17,10 +17,6 @@ using StaticArrays
 ## Setting up the stochastic Game of Life
 
 Each turn, the standard Game of Life applies the following rules to each cell,
-```math
-\text{dead and 3 neighbours alive} \to \text{ alive}, \\
-\text{alive and 0, 1, or 4 neighbours alive} \to \text{ dead}.
-```
 $$
 \text{dead and 3 neighbours alive} \to \text{ alive}, \\
 \text{alive and 0, 1, or 4 neighbours alive} \to \text{ dead}.

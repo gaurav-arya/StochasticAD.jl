@@ -164,18 +164,14 @@ end
 
 """
     stochastic_triple_vec(f, p::AbstractVector, ix; kwargs...)
-    stochastic_triple(p::AbstractVector, ix; kwargs...)
 
 Generate a vector of stochastic_triple objects, where the element of `p` indexed at `ix` has 
 `δ` set to 1, and `δ` at all other elements is zero. This is useful for finding the components
 (partial derivatives) of the gradient of the function `f` at `p`.
-When `f` is  not provided, the identity function is used, i.e. the vector of triples `p + ε` is returned.
 """
 function stochastic_triple_vec(f, p::AbstractVector, ix; backend = PrunedFIs)
     [i == ix ? stochastic_triple_1(f, p[i], backend) : stochastic_triple_0(f, p[i], backend) for i in eachindex(p)]
 end
-
-stochastic_triple_vec(p::AbstractVector, ix; kwargs...) = stochastic_triple_vec(x -> x, p, ix; kwargs...)
 
 @doc raw"""
     derivative_estimate(X, p::Real; backend=StochasticAD.PrunedFIs)

@@ -4,23 +4,21 @@ using StochasticAD, Distributions
 using Optimisers
 import Random
 Random.seed!(1234)
+Random.seed!(StochasticAD.RNG, 1234)
 PLOT = true
 if PLOT
     using CairoMakie
 end
 
-# Poisson autoregression model accumulating a likelihood for starting λ
-function igarch(a, b, c, n, λ) # todo: this should be a Turing/Tilde model
-    ℓ = logpdf(Exponential(100.0), λ)
+# Poisson autoregression model, returning end value after `n` iterations
+function igarch(a, b, c, n, λ)
     z = rand(Poisson(λ))
-    ℓ += logpdf(Poisson(λ), z)
     λ = a + b * z + c * λ
     for i in 2:n
         z = rand(Poisson(λ))
-        ℓ += logpdf(Poisson(λ), z)
         λ = a + b * z + c * λ
     end
-    return ℓ, λ, z
+    return λ, z
 end
 
 λ0 = 5.42 # true starting value
@@ -28,21 +26,21 @@ end
 ## Generate observations
 n = 10
 a, b, c = [0.25, 0.9, 0.51]
-_, _, z_obs = igarch(a, b, c, n, λ0) # 140 in first run
+_, z_obs = igarch(a, b, c, n, λ0) # 140 in first run
 
-# Likelihood of parameter p=λ0 given z_obs=140 (assume we don't know)
+# Posterior density estimate of parameter p=λ0 given z_obs=140 (assume we don't know)
 function X(p, z_obs = 140, n = 10)
     a, b, c = [0.25, 0.9, 0.51]
-    ℓ, λ, _ = igarch(a, b, c, n - 1, p)
-    ℓ + logpdf(Poisson(λ), z_obs)
+    λ, _ = igarch(a, b, c, n - 1, p)
+    pdf(Exponential(100.0), λ)*pdf(Poisson(λ), z_obs)
 end
 
-# Maximize likelihood Adam and Optimize
+# Maximize posterior with Adam and Optimize
 p0 = [20.5]
 iterations = 5000
 m = StochasticAD.StochasticModel(p0, x -> -X(x)) # Formulate as minimization problem
 trace = Float64[]
-o = Adam(0.02)
+o = Adam(0.1)
 s = Optimisers.setup(o, m)
 for i in 1:iterations
     Optimisers.update!(s, m, StochasticAD.stochastic_gradient(m))

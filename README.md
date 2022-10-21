@@ -11,9 +11,9 @@ StochasticAD is an experimental, research package for automatic differentiation 
 
 ## Installation
 
-The package is not yet registered, but can be installed with the repo link:
+The package can be installed with the Julia package manager:
 
 ```julia
 julia> using Pkg;
-julia> Pkg.add(url="https://github.com/gaurav-arya/StochasticAD.jl");
+julia> Pkg.add("StochasticAD");
 ```

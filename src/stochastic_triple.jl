@@ -150,14 +150,14 @@ function stochastic_triple(f, p::V; backend = PrunedFIs) where {V}
     st = StochasticTriple{Tag{typeof(f), V}}(p, one(p), backend)
     out_st = f(st)
     out_st
-end 
+end
 
 stochastic_triple(p::Real; kwargs...) = stochastic_triple(x -> x, p; kwargs...)
 
 function stochastic_triple_1(f, p::V, backend) where {V}
     StochasticTriple{Tag{typeof(f), V}}(p, one(p), backend)
 end
-  
+
 function stochastic_triple_0(f, p::V, backend) where {V}
     StochasticTriple{Tag{typeof(f), V}}(p, zero(p), backend)
 end
@@ -170,7 +170,8 @@ Generate a vector of stochastic_triple objects, where the element of `p` indexed
 (partial derivatives) of the gradient of the function `f` at `p`.
 """
 function stochastic_triple_vec(f, p::AbstractVector, ix; backend = PrunedFIs)
-    [i == ix ? stochastic_triple_1(f, p[i], backend) : stochastic_triple_0(f, p[i], backend) for i in eachindex(p)]
+    [i == ix ? stochastic_triple_1(f, p[i], backend) :
+     stochastic_triple_0(f, p[i], backend) for i in eachindex(p)]
 end
 
 @doc raw"""

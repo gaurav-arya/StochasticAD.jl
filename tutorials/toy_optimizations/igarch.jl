@@ -32,7 +32,7 @@ _, z_obs = igarch(a, b, c, n, λ0) # 140 in first run
 function X(p, z_obs = 140, n = 10)
     a, b, c = [0.25, 0.9, 0.51]
     λ, _ = igarch(a, b, c, n - 1, p)
-    pdf(Exponential(100.0), λ)*pdf(Poisson(λ), z_obs)
+    pdf(Exponential(100.0), λ) * pdf(Poisson(λ), z_obs)
 end
 
 # Maximize posterior with Adam and Optimize

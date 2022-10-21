@@ -152,6 +152,22 @@ function stochastic_triple(f, p::V; backend = PrunedFIs) where {V}
     out_st
 end
 
+
+
+function stochastic_triple_1(f, p::V, backend) where {V}
+    StochasticTriple{Tag{typeof(f), V}}(p, one(p), backend)
+end
+  
+function stochastic_triple_0(f, p::V, backend) where {V}
+    StochasticTriple{Tag{typeof(f), V}}(p, zero(p), backend)
+end
+
+# ix: which index to set "d/dx" term to 1
+function stochastic_triple_vec(f, p::AbstractVector, ix; backend = PrunedFIs)
+    [i == ix ? stochastic_triple_1(f, p[i], backend) : stochastic_triple_0(f, p[i], backend) for i in eachindex(p)]
+end
+  
+
 stochastic_triple(p::Real; kwargs...) = stochastic_triple(x -> x, p; kwargs...)
 
 @doc raw"""

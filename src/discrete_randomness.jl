@@ -137,7 +137,7 @@ end
 function δtoΔs(d::Categorical, val::V, δs, Δs::AbstractFIs) where {V <: Signed}
     p = params(d)[1]
     left_sum = sum(δs[1:(val - 1)], init = zero(V))
-    right_sum = left_sum + δs[val]
+    right_sum = -sum(δs[(val + 1):end], init = zero(V))
 
     if left_sum > 0
         stop = rand() * left_sum

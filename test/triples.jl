@@ -22,7 +22,8 @@ const backends = [
         Geometric,
         Poisson,
         (p -> Categorical([p^2, 1 - p^2])),
-        (p -> Categorical([0, p^2, 0, 0, 1 - p^2])), # To check that 0's are skipped over
+        (p -> Categorical([0, p^2, 0, 0, 1 - p^2])), # check that 0's are skipped over
+        (p -> Categorical([0.1, exp(p)] ./ (0.1 + exp(p)))), # test fix for #38 (floating point comparisons in Categorical logic)
         (p -> Binomial(3, p)),
         (p -> Binomial(20, p)),
     ]

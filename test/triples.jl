@@ -150,4 +150,10 @@ end
     x_off = OffsetArray([1, 2, π / 2], 0:2)
     stochastic_ad_grad_off = derivative_estimate(f_off, x_off)
     @test stochastic_ad_grad_off ≈ OffsetArray(stochastic_ad_grad, 0:2)
+
+    # Test StochasticModel + stochastic_gradient combination
+    m = StochasticModel(x, f)
+    @test stochastic_gradient(m).p ≈ stochastic_ad_grad
+    m_unary = StochasticModel(x[1], p -> f([p, x[2], x[3]]))
+    @test stochastic_gradient(m_unary).p ≈ stochastic_ad_grad[1]
 end

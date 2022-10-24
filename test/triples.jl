@@ -154,6 +154,4 @@ end
     # Test StochasticModel + stochastic_gradient combination
     m = StochasticModel(x, f)
     @test stochastic_gradient(m).p ≈ stochastic_ad_grad
-    m_unary = StochasticModel(x[1], p -> f([p, x[2], x[3]]))
-    @test stochastic_gradient(m_unary).p ≈ stochastic_ad_grad[1]
 end

@@ -30,7 +30,7 @@ end
 Let's maximize $\mathbb{E}[X(p)]$! First, let's setup the problem, using the [`StochasticModel`](@ref) helper utility to create a trainable model:
 ```@example optimizations
 p0 = [0.5] # initial value of p
-m = StochasticModel(p0, x -> -X(x)) # formulate as minimization problem
+m = StochasticModel(p0, x -> -X(x[1])) # formulate as minimization problem
 ```
 Now, let's perform stochastic gradient descent using [Adam](https://arxiv.org/abs/1412.6980), where we use [`stochastic_gradient`](@ref) to obtain a gradient of the model.
 ```@example optimizations
@@ -88,7 +88,7 @@ We can now optimize the KL-divergence via stochastic gradient descent!
 # Minimize E[X] = KL(Poisson(p)| NegativeBinomial(10, 0.25))
 iterations = 1000
 p0 = [10.0]
-m = StochasticModel(p0, X) # Formulate as minimization problem
+m = StochasticModel(p0, x -> X(x[1]))
 trace = Float64[]
 o = Adam(0.1)
 s = Optimisers.setup(o, m)

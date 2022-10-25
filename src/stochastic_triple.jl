@@ -145,7 +145,7 @@ end
 
 If `p <: Real`, return the result of propagating the stochastic triple `p + ε` through the random function `X(p)`.
 If `p <: AbstractVector`, return a vector of stochastic triples of the same shape as `p`, containing the stochastic
-triples that result from perturbing the corresponding array elements.
+triples that result from perturbing the corresponding array elements of `p` one-by-one.
 When `X` is not provided, the identity function is used.
 """
 function stochastic_triple(f, p::V; backend = PrunedFIs) where {V <: Real}

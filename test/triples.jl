@@ -2,6 +2,7 @@ using StochasticAD
 using Test
 using Distributions
 using ForwardDiff
+using OffsetArrays
 
 const backends = [
     StochasticAD.PrunedFIs,
@@ -132,4 +133,26 @@ end end
     triple_array_index2_deriv = mean(derivative_estimate(array_index2, p) for i in 1:100000)
     exact_array_index2_deriv = ForwardDiff.derivative(array_index2_mean, p)
     @test isapprox(triple_array_index2_deriv, exact_array_index2_deriv, rtol = 5e-2)
+end
+
+@testset "Array inputs to higher level functions" begin
+    # Try a deterministic test function to compare to ForwardDiff
+    f(x) = (x[1] * x[2] * sin(x[3]) + exp(x[1] * x[2])) / x[3]
+    x = [1, 2, π / 2]
+
+    stochastic_ad_grad = derivative_estimate(f, x)
+    stochastic_ad_grad2 = derivative_contribution.(stochastic_triple(f, x))
+    fd_grad = ForwardDiff.gradient(f, x)
+    @test stochastic_ad_grad ≈ fd_grad
+    @test stochastic_ad_grad ≈ stochastic_ad_grad2
+
+    # Try an OffsetArray too
+    f_off(x) = (x[0] * x[1] * sin(x[2]) + exp(x[0] * x[1])) / x[2]
+    x_off = OffsetArray([1, 2, π / 2], 0:2)
+    stochastic_ad_grad_off = derivative_estimate(f_off, x_off)
+    @test stochastic_ad_grad_off ≈ OffsetArray(stochastic_ad_grad, 0:2)
+
+    # Test StochasticModel + stochastic_gradient combination
+    m = StochasticModel(f, x)
+    @test stochastic_gradient(m).p ≈ stochastic_ad_grad
 end

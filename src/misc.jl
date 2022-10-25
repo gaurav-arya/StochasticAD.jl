@@ -23,25 +23,24 @@ function ChainRulesCore.rrule(::typeof(new_weight), p)
 end
 
 @doc raw"""
-    StochasticModel(p, X)
+    StochasticModel(X, p)
 
 Combine stochastic program `X` with parameter `p` into 
-a trainable model using [Functors](https://fluxml.ai/Functors.jl/stable/) 
-(formulate as a minimization problem, i.e. find ``p`` that minimizes ``\mathbb{E}[X(p)]``).
+a trainable model using [Functors](https://fluxml.ai/Functors.jl/stable/), where
+`p <: AbstractArray`.
+Formulate as a minimization problem, i.e. find ``p`` that minimizes ``\mathbb{E}[X(p)]``.
 """
-struct StochasticModel{S <: AbstractVector, T}
-    p::S
+struct StochasticModel{S <: AbstractArray, T}
     X::T
+    p::S
 end
 @functor StochasticModel (p,)
 
 """
     stochastic_gradient(m::StochasticModel)
 
-Compute gradient with respect to the trainable parameter `p` of `StochasticModel(p, X)`
+Compute gradient with respect to the trainable parameter `p` of `StochasticModel(X, p)`.
 """
 function stochastic_gradient(m::StochasticModel)
-    length(m.p) != 1 &&
-        throw(ArgumentError("`stochastic_gradient`` currently supports univariate models"))
-    fmap(p -> [derivative_estimate(m.X, p[])], m)
+    fmap(p -> derivative_estimate(m.X, p), m)
 end

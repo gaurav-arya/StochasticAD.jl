@@ -140,26 +140,46 @@ struct Tag{F, V}
 end
 
 """
-    stochastic_triple(X, p::Real; kwargs...)
-    stochastic_triple(p::Real; kwargs...)
+    stochastic_triple(X, p; kwargs...)
+    stochastic_triple(p; kwargs...)
 
-Return the result of propagating the stochastic triple `p + ε` through the random function `X(p)`.
-When `X` is not provided, the identity function is used, i.e. the triple `p + ε` is returned.
+If `p <: Real`, return the result of propagating the stochastic triple `p + ε` through the random function `X(p)`.
+If `p <: AbstractVector`, return a vector of stochastic triples of the same shape as `p`, containing the stochastic
+triples that result from perturbing the corresponding array elements.
+When `X` is not provided, the identity function is used.
 """
-function stochastic_triple(f, p::V; backend = PrunedFIs) where {V}
+function stochastic_triple(f, p::V; backend = PrunedFIs) where {V <: Real}
     st = StochasticTriple{Tag{typeof(f), V}}(p, one(p), backend)
-    out_st = f(st)
-    out_st
+    return f(st)
 end
 
-stochastic_triple(p::Real; kwargs...) = stochastic_triple(x -> x, p; kwargs...)
+function stochastic_triple(f, p::AbstractVector{V}; backend = PrunedFIs) where {V}
+    function map_func(perturbed_index)
+        sts = map(eachindex(p), p) do i, p_i
+            if i == perturbed_index
+                return StochasticTriple{Tag{typeof(f), V}}(p_i, one(p_i), backend)
+            else
+                return StochasticTriple{Tag{typeof(f), V}}(p_i, zero(p_i), backend)
+            end
+        end
+        return f(sts)
+    end
+    return map(map_func, eachindex(p))
+end
+
+stochastic_triple(p; kwargs...) = stochastic_triple(x -> x, p; kwargs...)
 
 @doc raw"""
-    derivative_estimate(X, p::Real; backend=StochasticAD.PrunedFIs)
+    derivative_estimate(X, p; backend=StochasticAD.PrunedFIs)
 
-Computes an unbiased estimate of ``\frac{\mathrm{d}\mathbb{E}[X(p)]}{\mathrm{d}p}``, the derivative of the expectation of the random function `X(p)` with respect to its input `p`.
-The `backend` keyword argument describes the algorithm used by the third component of the stochastic triple, see [Technical details](devdocs.md) for more details.
+Compute an unbiased estimate of ``\frac{\mathrm{d}\mathbb{E}[X(p)]}{\mathrm{d}p}``, the derivative of the expectation of the real-valued random function `X(p)` 
+with respect to its input `p`, where `p <: Real` or `p <: AbstractVector`.
+The `backend` keyword argument describes the algorithm used by the third component of the stochastic triple, see [technical details](devdocs.md) for more details.
 """
-function derivative_estimate(f, p; kwargs...)
+function derivative_estimate(f, p::Real; kwargs...)
     derivative_contribution(stochastic_triple(f, p; kwargs...))
+end
+
+function derivative_estimate(f, p::AbstractVector; kwargs...)
+    derivative_contribution.(stochastic_triple(f, p; kwargs...))
 end

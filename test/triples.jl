@@ -153,6 +153,6 @@ end
     @test stochastic_ad_grad_off ≈ OffsetArray(stochastic_ad_grad, 0:2)
 
     # Test StochasticModel + stochastic_gradient combination
-    m = StochasticModel(x, f)
+    m = StochasticModel(f, x)
     @test stochastic_gradient(m).p ≈ stochastic_ad_grad
 end

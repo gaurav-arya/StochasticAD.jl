@@ -188,18 +188,7 @@ for i in 1:min(m, 100) # note that Xs has obs noise.
 end
 
 xs_Kalman, ll_Kalman = kalman_filter(θtrue)
-plot!(getindex.(mean.(xs_Kalman), 1), getindex.(mean.(xs_Kalman), 2), legend=false, color=&quot;red&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">qt.qpa.xcb: could not connect to display
-qt.qpa.plugin: Could not load the Qt platform plugin &quot;xcb&quot; in &quot;&quot; even though it was found.
-This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
-
-Available platform plugins are: linuxfb, minimal, offscreen, vnc, xcb.
-
-Aborted (core dumped)
-connect: Connection refused
-GKS: can&#39;t connect to GKS socket application
-
-GKS: Open failed in routine OPEN_WS
-GKS: GKS not in proper state. GKS must be either in the state WSOP or WSAC in routine ACTIVATE_WS</code></pre><p><img src="pf_1.png" alt/></p><h2 id="Bias"><a class="docs-heading-anchor" href="#Bias">Bias</a><a id="Bias-1"></a><a class="docs-heading-anchor-permalink" href="#Bias" title="Permalink"></a></h2><p>We can also investigate the distribution of the gradients from the particle filter with and without differentiable resampling step, as compared to the gradient computed by differentiating the Kalman filter.</p><pre><code class="language-julia hljs">### compute gradients
+plot!(getindex.(mean.(xs_Kalman), 1), getindex.(mean.(xs_Kalman), 2), legend=false, color=&quot;red&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">&quot;pf_1.png&quot;</code></pre><p><img src="pf_1.png" alt/></p><h2 id="Bias"><a class="docs-heading-anchor" href="#Bias">Bias</a><a id="Bias-1"></a><a class="docs-heading-anchor-permalink" href="#Bias" title="Permalink"></a></h2><p>We can also investigate the distribution of the gradients from the particle filter with and without differentiable resampling step, as compared to the gradient computed by differentiating the Kalman filter.</p><pre><code class="language-julia hljs">### compute gradients
 Random.seed!(seed)
 X = [forw_grad(θtrue, particle_filter) for i in 1:200] # gradient of the particle filter *with* differentiation of the resampling step
 Random.seed!(seed)
@@ -213,18 +202,7 @@ vline!([mean(X)[index]], color=1)
 vline!([mean(Xbiased)[index]], color=2)
 # add derivative of differentiable Kalman filter as a comparison
 XK = forw_grad_Kalman(θtrue, kalman_filter)
-vline!([XK[index]], color=&quot;black&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">qt.qpa.xcb: could not connect to display
-qt.qpa.plugin: Could not load the Qt platform plugin &quot;xcb&quot; in &quot;&quot; even though it was found.
-This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
-
-Available platform plugins are: linuxfb, minimal, offscreen, vnc, xcb.
-
-Aborted (core dumped)
-connect: Connection refused
-GKS: can&#39;t connect to GKS socket application
-
-GKS: Open failed in routine OPEN_WS
-GKS: GKS not in proper state. GKS must be either in the state WSOP or WSAC in routine ACTIVATE_WS</code></pre><p><img src="pf_2.png" alt/></p><p>The estimator using the <code>new_weight</code> function agrees with the gradient value from the Kalman filter and the <a href="https://arxiv.org/abs/2106.10314">particle filter AD scheme developed by Ścibior and Wood</a>, unlike biased estimators that neglect the contribution of the derivative from the resampling step. However, the biased estimator displays a smaller variance.</p><h2 id="Benchmark"><a class="docs-heading-anchor" href="#Benchmark">Benchmark</a><a id="Benchmark-1"></a><a class="docs-heading-anchor-permalink" href="#Benchmark" title="Permalink"></a></h2><p>Finally, we can use <code>BenchmarkTools.jl</code> to benchmark the run times of the primal pass with respect to forward-mode and reverse-mode AD of the particle filter. As expected, forward-mode AD outperforms reverse-mode AD for the small number of parameters considered here.</p><pre><code class="language-julia hljs"># secs for how long the benchmark should run, see https://juliaci.github.io/BenchmarkTools.jl/stable/
+vline!([XK[index]], color=&quot;black&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">&quot;pf_2.png&quot;</code></pre><p><img src="pf_2.png" alt/></p><p>The estimator using the <code>new_weight</code> function agrees with the gradient value from the Kalman filter and the <a href="https://arxiv.org/abs/2106.10314">particle filter AD scheme developed by Ścibior and Wood</a>, unlike biased estimators that neglect the contribution of the derivative from the resampling step. However, the biased estimator displays a smaller variance.</p><h2 id="Benchmark"><a class="docs-heading-anchor" href="#Benchmark">Benchmark</a><a id="Benchmark-1"></a><a class="docs-heading-anchor-permalink" href="#Benchmark" title="Permalink"></a></h2><p>Finally, we can use <code>BenchmarkTools.jl</code> to benchmark the run times of the primal pass with respect to forward-mode and reverse-mode AD of the particle filter. As expected, forward-mode AD outperforms reverse-mode AD for the small number of parameters considered here.</p><pre><code class="language-julia hljs"># secs for how long the benchmark should run, see https://juliaci.github.io/BenchmarkTools.jl/stable/
 secs = 1
 
 suite = BenchmarkGroup()
@@ -243,4 +221,4 @@ t3 = measurement(mean(results[&quot;scaling&quot;][&quot;backward&quot;].times),
 @show t1 t2 t3
 
 ts = (t1, t2, t3) ./ 10^6 # ms
-@show ts</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(32.4 ± 2.1, 54.0 ± 4.0, 746.0 ± 23.0)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="game_of_life.html">« Stochastic Game of Life</a><a class="docs-footer-nextpage" href="optimizations.html">Stochastic optimizations with discrete randomness »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.28.0-DEV on <span class="colophon-date" title="Friday 21 October 2022 07:02">Friday 21 October 2022</span>. Using Julia version 1.8.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+@show ts</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(37.6 ± 1.9, 63.6 ± 4.6, 832.0 ± 30.0)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="game_of_life.html">« Stochastic Game of Life</a><a class="docs-footer-nextpage" href="optimizations.html">Stochastic optimizations with discrete randomness »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.28.0-DEV on <span class="colophon-date" title="Monday 31 October 2022 12:47">Monday 31 October 2022</span>. Using Julia version 1.8.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

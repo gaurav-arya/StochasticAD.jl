@@ -40,7 +40,7 @@ p0 = [20.5]
 iterations = 5000
 m = StochasticAD.StochasticModel(p0, x -> -X(x)) # Formulate as minimization problem
 trace = Float64[]
-o = Adam(0.1)
+o = Adam(0.08)
 s = Optimisers.setup(o, m)
 for i in 1:iterations
     Optimisers.update!(s, m, StochasticAD.stochastic_gradient(m))
@@ -63,7 +63,7 @@ if PLOT
     hlines!(ax, [0.0], color = :black, linewidth = 1.0)
 
     f[1, 2] = Legend(f, ax, framevisible = false)
-    ylims!(ax, (-50, 80))
+    ylims!(ax, (-1e-5, 2e-5))
     ax = f[2, 1:2] = Axis(f, title = "Optimizer trace")
     lines!(ax, trace, color = :green, linewidth = 2.0)
     hlines!(ax, [λ0], linestyle = :dot, linewidth = 2.0)

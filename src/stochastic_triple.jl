@@ -140,13 +140,14 @@ struct Tag{F, V}
 end
 
 """
-    stochastic_triple(X, p; kwargs...)
-    stochastic_triple(p; kwargs...)
+    stochastic_triple(X, p; backend=StochasticAD.PrunedFIs)
+    stochastic_triple(p; backend=StochasticAD.PrunedFIs)
 
 If `p <: Real`, return the result of propagating the stochastic triple `p + ε` through the random function `X(p)`.
 If `p <: AbstractVector`, return a vector of stochastic triples of the same shape as `p`, containing the stochastic
 triples that result from perturbing the corresponding array elements of `p` one-by-one.
-When `X` is not provided, the identity function is used.
+When `X` is not provided, the identity function is used. The `backend` keyword argument describes the algorithm 
+used by the third component of the stochastic triple, see [technical details](devdocs.md) for more details.
 """
 function stochastic_triple(f, p::V; backend = PrunedFIs) where {V <: Real}
     st = StochasticTriple{Tag{typeof(f), V}}(p, one(p), backend)

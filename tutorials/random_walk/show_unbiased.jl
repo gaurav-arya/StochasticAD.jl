@@ -2,7 +2,14 @@ include("core.jl")
 println("## Exact computation\n")
 
 using ForwardDiff: derivative
+using StochasticAD
+using Statistics
+using Random
 
+p = RandomWalkCore.p
+f = RandomWalkCore.f
+X = RandomWalkCore.X
+fX = RandomWalkCore.fX
 range = 0:(RandomWalkCore.n)
 range_start = 1 # range[range_start] = 0
 

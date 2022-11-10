@@ -92,11 +92,29 @@ function Base.promote_rule(::Type{StochasticTriple{T, V1, FIs}},
     StochasticTriple{T, V, similar_type(FIs, V)}
 end
 
-Base.hash(st::StochasticAD.StochasticTriple) = hash(StochasticAD.value(st)) # TODO: port
+### Extra overloads
 
-for op in UNARY_TYPEFUNCS
+# TODO: generalize the below logic to compactly handle a wider range of functions
+# See also https://github.com/JuliaDiff/ForwardDiff.jl/blob/master/src/dual.jl.
+
+Base.hash(st::StochasticAD.StochasticTriple) = hash(StochasticAD.value(st))
+
+for op in UNARY_TYPEFUNCS_NOWRAP
+    @eval function $op(::Type{<:StochasticAD.StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+        return $op(V)
+    end
+end
+
+for op in UNARY_TYPEFUNCS_WRAP
     @eval function $op(::Type{StochasticAD.StochasticTriple{T, V, FIs}}) where {T, V, FIs}
         return StochasticAD.StochasticTriple{T, V, FIs}($op(V), zero(V), empty(FIs))
+    end
+end
+
+for op in RNG_TYPEFUNCS_WRAP
+    @eval function $op(rng::AbstractRNG,
+                       ::Type{StochasticAD.StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+        return StochasticAD.StochasticTriple{T, V, FIs}($op(rng, V), zero(V), empty(FIs))
     end
 end
 

@@ -12,3 +12,5 @@ const BINARY_PREDICATES = [
     Base.:(<=),
     Base.:(>=),
 ]
+
+const UNARY_TYPEFUNCS = [:(Base.typemin), :(Base.typemax), :(Base.floatmin), :(Base.floatmax), :(Base.zero), :(Base.one)]

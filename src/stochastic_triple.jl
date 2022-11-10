@@ -92,8 +92,14 @@ function Base.promote_rule(::Type{StochasticTriple{T, V1, FIs}},
     StochasticTriple{T, V, similar_type(FIs, V)}
 end
 
-Base.zero(::Type{StochasticTriple{T, V, FIs}}) where {T, V, FIs} = zero(V)
-Base.one(::Type{StochasticTriple{T, V, FIs}}) where {T, V, FIs} = one(V)
+Base.hash(st::StochasticAD.StochasticTriple) = hash(StochasticAD.value(st)) # TODO: port
+
+for op in UNARY_TYPEFUNCS
+    @eval function $op(::Type{StochasticAD.StochasticTriple{T,V,FIs}}) where {T, V, FIs}
+        return StochasticAD.StochasticTriple{T, V, FIs}($op(V), zero(V), empty(FIs))
+    end
+end
+
 Base.zero(st::StochasticTriple) = zero(typeof(st))
 Base.one(st::StochasticTriple) = one(typeof(st))
 

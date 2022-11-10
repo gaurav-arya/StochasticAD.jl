@@ -95,7 +95,8 @@ function define_triple_overload(sig)
         end
         @eval function (f::$opT)(st::StochasticTriple{T}; kwargs...) where {T}
             args_tangent = (NoTangent(), delta(st))
-            val, δ = frule(args_tangent, f, value(st); kwargs...)
+            val, δ0 = frule(args_tangent, f, value(st); kwargs...)
+            δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
             if !iszero(st.Δs)
                 Δs = map(Δ -> f(st.value + Δ) - val, st.Δs)
             else
@@ -116,7 +117,8 @@ function define_triple_overload(sig)
         for R in AMBIGUOUS_TYPES
             @eval function (f::$opT)(st::StochasticTriple{T}, x::$R; kwargs...) where {T}
                 args_tangent = (NoTangent(), delta(st), zero(x))
-                val, δ = frule(args_tangent, f, value(st), x; kwargs...)
+                val, δ0 = frule(args_tangent, f, value(st), x; kwargs...)
+                δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
                 if !iszero(st.Δs)
                     Δs = map(Δ -> f(st.value + Δ, x) - val, st.Δs)
                 else
@@ -126,7 +128,8 @@ function define_triple_overload(sig)
             end
             @eval function (f::$opT)(x::$R, st::StochasticTriple{T}; kwargs...) where {T}
                 args_tangent = (NoTangent(), zero(x), delta(st))
-                val, δ = frule(args_tangent, f, x, value(st); kwargs...)
+                val, δ0 = frule(args_tangent, f, x, value(st); kwargs...)
+                δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
                 if !iszero(st.Δs)
                     Δs = map(Δ -> f(x, st.value + Δ) - val, st.Δs)
                 else
@@ -138,7 +141,8 @@ function define_triple_overload(sig)
         @eval function (f::$opT)(sts::Vararg{StochasticTriple{T}, 2}; kwargs...) where {T}
             args_tangent = (NoTangent(), delta.(sts)...)
             args = (f, value.(sts)...)
-            val, δ = frule(args_tangent, args...; kwargs...)
+            val, δ0 = frule(args_tangent, args...; kwargs...)
+            δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
 
             Δs_all = map(st -> getfield(st, :Δs), sts)
             if all(iszero.(Δs_all))

@@ -95,7 +95,7 @@ end
 Base.hash(st::StochasticAD.StochasticTriple) = hash(StochasticAD.value(st)) # TODO: port
 
 for op in UNARY_TYPEFUNCS
-    @eval function $op(::Type{StochasticAD.StochasticTriple{T,V,FIs}}) where {T, V, FIs}
+    @eval function $op(::Type{StochasticAD.StochasticTriple{T, V, FIs}}) where {T, V, FIs}
         return StochasticAD.StochasticTriple{T, V, FIs}($op(V), zero(V), empty(FIs))
     end
 end

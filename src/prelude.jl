@@ -13,7 +13,7 @@ const BINARY_PREDICATES = [
     Base.:(>=),
 ]
 
-const UNARY_TYPEFUNCS_NOWRAP = [:(Base.hash), :(Base.rtoldefault)]
+const UNARY_TYPEFUNCS_NOWRAP = [:(Base.rtoldefault)]
 const UNARY_TYPEFUNCS_WRAP = [
     :(Base.typemin),
     :(Base.typemax),

@@ -94,10 +94,11 @@ end
 
 ### Extra overloads
 
-# TODO: generalize the below logic to compactly handle a wider range of functions
+# TODO: generalize the below logic to compactly handle a wider range of functions.
 # See also https://github.com/JuliaDiff/ForwardDiff.jl/blob/master/src/dual.jl.
 
 Base.hash(st::StochasticAD.StochasticTriple) = hash(StochasticAD.value(st))
+Base.hash(st::StochasticAD.StochasticTriple, hsh::UInt) = hash(StochasticAD.value(st), hsh)
 
 for op in UNARY_TYPEFUNCS_NOWRAP
     @eval function $op(::Type{<:StochasticAD.StochasticTriple{T, V, FIs}}) where {T, V, FIs}

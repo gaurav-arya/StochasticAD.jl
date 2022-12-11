@@ -62,6 +62,10 @@ function StochasticTriple{T}(value::V, δ::V, Δs::FIs) where {T, V, FIs <: Abst
     StochasticTriple{T, V, FIs}(value, δ, Δs)
 end
 
+function StochasticTriple{T}(value::V, Δs::FIs) where {T, V, FIs <: AbstractFIs{V}}
+    StochasticTriple{T}(value, zero(value), Δs)
+end
+
 function StochasticTriple{T}(value::A, δ::B,
                              Δs::FIs) where {T, A, B, C, FIs <: AbstractFIs{C}}
     V = promote_type(A, B, C)
@@ -97,25 +101,29 @@ end
 # TODO: generalize the below logic to compactly handle a wider range of functions.
 # See also https://github.com/JuliaDiff/ForwardDiff.jl/blob/master/src/dual.jl.
 
-Base.hash(st::StochasticAD.StochasticTriple) = hash(StochasticAD.value(st))
-Base.hash(st::StochasticAD.StochasticTriple, hsh::UInt) = hash(StochasticAD.value(st), hsh)
+Base.hash(st::StochasticTriple) = hash(StochasticAD.value(st))
+Base.hash(st::StochasticTriple, hsh::UInt) = hash(StochasticAD.value(st), hsh)
+
+function Base.round(I::Type{<:Integer}, st::StochasticTriple{T, V}) where {T, V}
+    return StochasticTriple{T}(round(I, st.value), map(Δ -> round(I, st.value + Δ), st.Δs))
+end
 
 for op in UNARY_TYPEFUNCS_NOWRAP
-    @eval function $op(::Type{<:StochasticAD.StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+    @eval function $op(::Type{<:StochasticTriple{T, V, FIs}}) where {T, V, FIs}
         return $op(V)
     end
 end
 
 for op in UNARY_TYPEFUNCS_WRAP
-    @eval function $op(::Type{StochasticAD.StochasticTriple{T, V, FIs}}) where {T, V, FIs}
-        return StochasticAD.StochasticTriple{T, V, FIs}($op(V), zero(V), empty(FIs))
+    @eval function $op(::Type{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+        return StochasticTriple{T, V, FIs}($op(V), zero(V), empty(FIs))
     end
 end
 
 for op in RNG_TYPEFUNCS_WRAP
     @eval function $op(rng::AbstractRNG,
-                       ::Type{StochasticAD.StochasticTriple{T, V, FIs}}) where {T, V, FIs}
-        return StochasticAD.StochasticTriple{T, V, FIs}($op(rng, V), zero(V), empty(FIs))
+                       ::Type{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+        return StochasticTriple{T, V, FIs}($op(rng, V), zero(V), empty(FIs))
     end
 end
 

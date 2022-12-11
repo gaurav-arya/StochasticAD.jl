@@ -33,7 +33,7 @@ end
 
 PrunedFIs{V}(state::PrunedFIsState) where {V} = PrunedFIs{V}(zero(V), -1, state)
 StochasticAD.similar_empty(Δs::PrunedFIs, V::Type) = PrunedFIs{V}(PrunedFIsState(false))
-Base.empty(Δs::PrunedFIs{V}) where {V} = similar_empty(Δs::PrunedFIs, V::Type)
+Base.empty(Δs::PrunedFIs{V}) where {V} = StochasticAD.similar_empty(Δs::PrunedFIs, V::Type)
 # we truly have no clue what the state is here, so use an invalidated state
 function Base.empty(::Type{<:PrunedFIs{V}}) where {V}
     PrunedFIs{V}(PrunedFIsState(false))

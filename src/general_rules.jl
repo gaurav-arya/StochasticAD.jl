@@ -162,7 +162,39 @@ end
 
 on_new_rule(define_triple_overload, frule)
 
-### Integer functions
+### Extra overloads
+
+# TODO: generalize the below logic to compactly handle a wider range of functions.
+# See also https://github.com/JuliaDiff/ForwardDiff.jl/blob/master/src/dual.jl.
+
+Base.hash(st::StochasticTriple) = hash(StochasticAD.value(st))
+Base.hash(st::StochasticTriple, hsh::UInt) = hash(StochasticAD.value(st), hsh)
+
+function Base.round(I::Type{<:Integer}, st::StochasticTriple{T, V}) where {T, V}
+    return StochasticTriple{T}(round(I, st.value), map(Δ -> round(I, st.value + Δ), st.Δs))
+end
+
+for op in UNARY_TYPEFUNCS_NOWRAP
+    @eval function $op(::Type{<:StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+        return $op(V)
+    end
+end
+
+for op in UNARY_TYPEFUNCS_WRAP
+    @eval function $op(::Type{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+        return StochasticTriple{T, V, FIs}($op(V), zero(V), empty(FIs))
+    end
+end
+
+for op in RNG_TYPEFUNCS_WRAP
+    @eval function $op(rng::AbstractRNG,
+                       ::Type{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+        return StochasticTriple{T, V, FIs}($op(rng, V), zero(V), empty(FIs))
+    end
+end
+
+Base.zero(st::StochasticTriple) = zero(typeof(st))
+Base.one(st::StochasticTriple) = one(typeof(st))
 
 """
     Base.getindex(C::AbstractArray, st::StochasticTriple{T})

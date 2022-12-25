@@ -1,4 +1,9 @@
 """
+Operators which have already been overloaded by StochasticAD. 
+"""
+const handled_ops = DataType[]
+
+"""
     define_triple_overload(sig)
 
 Given a function signature, defines operator overloading rules for stochastic triples.
@@ -18,12 +23,13 @@ function define_triple_overload(sig)
 
     N = length(ExprTools.parameters(sig)) - 1  # skip the op
 
+    if opT in handled_ops
+        return
+    end
+
+    push!(handled_ops, opT)
+
     if opT.instance in UNARY_PREDICATES
-        for m in methods(opT.instance, (StochasticTriple,))
-            if m.sig <: Tuple{opT, StochasticTriple}
-                return
-            end
-        end
         @eval function (f::$opT)(st::StochasticTriple)
             val = value(st)
             out = f(val)
@@ -33,11 +39,6 @@ function define_triple_overload(sig)
             return out
         end
     elseif opT.instance in BINARY_PREDICATES
-        for m in methods(opT.instance, (StochasticTriple, StochasticTriple))
-            if m.sig <: Tuple{opT, StochasticTriple, StochasticTriple}
-                return
-            end
-        end
         # Special case equality comparisons as in https://github.com/JuliaDiff/ForwardDiff.jl/pull/481
         if opT.instance == Base.:(==)
             return_value_real = quote
@@ -87,12 +88,6 @@ function define_triple_overload(sig)
            Tuple{Any, NoTangent}
             return
         end
-        # TODO: see if this is a compilation/precompilation bottleneck
-        for m in methods(opT.instance, (StochasticTriple,))
-            if m.sig <: Tuple{opT, StochasticTriple}
-                return
-            end
-        end
         @eval function (f::$opT)(st::StochasticTriple{T}; kwargs...) where {T}
             args_tangent = (NoTangent(), delta(st))
             val, δ0 = frule(args_tangent, f, value(st); kwargs...)
@@ -108,11 +103,6 @@ function define_triple_overload(sig)
         if Base.return_types(frule, (Tuple{NoTangent, Real, Real}, opT, Real, Real))[1] <:
            Tuple{Any, NoTangent}
             return
-        end
-        for m in methods(opT.instance, (StochasticTriple, StochasticTriple))
-            if m.sig <: Tuple{opT, StochasticTriple, StochasticTriple}
-                return
-            end
         end
         for R in AMBIGUOUS_TYPES
             @eval function (f::$opT)(st::StochasticTriple{T}, x::$R; kwargs...) where {T}
@@ -192,9 +182,6 @@ for op in RNG_TYPEFUNCS_WRAP
         return StochasticTriple{T, V, FIs}($op(rng, V), zero(V), empty(FIs))
     end
 end
-
-Base.zero(st::StochasticTriple) = zero(typeof(st))
-Base.one(st::StochasticTriple) = one(typeof(st))
 
 """
     Base.getindex(C::AbstractArray, st::StochasticTriple{T})

@@ -1,7 +1,7 @@
 """
 Operators which have already been overloaded by StochasticAD. 
 """
-const handled_ops = DataType[]
+const handled_ops = Tuple{DataType, Int}[]
 
 """
     define_triple_overload(sig)
@@ -23,13 +23,13 @@ function define_triple_overload(sig)
 
     N = length(ExprTools.parameters(sig)) - 1  # skip the op
 
-    if opT in handled_ops
+    if (opT, N) in handled_ops
         return
     end
 
-    push!(handled_ops, opT)
+    push!(handled_ops, (opT, N))
 
-    if opT.instance in UNARY_PREDICATES
+    if opT.instance in UNARY_PREDICATES && (N == 1)
         @eval function (f::$opT)(st::StochasticTriple)
             val = value(st)
             out = f(val)
@@ -38,7 +38,7 @@ function define_triple_overload(sig)
             end
             return out
         end
-    elseif opT.instance in BINARY_PREDICATES
+    elseif opT.instance in BINARY_PREDICATES && (N == 2)
         # Special case equality comparisons as in https://github.com/JuliaDiff/ForwardDiff.jl/pull/481
         if opT.instance == Base.:(==)
             return_value_real = quote

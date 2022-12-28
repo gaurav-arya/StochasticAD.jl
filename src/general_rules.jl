@@ -218,7 +218,13 @@ A simple prototype rule for array indexing. Assumes that underlying type of `st`
 function Base.getindex(C::AbstractArray, st::StochasticTriple{T}) where {T}
     val = C[st.value]
     function do_map(Δ)
-        value(C[st.value + Δ]) - value(val)
+        #=
+        A hack to avoid errors when eltype(C) is not a vector space,
+        but the perturbation is zero anyway.
+        =#
+        iszero(Δ) && return zero(val)
+
+        return value(C[st.value + Δ]) - value(val)
     end
     Δs = map(do_map, st.Δs)
     if val isa StochasticTriple

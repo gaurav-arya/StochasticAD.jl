@@ -76,9 +76,9 @@ function define_triple_overload(sig)
             val2 = value(st2)
             out = f(val1, val2)
 
-            safe_perturb1 = alltrue(map(Δ -> (f(val1 + Δ, val2) == out), st1.Δs))
-            safe_perturb2 = alltrue(map(Δ -> (f(val1, val2 + Δ) == out), st2.Δs))
-            if !safe_perturb1 || !safe_perturb2
+            Δs_coupled = couple((st1.Δs, st2.Δs))
+            safe_perturb = alltrue(map(Δs -> f(val1 + Δs[1], val2 + Δs[2]) == out, Δs_coupled))
+            if !safe_perturb
                 error("Output of boolean predicate cannot depend on input (unsupported by StochasticAD)")
             end
             return $return_value_st

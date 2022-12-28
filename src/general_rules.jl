@@ -192,19 +192,22 @@ We patch up the rule by removing the short-circuit, allowing some common
 cases to work.
 =#
 function Base.isapprox(st1::StochasticTriple, st2::StochasticTriple;
-                  atol::Real=0, rtol::Real=Base.rtoldefault(st1,st2,atol),
-                  nans::Bool=false, norm::Function=abs)
-    (isfinite(st1) && isfinite(st2) && norm(st1-st2) <= max(atol, rtol*max(norm(st1), norm(st2)))) || (nans && isnan(st1) && isnan(st2))
+                       atol::Real = 0, rtol::Real = Base.rtoldefault(st1, st2, atol),
+                       nans::Bool = false, norm::Function = abs)
+    (isfinite(st1) && isfinite(st2) &&
+     norm(st1 - st2) <= max(atol, rtol * max(norm(st1), norm(st2)))) ||
+        (nans && isnan(st1) && isnan(st2))
 end
 function Base.isapprox(st1::StochasticTriple, x::Real;
-                  atol::Real=0, rtol::Real=Base.rtoldefault(st1,x,atol),
-                  nans::Bool=false, norm::Function=abs)
-    (isfinite(st1) && isfinite(x) && norm(st1-x) <= max(atol, rtol*max(norm(st1), norm(x)))) || (nans && isnan(st1) && isnan(x))
+                       atol::Real = 0, rtol::Real = Base.rtoldefault(st1, x, atol),
+                       nans::Bool = false, norm::Function = abs)
+    (isfinite(st1) && isfinite(x) &&
+     norm(st1 - x) <= max(atol, rtol * max(norm(st1), norm(x)))) ||
+        (nans && isnan(st1) && isnan(x))
 end
 function Base.isapprox(x::Real, st::StochasticTriple; kwargs...)
     return Base.isapprox(st, x; kwargs...)
 end
-
 
 """
     Base.getindex(C::AbstractArray, st::StochasticTriple{T})

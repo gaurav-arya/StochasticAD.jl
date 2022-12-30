@@ -160,56 +160,54 @@ end
 end
 
 @testset "Propagation using frule with ZeroTangent" begin
-   st = stochastic_triple(.5)
+    st = stochastic_triple(0.5)
 
-   # Verify that the rule for imag indeed gives a ZeroTangent
-   value = StochasticAD.value(st)
-   δ = StochasticAD.delta(st)
-   @test frule((NoTangent(), δ), imag, value)[2] isa ZeroTangent
-   # Test that stochastic triples flow through this rule
-   out_st = imag(st)
-   @test StochasticAD.value(out_st) ≈ 0
-   @test StochasticAD.delta(out_st) ≈ 0
-   @test isempty(out_st.Δs)
+    # Verify that the rule for imag indeed gives a ZeroTangent
+    value = StochasticAD.value(st)
+    δ = StochasticAD.delta(st)
+    @test frule((NoTangent(), δ), imag, value)[2] isa ZeroTangent
+    # Test that stochastic triples flow through this rule
+    out_st = imag(st)
+    @test StochasticAD.value(out_st) ≈ 0
+    @test StochasticAD.delta(out_st) ≈ 0
+    @test isempty(out_st.Δs)
 end
 
-@testset "Unary functions converting type to fixed instance" begin
-    for val in [0.5, 1]
-        st = stochastic_triple(val)
-        for op in StochasticAD.UNARY_TYPEFUNCS_WRAP
-            f = getfield(Base, Symbol(op))
-            out_st = f(st)
-            @test out_st isa StochasticAD.StochasticTriple
-            @test StochasticAD.value(out_st) ≈ f(val) ≈ f(typeof(val))
-            @test StochasticAD.delta(out_st) ≈ 0 
-            @test isempty(out_st.Δs)
-            @test f(typeof(st)) = out_st 
-        end
-        #=
-        It so happens that the UNARY_TYPEFUNCS_WRAP funcs all support both instances and types
-        whereas UNARY_TYPEFUNCS_NOWRAP only supports types, so we only test types in the below,
-        but this is a coincidence that may not hold in the future.
-        =#
-        for op in StochasticAD.UNARY_TYPEFUNCS_NOWRAP
-            f = getfield(Base, Symbol(op))
-            out = f(typeof(st))
-            @test out isa typeof(val) 
-            @test out ≈ f(typeof(val))
-        end
-        RNG = copy(Random.GLOBAL_RNG)
-        for op in StochasticAD.RNG_TYPEFUNCS_WRAP
-            f = getfield(Random, Symbol(op))
-            out_st = f(copy(RNG), typeof(st))
-            @test out_st isa StochasticAD.StochasticTriple
-            @test StochasticAD.value(out_st) ≈ f(copy(RNG), typeof(val))
-            @test StochasticAD.delta(out_st) ≈ 0 
-            @test isempty(out_st.Δs)
-        end
+@testset "Unary functions converting type to fixed instance" begin for val in [0.5, 1]
+    st = stochastic_triple(val)
+    for op in StochasticAD.UNARY_TYPEFUNCS_WRAP
+        f = getfield(Base, Symbol(op))
+        out_st = f(st)
+        @test out_st isa StochasticAD.StochasticTriple
+        @test StochasticAD.value(out_st) ≈ f(val) ≈ f(typeof(val))
+        @test StochasticAD.delta(out_st) ≈ 0
+        @test isempty(out_st.Δs)
+        @test f(typeof(st)) = out_st
     end
-end
+    #=
+    It so happens that the UNARY_TYPEFUNCS_WRAP funcs all support both instances and types
+    whereas UNARY_TYPEFUNCS_NOWRAP only supports types, so we only test types in the below,
+    but this is a coincidence that may not hold in the future.
+    =#
+    for op in StochasticAD.UNARY_TYPEFUNCS_NOWRAP
+        f = getfield(Base, Symbol(op))
+        out = f(typeof(st))
+        @test out isa typeof(val)
+        @test out ≈ f(typeof(val))
+    end
+    RNG = copy(Random.GLOBAL_RNG)
+    for op in StochasticAD.RNG_TYPEFUNCS_WRAP
+        f = getfield(Random, Symbol(op))
+        out_st = f(copy(RNG), typeof(st))
+        @test out_st isa StochasticAD.StochasticTriple
+        @test StochasticAD.value(out_st) ≈ f(copy(RNG), typeof(val))
+        @test StochasticAD.delta(out_st) ≈ 0
+        @test isempty(out_st.Δs)
+    end
+end end
 
 @testset "Hashing" begin
-    st = stochastic_triple(3.)
+    st = stochastic_triple(3.0)
     @test_nowarn hash(st)
     @test_nowarn hash(st, UInt(5))
     d = Dict()
@@ -218,29 +216,29 @@ end
     @test d[3] == 5
     # Test that we get an error with discrete random dictionary indices,
     # since this isn't supported and we want to avoid silent failures.
-    Δs = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 1., 1.)
-    st = StochasticAD.StochasticTriple{0}(1., 0, Δs)
+    Δs = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 1.0, 1.0)
+    st = StochasticAD.StochasticTriple{0}(1.0, 0, Δs)
     @test_throws ErrorException d[rand(Bernoulli(st))]
 end
 
 @testset "Coupled comparison" begin
-    Δs_1 = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 1., 1.)
-    Δs_2 = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 1., 1.)
-    st_1 = StochasticAD.StochasticTriple{0}(1., 0, Δs_1)
-    st_2 = StochasticAD.StochasticTriple{0}(1., 0, Δs_2)
+    Δs_1 = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 1.0, 1.0)
+    Δs_2 = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 1.0, 1.0)
+    st_1 = StochasticAD.StochasticTriple{0}(1.0, 0, Δs_1)
+    st_2 = StochasticAD.StochasticTriple{0}(1.0, 0, Δs_2)
     @test st_1 == st_1
-    @test_throws ErrorException st_1 == st_2
+    @test_throws ErrorException st_1==st_2
 end
 
 @testset "Converting float stochastic triples to integer triples" begin
-    st = stochastic_triple(.6)
+    st = stochastic_triple(0.6)
     @test round(Int, st) isa StochasticTriple
-    @test StocasticAD.delta(round(Int, st)) ≈ 0 
+    @test StocasticAD.delta(round(Int, st)) ≈ 0
     @test round(Int, st) ≈ 1
 end
 
 @testset "Approximate comparisons" begin
-    st = stochastic_triple(.5)
+    st = stochastic_triple(0.5)
     @test st ≈ st
     @test !(st ≈ st + 1)
     @test_broken stochastic_triple(Inf) ≈ stochastic_triple(Inf)

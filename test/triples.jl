@@ -178,12 +178,12 @@ end
         st = stochastic_triple(val)
         for op in StochasticAD.UNARY_TYPEFUNCS_WRAP
             f = getfield(Base, Symbol(op))
-            for out_st in [f(st), f(typeof(st))]
-                @test out_st isa StochasticAD.StochasticTriple
-                @test StochasticAD.value(out_st) ≈ f(val) ≈ f(typeof(val))
-                @test StochasticAD.delta(out_st) ≈ 0 
-                @test isempty(out_st.Δs)
-            end
+            out_st = f(st)
+            @test out_st isa StochasticAD.StochasticTriple
+            @test StochasticAD.value(out_st) ≈ f(val) ≈ f(typeof(val))
+            @test StochasticAD.delta(out_st) ≈ 0 
+            @test isempty(out_st.Δs)
+            @test f(typeof(st)) = out_st 
         end
         #=
         It so happens that the UNARY_TYPEFUNCS_WRAP funcs all support both instances and types
@@ -221,4 +221,10 @@ end
     Δs = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 1., 1.)
     st = StochasticAD.StochasticTriple{0}(1., 0, Δs)
     @test_throws ErrorException d[rand(Bernoulli(st))]
+end
+
+@testset "Coupled comparison" begin
+    Δs = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 1., 1.)
+    st = StochasticAD.StochasticTriple{0}(1., 0, Δs)
+    @test st == st
 end

@@ -231,3 +231,10 @@ end
     @test st_1 == st_1
     @test_throws ErrorException st_1 == st_2
 end
+
+@testset "Converting float stochastic triples to integer triples" begin
+    st = stochastic_triple(.6)
+    @test round(Int, st) isa StochasticTriple
+    @test StocasticAD.delta(round(Int, st)) ≈ 0 
+    @test round(Int, st) ≈ 1
+end

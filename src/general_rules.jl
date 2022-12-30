@@ -165,6 +165,10 @@ function Base.hash(st::StochasticTriple, hsh::UInt)
     hash(StochasticAD.value(st), hsh)
 end
 
+#=
+This is a hacky experimental way to convert a float-like stochastic triple
+into an integer-like one, to facilitate generic coding.
+=#
 function Base.round(I::Type{<:Integer}, st::StochasticTriple{T, V}) where {T, V}
     return StochasticTriple{T}(round(I, st.value), map(Δ -> round(I, st.value + Δ), st.Δs))
 end

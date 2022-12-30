@@ -1,4 +1,9 @@
 """
+Operators which have already been overloaded by StochasticAD. 
+"""
+const handled_ops = Tuple{DataType, Int}[]
+
+"""
     define_triple_overload(sig)
 
 Given a function signature, defines operator overloading rules for stochastic triples.
@@ -18,12 +23,13 @@ function define_triple_overload(sig)
 
     N = length(ExprTools.parameters(sig)) - 1  # skip the op
 
-    if opT.instance in UNARY_PREDICATES
-        for m in methods(opT.instance, (StochasticTriple,))
-            if m.sig <: Tuple{opT, StochasticTriple}
-                return
-            end
-        end
+    if (opT, N) in handled_ops
+        return
+    end
+
+    push!(handled_ops, (opT, N))
+
+    if opT.instance in UNARY_PREDICATES && (N == 1)
         @eval function (f::$opT)(st::StochasticTriple)
             val = value(st)
             out = f(val)
@@ -32,12 +38,7 @@ function define_triple_overload(sig)
             end
             return out
         end
-    elseif opT.instance in BINARY_PREDICATES
-        for m in methods(opT.instance, (StochasticTriple, StochasticTriple))
-            if m.sig <: Tuple{opT, StochasticTriple, StochasticTriple}
-                return
-            end
-        end
+    elseif opT.instance in BINARY_PREDICATES && (N == 2)
         # Special case equality comparisons as in https://github.com/JuliaDiff/ForwardDiff.jl/pull/481
         if opT.instance == Base.:(==)
             return_value_real = quote
@@ -75,9 +76,10 @@ function define_triple_overload(sig)
             val2 = value(st2)
             out = f(val1, val2)
 
-            safe_perturb1 = alltrue(map(Δ -> (f(val1 + Δ, val2) == out), st1.Δs))
-            safe_perturb2 = alltrue(map(Δ -> (f(val1, val2 + Δ) == out), st2.Δs))
-            if !safe_perturb1 || !safe_perturb2
+            Δs_coupled = couple((st1.Δs, st2.Δs))
+            safe_perturb = alltrue(map(Δs -> f(val1 + Δs[1], val2 + Δs[2]) == out,
+                                       Δs_coupled))
+            if !safe_perturb
                 error("Output of boolean predicate cannot depend on input (unsupported by StochasticAD)")
             end
             return $return_value_st
@@ -87,15 +89,10 @@ function define_triple_overload(sig)
            Tuple{Any, NoTangent}
             return
         end
-        # TODO: see if this is a compilation/precompilation bottleneck
-        for m in methods(opT.instance, (StochasticTriple,))
-            if m.sig <: Tuple{opT, StochasticTriple}
-                return
-            end
-        end
         @eval function (f::$opT)(st::StochasticTriple{T}; kwargs...) where {T}
             args_tangent = (NoTangent(), delta(st))
-            val, δ = frule(args_tangent, f, value(st); kwargs...)
+            val, δ0 = frule(args_tangent, f, value(st); kwargs...)
+            δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
             if !iszero(st.Δs)
                 Δs = map(Δ -> f(st.value + Δ) - val, st.Δs)
             else
@@ -108,15 +105,11 @@ function define_triple_overload(sig)
            Tuple{Any, NoTangent}
             return
         end
-        for m in methods(opT.instance, (StochasticTriple, StochasticTriple))
-            if m.sig <: Tuple{opT, StochasticTriple, StochasticTriple}
-                return
-            end
-        end
         for R in AMBIGUOUS_TYPES
             @eval function (f::$opT)(st::StochasticTriple{T}, x::$R; kwargs...) where {T}
                 args_tangent = (NoTangent(), delta(st), zero(x))
-                val, δ = frule(args_tangent, f, value(st), x; kwargs...)
+                val, δ0 = frule(args_tangent, f, value(st), x; kwargs...)
+                δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
                 if !iszero(st.Δs)
                     Δs = map(Δ -> f(st.value + Δ, x) - val, st.Δs)
                 else
@@ -126,7 +119,8 @@ function define_triple_overload(sig)
             end
             @eval function (f::$opT)(x::$R, st::StochasticTriple{T}; kwargs...) where {T}
                 args_tangent = (NoTangent(), zero(x), delta(st))
-                val, δ = frule(args_tangent, f, x, value(st); kwargs...)
+                val, δ0 = frule(args_tangent, f, x, value(st); kwargs...)
+                δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
                 if !iszero(st.Δs)
                     Δs = map(Δ -> f(x, st.value + Δ) - val, st.Δs)
                 else
@@ -138,7 +132,8 @@ function define_triple_overload(sig)
         @eval function (f::$opT)(sts::Vararg{StochasticTriple{T}, 2}; kwargs...) where {T}
             args_tangent = (NoTangent(), delta.(sts)...)
             args = (f, value.(sts)...)
-            val, δ = frule(args_tangent, args...; kwargs...)
+            val, δ0 = frule(args_tangent, args...; kwargs...)
+            δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
 
             Δs_all = map(st -> getfield(st, :Δs), sts)
             if all(iszero.(Δs_all))
@@ -158,7 +153,78 @@ end
 
 on_new_rule(define_triple_overload, frule)
 
-### Integer functions
+### Extra overloads
+
+# TODO: generalize the below logic to compactly handle a wider range of functions.
+# See also https://github.com/JuliaDiff/ForwardDiff.jl/blob/master/src/dual.jl.
+
+function Base.hash(st::StochasticTriple, hsh::UInt)
+    if !isempty(st.Δs)
+        error("Hashing a stochastic triple with perturbations not yet supported.")
+    end
+    hash(StochasticAD.value(st), hsh)
+end
+
+#=
+This is a hacky experimental way to convert a float-like stochastic triple
+into an integer-like one, to facilitate generic coding.
+=#
+function Base.round(I::Type{<:Integer}, st::StochasticTriple{T, V}) where {T, V}
+    return StochasticTriple{T}(round(I, st.value), map(Δ -> round(I, st.value + Δ), st.Δs))
+end
+
+for op in UNARY_TYPEFUNCS_NOWRAP
+    @eval function Base.$op(::Type{<:StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+        return Base.$op(V)
+    end
+end
+
+for op in UNARY_TYPEFUNCS_WRAP
+    @eval function Base.$op(::Type{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+        return StochasticTriple{T, V, FIs}(Base.$op(V), zero(V), empty(FIs))
+    end
+    if !(op in (:(zero), :(one)))
+        @eval function Base.$op(st::StochasticTriple) where {T, V, FIs}
+            return Base.$op(typeof(st))
+        end
+    end
+end
+
+for op in RNG_TYPEFUNCS_WRAP
+    @eval function Random.$op(rng::AbstractRNG,
+                              ::Type{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+        return StochasticTriple{T, V, FIs}(Random.$op(rng, V), zero(V), empty(FIs))
+    end
+end
+
+#=
+The short-circuit "x == y" case in Base.isapprox is bad for us
+because it could unnecessarily lead to a boolean-predicate
+depends on output error where StochasticAD cannot prove correctness.
+We patch up the rule by removing the short-circuit, allowing some common
+cases to work.
+
+In the future, we will ideally handle the overloading rule in a more general
+way. (E.g. by catching the chain rule for isapprox and recursively calling isapprox
+on the values.)
+=#
+function Base.isapprox(st1::StochasticTriple, st2::StochasticTriple;
+                       atol::Real = 0, rtol::Real = Base.rtoldefault(st1, st2, atol),
+                       nans::Bool = false, norm::Function = abs)
+    (isfinite(st1) && isfinite(st2) &&
+     norm(st1 - st2) <= max(atol, rtol * max(norm(st1), norm(st2)))) ||
+        (nans && isnan(st1) && isnan(st2))
+end
+function Base.isapprox(st1::StochasticTriple, x::Real;
+                       atol::Real = 0, rtol::Real = Base.rtoldefault(st1, x, atol),
+                       nans::Bool = false, norm::Function = abs)
+    (isfinite(st1) && isfinite(x) &&
+     norm(st1 - x) <= max(atol, rtol * max(norm(st1), norm(x)))) ||
+        (nans && isnan(st1) && isnan(x))
+end
+function Base.isapprox(x::Real, st::StochasticTriple; kwargs...)
+    return Base.isapprox(st, x; kwargs...)
+end
 
 """
     Base.getindex(C::AbstractArray, st::StochasticTriple{T})
@@ -169,7 +235,7 @@ A simple prototype rule for array indexing. Assumes that underlying type of `st`
 function Base.getindex(C::AbstractArray, st::StochasticTriple{T}) where {T}
     val = C[st.value]
     function do_map(Δ)
-        value(C[st.value + Δ]) - value(val)
+        return value(C[st.value + Δ]) - value(val)
     end
     Δs = map(do_map, st.Δs)
     if val isa StochasticTriple

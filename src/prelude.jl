@@ -12,3 +12,14 @@ const BINARY_PREDICATES = [
     Base.:(<=),
     Base.:(>=),
 ]
+
+const UNARY_TYPEFUNCS_NOWRAP = [:(rtoldefault)]
+const UNARY_TYPEFUNCS_WRAP = [
+    :(typemin),
+    :(typemax),
+    :(floatmin),
+    :(floatmax),
+    :(zero),
+    :(one),
+]
+const RNG_TYPEFUNCS_WRAP = [:(rand), :(randn), :(randexp)]

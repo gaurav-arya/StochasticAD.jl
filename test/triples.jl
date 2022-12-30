@@ -169,4 +169,19 @@ end
    out_st = imag(st)
    @test StochasticAD.value(out_st) ≈ 0
    @test StochasticAD.delta(out_st) ≈ 0
+   @test isempty(out_st.Δs)
+end
+
+@testset "Unary functions converting type to fixed instance" begin
+    for val in [0.5, 1]
+        st = stochastic_triple(val)
+        for op in StochasticAD.UNARY_TYPEFUNCS_WRAP
+            f = getfield(Base, Symbol(op))
+            for out_st in [f(st), f(typeof(st))]
+                @test StochasticAD.value(out_st) ≈ f(typeof(val))
+                @test StochasticAD.delta(out_st) ≈ 0 
+                @test isempty(out_st.Δs)
+            end
+        end
+    end
 end

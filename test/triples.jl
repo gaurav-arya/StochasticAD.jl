@@ -3,6 +3,7 @@ using Test
 using Distributions
 using ForwardDiff
 using OffsetArrays
+using ChainRulesCore
 
 const backends = [
     StochasticAD.PrunedFIs,
@@ -155,4 +156,17 @@ end
     # Test StochasticModel + stochastic_gradient combination
     m = StochasticModel(f, x)
     @test stochastic_gradient(m).p ≈ stochastic_ad_grad
+end
+
+@testset "Propagation using frule with ZeroTangent" begin
+   st = stochastic_triple(.5)
+
+   # Verify that the rule for imag indeed gives a ZeroTangent
+   value = StochasticAD.value(st)
+   δ = StochasticAD.delta(st)
+   @test frule((NoTangent(), δ), imag, value)[2] isa ZeroTangent
+   # Test that stochastic triples flow through this rule
+   out_st = imag(st)
+   @test StochasticAD.value(out_st) ≈ 0
+   @test StochasticAD.delta(out_st) ≈ 0
 end

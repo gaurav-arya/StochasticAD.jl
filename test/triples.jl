@@ -178,9 +178,22 @@ end
         for op in StochasticAD.UNARY_TYPEFUNCS_WRAP
             f = getfield(Base, Symbol(op))
             for out_st in [f(st), f(typeof(st))]
-                @test StochasticAD.value(out_st) ≈ f(typeof(val))
+                @test out_st isa StochasticAD.StochasticTriple
+                @test StochasticAD.value(out_st) ≈ f(val) ≈ f(typeof(val))
                 @test StochasticAD.delta(out_st) ≈ 0 
                 @test isempty(out_st.Δs)
+            end
+        end
+        #=
+        It so happens that the UNARY_TYPEFUNCS_WRAP funcs all support both instances and types
+        whereas UNARY_TYPEFUNCS_NOWRAP only supports types, so we only test types in the below,
+        but this is a coincidence that may not hold in the future.
+        =#
+        for op in StochasticAD.UNARY_TYPEFUNCS_NOWRAP
+            f = getfield(Base, Symbol(op))
+            out = f(typeof(st))
+            @test out isa typeof(val) 
+            @test out ≈ f(typeof(val))
             end
         end
     end

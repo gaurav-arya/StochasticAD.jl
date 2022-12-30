@@ -5,21 +5,21 @@ const UNARY_PREDICATES = [isinf, isnan, isfinite, iseven, isodd, isreal, isinteg
 const BINARY_PREDICATES = [
     isequal,
     isless,
-    Base.:<,
-    Base.:>,
-    Base.:(==),
-    Base.:(!=),
-    Base.:(<=),
-    Base.:(>=),
+    :<,
+    :>,
+    :(==),
+    :(!=),
+    :(<=),
+    :(>=),
 ]
 
-const UNARY_TYPEFUNCS_NOWRAP = [:(Base.rtoldefault)]
+const UNARY_TYPEFUNCS_NOWRAP = [:(rtoldefault)]
 const UNARY_TYPEFUNCS_WRAP = [
-    :(Base.typemin),
-    :(Base.typemax),
-    :(Base.floatmin),
-    :(Base.floatmax),
-    :(Base.zero),
-    :(Base.one),
+    :(typemin),
+    :(typemax),
+    :(floatmin),
+    :(floatmax),
+    :(zero),
+    :(one),
 ]
-const RNG_TYPEFUNCS_WRAP = [:(Random.rand), :(Random.randn), :(Random.randexp)]
+const RNG_TYPEFUNCS_WRAP = [:(rand), :(randn), :(randexp)]

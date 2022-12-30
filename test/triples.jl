@@ -4,6 +4,7 @@ using Distributions
 using ForwardDiff
 using OffsetArrays
 using ChainRulesCore
+using Random
 
 const backends = [
     StochasticAD.PrunedFIs,
@@ -194,6 +195,15 @@ end
             out = f(typeof(st))
             @test out isa typeof(val) 
             @test out ≈ f(typeof(val))
+        end
+        RNG = copy(Random.GLOBAL_RNG)
+        for op in StochasticAD.RNG_TYPEFUNCS_WRAP
+            f = getfield(Random, Symbol(op))
+            out_st = f(copy(RNG), typeof(st))
+            @test out_st isa StochasticAD.StochasticTriple
+            @test StochasticAD.value(out_st) ≈ f(copy(RNG), typeof(val))
+            @test StochasticAD.delta(out_st) ≈ 0 
+            @test isempty(out_st.Δs)
             end
         end
     end

@@ -185,7 +185,7 @@ end
 for op in RNG_TYPEFUNCS_WRAP
     @eval function Random.$op(rng::AbstractRNG,
                        ::Type{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
-        return StochasticTriple{T, V, FIs}($op(rng, V), zero(V), empty(FIs))
+        return StochasticTriple{T, V, FIs}(Random.$op(rng, V), zero(V), empty(FIs))
     end
 end
 

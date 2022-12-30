@@ -204,7 +204,6 @@ end
             @test StochasticAD.value(out_st) ≈ f(copy(RNG), typeof(val))
             @test StochasticAD.delta(out_st) ≈ 0 
             @test isempty(out_st.Δs)
-            end
         end
     end
 end

@@ -203,6 +203,10 @@ because it could unnecessarily lead to a boolean-predicate
 depends on output error where StochasticAD cannot prove correctness.
 We patch up the rule by removing the short-circuit, allowing some common
 cases to work.
+
+In the future, we will ideally handle the overloading rule in a more general
+way. (E.g. by catching the chain rule for isapprox and recursively calling isapprox
+on the values.)
 =#
 function Base.isapprox(st1::StochasticTriple, st2::StochasticTriple;
                        atol::Real = 0, rtol::Real = Base.rtoldefault(st1, st2, atol),

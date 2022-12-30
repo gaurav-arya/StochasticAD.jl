@@ -238,3 +238,10 @@ end
     @test StocasticAD.delta(round(Int, st)) ≈ 0 
     @test round(Int, st) ≈ 1
 end
+
+@testset "Approximate comparisons" begin
+    st = stochastic_triple(.5)
+    @test st ≈ st
+    @test !(st ≈ st + 1)
+    @test_broken stochastic_triple(Inf) ≈ stochastic_triple(Inf)
+end

@@ -233,7 +233,7 @@ end
 @testset "Converting float stochastic triples to integer triples" begin
     st = stochastic_triple(0.6)
     @test round(Int, st) isa StochasticAD.StochasticTriple
-    @test StocasticAD.delta(round(Int, st)) ≈ 0
+    @test StochasticAD.delta(round(Int, st)) ≈ 0
     @test round(Int, st) ≈ 1
 end
 

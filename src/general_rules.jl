@@ -158,8 +158,12 @@ on_new_rule(define_triple_overload, frule)
 # TODO: generalize the below logic to compactly handle a wider range of functions.
 # See also https://github.com/JuliaDiff/ForwardDiff.jl/blob/master/src/dual.jl.
 
-Base.hash(st::StochasticTriple) = hash(StochasticAD.value(st))
-Base.hash(st::StochasticTriple, hsh::UInt) = hash(StochasticAD.value(st), hsh)
+function Base.hash(st::StochasticTriple, hsh::UInt)
+    if !isempty(st.Δs)
+        error("Hashing a stochastic triple with perturbations not yet supported.")
+    end
+    hash(StochasticAD.value(st), hsh)
+end
 
 function Base.round(I::Type{<:Integer}, st::StochasticTriple{T, V}) where {T, V}
     return StochasticTriple{T}(round(I, st.value), map(Δ -> round(I, st.value + Δ), st.Δs))

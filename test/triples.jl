@@ -207,3 +207,18 @@ end
         end
     end
 end
+
+@testset "Hashing" begin
+    st = stochastic_triple(3.)
+    @test_nowarn hash(st)
+    @test_nowarn hash(st, UInt(5))
+    d = Dict()
+    @test_nowarn d[st] = 5
+    @test d[st] == 5
+    @test d[3] == 5
+    # Test that we get an error with discrete random dictionary indices,
+    # since this isn't supported and we want to avoid silent failures.
+    Δs = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 1., 1.)
+    st = StochasticAD.StochasticTriple{0}(1., 0, Δs)
+    @test_throws ErrorException d[rand(Bernoulli(st))]
+end

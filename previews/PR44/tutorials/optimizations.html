@@ -17,7 +17,7 @@ for i in 1:iterations
     Optimisers.update!(s, m, stochastic_gradient(m))
     push!(trace, m.p[])
 end
-p_opt = m.p[] # Our optimized value of p</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">0.7486961105129275</code></pre><p>Finally, let&#39;s plot the results of our optimization, and also perform a sweep through the parameter space to verify the accuracy of our estimator:</p><pre><code class="language-julia hljs">## Sweep through parameters to find average and derivative
+p_opt = m.p[] # Our optimized value of p</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">0.7489093226187383</code></pre><p>Finally, let&#39;s plot the results of our optimization, and also perform a sweep through the parameter space to verify the accuracy of our estimator:</p><pre><code class="language-julia hljs">## Sweep through parameters to find average and derivative
 ps = 0.02:0.02:0.98 # values of p to sweep
 N = 1000 # number of samples at each p
 avg = [mean(X(p) for _ in 1:N) for p in ps]
@@ -48,7 +48,7 @@ for i in 1:iterations
     Optimisers.update!(s, m, stochastic_gradient(m))
     push!(trace, m.p[])
 end
-p_opt = m.p[]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">29.150430154677775</code></pre><p>Let&#39;s plot our results in the same way as before:</p><pre><code class="language-julia hljs">ps = 10:0.5:50
+p_opt = m.p[]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">29.072133861673862</code></pre><p>Let&#39;s plot our results in the same way as before:</p><pre><code class="language-julia hljs">ps = 10:0.5:50
 N = 1000
 avg = [mean(X(p) for _ in 1:N) for p in ps]
 derivative = [mean(derivative_estimate(X, p) for _ in 1:N) for p in ps]

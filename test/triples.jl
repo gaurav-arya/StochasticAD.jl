@@ -224,7 +224,10 @@ end
 end
 
 @testset "Coupled comparison" begin
-    Δs = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 1., 1.)
-    st = StochasticAD.StochasticTriple{0}(1., 0, Δs)
-    @test st == st
+    Δs_1 = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 1., 1.)
+    Δs_2 = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 1., 1.)
+    st_1 = StochasticAD.StochasticTriple{0}(1., 0, Δs_1)
+    st_2 = StochasticAD.StochasticTriple{0}(1., 0, Δs_2)
+    @test st_1 == st_1
+    @test_throws ErrorException st_1 == st_2
 end

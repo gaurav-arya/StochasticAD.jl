@@ -26,6 +26,7 @@ ForwardDiff = "0.10"
 Functors = "0.3"
 
 [extras]
+ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 DiffResults = "163ba53b-c6d8-5494-b064-1a9d43ac40c5"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 GaussianDistributions = "43dcc890-d446-5863-8d1a-14597580bb8d"

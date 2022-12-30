@@ -240,6 +240,8 @@ end
 @testset "Approximate comparisons" begin
     st = stochastic_triple(0.5)
     @test st ≈ st
+    # Check that the rtol is indeed reasonable
+    @test st ≈ st + 1e-14
     @test !(st ≈ st + 1)
     @test_broken stochastic_triple(Inf) ≈ stochastic_triple(Inf)
 end

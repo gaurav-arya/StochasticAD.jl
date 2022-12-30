@@ -5,12 +5,12 @@ const UNARY_PREDICATES = [isinf, isnan, isfinite, iseven, isodd, isreal, isinteg
 const BINARY_PREDICATES = [
     isequal,
     isless,
-    :<,
-    :>,
-    :(==),
-    :(!=),
-    :(<=),
-    :(>=),
+    Base.:<,
+    Base.:>,
+    Base.:(==),
+    Base.:(!=),
+    Base.:(<=),
+    Base.:(>=),
 ]
 
 const UNARY_TYPEFUNCS_NOWRAP = [:(rtoldefault)]

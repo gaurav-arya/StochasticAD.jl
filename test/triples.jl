@@ -182,7 +182,7 @@ end
         @test StochasticAD.value(out_st) ≈ f(val) ≈ f(typeof(val))
         @test StochasticAD.delta(out_st) ≈ 0
         @test isempty(out_st.Δs)
-        @test f(typeof(st)) = out_st
+        @test f(typeof(st)) == out_st
     end
     #=
     It so happens that the UNARY_TYPEFUNCS_WRAP funcs all support both instances and types

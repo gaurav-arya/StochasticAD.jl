@@ -139,12 +139,16 @@ struct Tag{F, V}
 end
 
 """
-    stochastic_triple(X, p; backend=StochasticAD.PrunedFIs)
-    stochastic_triple(p; backend=StochasticAD.PrunedFIs)
+    stochastic_triple(X, p; backend=StochasticAD.PrunedFIs[, perturbed_index])
+    stochastic_triple(p; backend=StochasticAD.PrunedFIs[, perturbed_index])
 
 If `p <: Real`, return the result of propagating the stochastic triple `p + ε` through the random function `X(p)`.
+
 If `p <: AbstractVector`, return a vector of stochastic triples of the same shape as `p`, containing the stochastic
-triples that result from perturbing the corresponding array elements of `p` one-by-one.
+triples that result from perturbing the corresponding array elements of `p` one-by-one. The `perturbed_index` argument
+may be used to specify that the sensitivity is only required with respect to a particular index, in which case only
+that sensitivity is returned.
+
 When `X` is not provided, the identity function is used. The `backend` keyword argument describes the algorithm 
 used by the third component of the stochastic triple, see [technical details](devdocs.md) for more details.
 """
@@ -153,28 +157,28 @@ function stochastic_triple(f, p::V; backend = PrunedFIs) where {V <: Real}
     return f(st)
 end
 
-function stochastic_triple(f, p::AbstractVector{V}; backend = PrunedFIs) where {V}
-    function map_func(perturbed_index)
-        sts = map(eachindex(p), p) do i, p_i
-            if i == perturbed_index
-                return StochasticTriple{Tag{typeof(f), V}}(p_i, one(p_i), backend)
-            else
-                return StochasticTriple{Tag{typeof(f), V}}(p_i, zero(p_i), backend)
-            end
+function stochastic_triple(f, p::AbstractVector{V}; backend = PrunedFIs, perturbed_index) where {V}
+    sts = map(eachindex(p), p) do i, p_i
+        if i == perturbed_index
+            return StochasticTriple{Tag{typeof(f), V}}(p_i, one(p_i), backend)
+        else
+            return StochasticTriple{Tag{typeof(f), V}}(p_i, zero(p_i), backend)
         end
-        return f(sts)
     end
-    return map(map_func, eachindex(p))
+    return f(sts)
+end
+
+function stochastic_triple(f, p::AbstractVector; backend = PrunedFIs)
+    return map(i -> stochastic_triple(f, p; backend, perturbed_index=i), eachindex(p))
 end
 
 stochastic_triple(p; kwargs...) = stochastic_triple(x -> x, p; kwargs...)
 
 @doc raw"""
-    derivative_estimate(X, p; backend=StochasticAD.PrunedFIs)
+    derivative_estimate(X, p; backend=StochasticAD.PrunedFIs, kwargs...)
 
 Compute an unbiased estimate of ``\frac{\mathrm{d}\mathbb{E}[X(p)]}{\mathrm{d}p}``, the derivative of the expectation of the real-valued random function `X(p)` 
-with respect to its input `p`, where `p <: Real` or `p <: AbstractVector`.
-The `backend` keyword argument describes the algorithm used by the third component of the stochastic triple, see [technical details](devdocs.md) for more details.
+with respect to its input `p`, where `p <: Real` or `p <: AbstractVector`. Takes in the same `kwargs` as [`stochastic_triple`](@ref).
 """
 function derivative_estimate(f, p::Real; kwargs...)
     derivative_contribution(stochastic_triple(f, p; kwargs...))

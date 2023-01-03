@@ -144,9 +144,12 @@ end
 
     stochastic_ad_grad = derivative_estimate(f, x)
     stochastic_ad_grad2 = derivative_contribution.(stochastic_triple(f, x))
+    stochastic_ad_grad_first ≈ derivative_estimate(f, x; perturbed_index=1)
     fd_grad = ForwardDiff.gradient(f, x)
+
     @test stochastic_ad_grad ≈ fd_grad
     @test stochastic_ad_grad ≈ stochastic_ad_grad2
+    @test stochastic_ad_grad_first ≈ first(fd_grad)
 
     # Try an OffsetArray too
     f_off(x) = (x[0] * x[1] * sin(x[2]) + exp(x[0] * x[1])) / x[2]

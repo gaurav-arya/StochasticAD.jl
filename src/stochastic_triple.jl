@@ -62,6 +62,10 @@ function StochasticTriple{T}(value::V, δ::V, Δs::FIs) where {T, V, FIs <: Abst
     StochasticTriple{T, V, FIs}(value, δ, Δs)
 end
 
+function StochasticTriple{T}(value::V, Δs::FIs) where {T, V, FIs <: AbstractFIs{V}}
+    StochasticTriple{T}(value, zero(value), Δs)
+end
+
 function StochasticTriple{T}(value::A, δ::B,
                              Δs::FIs) where {T, A, B, C, FIs <: AbstractFIs{C}}
     V = promote_type(A, B, C)
@@ -91,11 +95,6 @@ function Base.promote_rule(::Type{StochasticTriple{T, V1, FIs}},
     V = promote_type(V1, V2)
     StochasticTriple{T, V, similar_type(FIs, V)}
 end
-
-Base.zero(::Type{StochasticTriple{T, V, FIs}}) where {T, V, FIs} = zero(V)
-Base.one(::Type{StochasticTriple{T, V, FIs}}) where {T, V, FIs} = one(V)
-Base.zero(st::StochasticTriple) = zero(typeof(st))
-Base.one(st::StochasticTriple) = one(typeof(st))
 
 function Base.convert(::Type{StochasticTriple{T, V, FIs}}, x::Real) where {T, V, FIs}
     StochasticTriple{T, V, FIs}(convert(V, x), zero(V), empty(FIs))

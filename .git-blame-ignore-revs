@@ -1,0 +1,5 @@
+# Run this command to always ignore these in local `git blame`:
+# git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# Run formatter 
+21038a047c023330876feb9259cd5c92add3ca81

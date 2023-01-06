@@ -33,7 +33,7 @@ end
 
 PrunedFIs{V}(state::PrunedFIsState) where {V} = PrunedFIs{V}(zero(V), -1, state)
 StochasticAD.similar_empty(Δs::PrunedFIs, V::Type) = PrunedFIs{V}(PrunedFIsState(false))
-Base.empty(Δs::PrunedFIs{V}) where {V} = similar_empty(Δs::PrunedFIs, V::Type)
+Base.empty(Δs::PrunedFIs{V}) where {V} = StochasticAD.similar_empty(Δs::PrunedFIs, V::Type)
 # we truly have no clue what the state is here, so use an invalidated state
 function Base.empty(::Type{<:PrunedFIs{V}}) where {V}
     PrunedFIs{V}(PrunedFIsState(false))
@@ -67,6 +67,7 @@ Base.isempty(Δs::PrunedFIs) = !Δs.state.valid || (Δs.tag != Δs.state.active_
 Base.length(Δs::PrunedFIs) = isempty(Δs) ? 0 : 1
 Base.iszero(Δs::PrunedFIs) = isempty(Δs) || iszero(Δs.Δ)
 Base.iszero(Δs::PrunedFIs{<:Tuple}) = isempty(Δs) || all(iszero.(Δs.Δ))
+isapproxzero(Δs::PrunedFIs) = isempty(Δs) || isapprox(Δs.Δ, zero(Δs.Δ))
 
 # we lazily prune, so check if empty first
 pruned_value(Δs::PrunedFIs{V}) where {V} = isempty(Δs) ? zero(V) : Δs.Δ
@@ -92,7 +93,7 @@ function get_pruned_state(Δs_all)
     new_state = PrunedFIsState(false)
     total_weight = 0.0
     for Δs in Δs_all
-        iszero(Δs) && continue
+        isapproxzero(Δs) && continue
         candidate_state = Δs.state
         if !candidate_state.valid || (candidate_state === new_state)
             continue

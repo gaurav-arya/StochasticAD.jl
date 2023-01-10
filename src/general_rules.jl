@@ -184,7 +184,7 @@ for op in UNARY_TYPEFUNCS_WRAP
         return StochasticTriple{T, V, FIs}(Base.$op(V), zero(V), empty(FIs))
     end
     if !(op in (:(zero), :(one)))
-        @eval function Base.$op(st::StochasticTriple) where {T, V, FIs}
+        @eval function Base.$op(st::StochasticTriple)
             return Base.$op(typeof(st))
         end
     end

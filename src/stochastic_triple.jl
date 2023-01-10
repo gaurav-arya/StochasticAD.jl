@@ -157,7 +157,7 @@ function stochastic_triple(f, p::V; backend = PrunedFIs) where {V <: Real}
     return f(st)
 end
 
-function stochastic_triple(f, p::AbstractVector{V}; backend = PrunedFIs, perturbed_index) where {V}
+function stochastic_triple_perturb(f, p::AbstractVector{V}; backend = PrunedFIs, perturbed_index) where {V}
     sts = map(eachindex(p), p) do i, p_i
         if i == perturbed_index
             return StochasticTriple{Tag{typeof(f), V}}(p_i, one(p_i), backend)
@@ -169,7 +169,7 @@ function stochastic_triple(f, p::AbstractVector{V}; backend = PrunedFIs, perturb
 end
 
 function stochastic_triple(f, p::AbstractVector; backend = PrunedFIs)
-    return map(i -> stochastic_triple(f, p; backend, perturbed_index=i), eachindex(p))
+    return map(i -> stochastic_triple_perturb(f, p; backend, perturbed_index=i), eachindex(p))
 end
 
 stochastic_triple(p; kwargs...) = stochastic_triple(x -> x, p; kwargs...)

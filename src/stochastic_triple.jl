@@ -142,29 +142,44 @@ end
     stochastic_triple(X, p; backend=StochasticAD.PrunedFIs)
     stochastic_triple(p; backend=StochasticAD.PrunedFIs)
 
-If `p <: Real`, return the result of propagating the stochastic triple `p + ε` through the random function `X(p)`.
-If `p <: AbstractVector`, return a vector of stochastic triples of the same shape as `p`, containing the stochastic
-triples that result from perturbing the corresponding array elements of `p` one-by-one.
-When `X` is not provided, the identity function is used. The `backend` keyword argument describes the algorithm 
-used by the third component of the stochastic triple, see [technical details](devdocs.md) for more details.
-"""
-function stochastic_triple(f, p::V; backend = PrunedFIs) where {V <: Real}
-    st = StochasticTriple{Tag{typeof(f), V}}(p, one(p), backend)
-    return f(st)
-end
+For any `p` that is supported by [`Functors.jl`]() (e.g. scalars, arrays), 
+return an output of similar structure to p, where a particular value contains
+the stochastic-triple output of `X` when perturbing the corresponding value in `p`
+(i.e. replacing the original value `x` with the triple `x + ε`).
+When `X` is not provided, the identity function is used. 
+The `backend` keyword argument describes the algorithm used by the third component
+of the stochastic triple, see [technical details](devdocs.md) for more details.
 
-function stochastic_triple(f, p::AbstractVector{V}; backend = PrunedFIs) where {V}
+# Example
+```jldoctest
+julia> using Distributions, Random, StochasticAD; Random.seed!(4321);
+
+julia> stochastic_triple(rand ∘ Bernoulli, 0.5)
+StochasticTriple of Int64:
+0 + 0ε + (1 with probability 2.0ε, tag 1)
+```
+"""
+function stochastic_triple(f, p::V; backend = PrunedFIs) where {V}
+    counter = begin
+        c = 0
+        (_) -> begin
+            c += 1
+            return c
+        end
+    end
+    indices = structural_map(counter, p)
     function map_func(perturbed_index)
-        sts = map(eachindex(p), p) do i, p_i
+        sts = structural_map(indices, p) do i, p_i
             if i == perturbed_index
                 return StochasticTriple{Tag{typeof(f), V}}(p_i, one(p_i), backend)
             else
                 return StochasticTriple{Tag{typeof(f), V}}(p_i, zero(p_i), backend)
             end
         end
-        return f(sts)
+        out = f(sts)
+        return out
     end
-    return map(map_func, eachindex(p))
+    return structural_map(map_func, indices)
 end
 
 stochastic_triple(p; kwargs...) = stochastic_triple(x -> x, p; kwargs...)
@@ -172,14 +187,38 @@ stochastic_triple(p; kwargs...) = stochastic_triple(x -> x, p; kwargs...)
 @doc raw"""
     derivative_estimate(X, p; backend=StochasticAD.PrunedFIs)
 
-Compute an unbiased estimate of ``\frac{\mathrm{d}\mathbb{E}[X(p)]}{\mathrm{d}p}``, the derivative of the expectation of the real-valued random function `X(p)` 
-with respect to its input `p`, where `p <: Real` or `p <: AbstractVector`.
-The `backend` keyword argument describes the algorithm used by the third component of the stochastic triple, see [technical details](devdocs.md) for more details.
-"""
-function derivative_estimate(f, p::Real; kwargs...)
-    derivative_contribution(stochastic_triple(f, p; kwargs...))
-end
+Compute an unbiased estimate of ``\frac{\mathrm{d}\mathbb{E}[X(p)]}{\mathrm{d}p}``, 
+the derivative of the expectation of the random function `X(p)` with respect to its input `p`. 
+Both `p` and `X(p)` can be any object supported by [`Functors.jl`](https://fluxml.ai/Functors.jl/stable/),
+e.g. scalars or abstract arrays. 
+The output of `derivative_estimate` has the same outer structure as `p`, but with each
+scalar in `p` replaced by a derivative estimate of `X(p)` with respect to that entry.
+For example, if `X(p) <: AbstractMatrix` and `p <: Real`, then the output would be a
+matrix.
+The `backend` keyword argument describes the algorithm used by the third component
+of the stochastic triple, see [technical details](devdocs.md) for more details.
 
-function derivative_estimate(f, p::AbstractVector; kwargs...)
-    derivative_contribution.(stochastic_triple(f, p; kwargs...))
+!!! note 
+    Since `derivative_estimate` performs forward-mode AD, the required computation time scales
+    linearly with the number of parameters in `p` (but is unaffected by the number of parameters in `X(p)`).
+# Example
+```jldoctest
+julia> using Distributions, Random, StochasticAD; Random.seed!(4321);
+
+julia> derivative_estimate(rand ∘ Bernoulli, 0.5) # A random quantity that averages to 1.
+2.0
+
+julia> derivative_estimate(x -> [rand(Bernoulli(x * i/100)) for i in 1:100], 0.5)
+100-element Vector{Float64}:
+ 0.010050251256281407
+ 0.020202020202020204
+ 0.03045685279187817
+ 0.04081632653061225
+ ⋮
+ 0.0
+ 0.0
+ 2.0
+"""
+function derivative_estimate(f, p; kwargs...)
+    StochasticAD.structural_map(derivative_contribution, stochastic_triple(f, p; kwargs...))
 end

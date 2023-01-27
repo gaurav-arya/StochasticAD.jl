@@ -245,3 +245,9 @@ end
     @test !(st ≈ st + 1)
     @test_broken stochastic_triple(Inf) ≈ stochastic_triple(Inf)
 end
+
+@testset "Error on unmatched tags" begin
+    st1 = stochastic_triple(0.5)
+    st2 = stochastic_triple(x -> x^2, 0.5)
+    @test_throws ArgumentError convert(typeof(st1), st2)
+end

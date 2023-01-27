@@ -76,9 +76,10 @@ end
 
 # TODO: is this the right thing to do? Maybe, different from the promote case because there V was guaranteed to be an ancestor. 
 # Also, bad to do when already same type?
-function Base.convert(::Type{StochasticTriple{T, V, FIs}},
-                      x::StochasticTriple{T}) where {T, V, FIs}
-    StochasticTriple{T, V, FIs}(convert(V, x.value), convert(V, x.δ), FIs(x.Δs))
+function Base.convert(::Type{StochasticTriple{T1, V, FIs}},
+                      x::StochasticTriple{T2}) where {T1, T2, V, FIs}
+    (T1 !== T2) && throw(ArgumentError("Tags of combined stochastic triples do not match."))
+    StochasticTriple{T1, V, FIs}(convert(V, x.value), convert(V, x.δ), FIs(x.Δs))
 end
 
 # TODO: ForwardDiff's promotion rules are a little more complicated, see https://github.com/JuliaDiff/ForwardDiff.jl/issues/322

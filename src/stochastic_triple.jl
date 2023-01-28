@@ -147,6 +147,7 @@ return an output of similar structure to p, where a particular value contains
 the stochastic-triple output of `X` when perturbing the corresponding value in `p`
 (i.e. replacing the original value `x` with the triple `x + ε`).
 When `X` is not provided, the identity function is used. 
+
 The `backend` keyword argument describes the algorithm used by the third component
 of the stochastic triple, see [technical details](devdocs.md) for more details.
 
@@ -189,12 +190,13 @@ stochastic_triple(p; kwargs...) = stochastic_triple(x -> x, p; kwargs...)
 
 Compute an unbiased estimate of ``\frac{\mathrm{d}\mathbb{E}[X(p)]}{\mathrm{d}p}``, 
 the derivative of the expectation of the random function `X(p)` with respect to its input `p`. 
+
 Both `p` and `X(p)` can be any object supported by [`Functors.jl`](https://fluxml.ai/Functors.jl/stable/),
 e.g. scalars or abstract arrays. 
 The output of `derivative_estimate` has the same outer structure as `p`, but with each
 scalar in `p` replaced by a derivative estimate of `X(p)` with respect to that entry.
-For example, if `X(p) <: AbstractMatrix` and `p <: Real`, then the output would be a
-matrix.
+
+For example, if `X(p) <: AbstractMatrix` and `p <: Real`, then the output would be a matrix.
 The `backend` keyword argument describes the algorithm used by the third component
 of the stochastic triple, see [technical details](devdocs.md) for more details.
 
@@ -218,6 +220,7 @@ julia> derivative_estimate(x -> [rand(Bernoulli(x * i/100)) for i in 1:100], 0.5
  0.0
  0.0
  2.0
+```
 """
 function derivative_estimate(f, p; kwargs...)
     StochasticAD.structural_map(derivative_contribution, stochastic_triple(f, p; kwargs...))

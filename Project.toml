@@ -1,7 +1,7 @@
 name = "StochasticAD"
 uuid = "e4facb34-4f7e-4bec-b153-e122c37934ac"
 authors = ["Gaurav Arya <aryag@mit.edu> and contributors"]
-version = "0.1.6"
+version = "0.1.7"
 
 [deps]
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
@@ -22,7 +22,7 @@ Distributions = "0.25"
 DistributionsAD = "0.6"
 ExprTools = "0.1"
 ForwardDiff = "0.10"
-Functors = "0.2, 0.3, 0.4"
+Functors = "0.4.1"
 julia = "1"
 
 [extras]

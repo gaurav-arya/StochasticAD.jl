@@ -260,3 +260,13 @@ end
     st2 = stochastic_triple(x -> x^2, 0.5)
     @test_throws ArgumentError convert(typeof(st1), st2)
 end
+
+@testset "StochasticAD.perturbations API" begin for backend in backends
+    Random.seed!(4321)
+    st = stochastic_triple(rand ∘ Bernoulli, 0.5; backend)
+    #= 
+    NB: since the implementation of perturbations can be backend-specific, the
+    below property need not hold in general, but does for the current backends.
+    =#
+    @test collect(perturbations(st)) == [(1, 2.0)]
+end end

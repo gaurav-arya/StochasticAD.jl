@@ -46,7 +46,7 @@ delta(st::StochasticTriple) = st.δ
 Return the finite perturbation(s) of `st`, in a format dependent on the [backend](devdocs.md) used for storing perturbations.
 """
 perturbations(x::Real) = ()
-perturbations(st::StochasticTriple) = perturbations(st.Δ)
+perturbations(st::StochasticTriple) = perturbations(st.Δs)
 
 """
     derivative_contribution(st::StochasticTriple)

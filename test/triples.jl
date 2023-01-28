@@ -137,7 +137,7 @@ end end
     @test isapprox(triple_array_index2_deriv, exact_array_index2_deriv, rtol = 5e-2)
 end
 
-@testset "Array inputs to higher level functions" begin
+@testset "Array/functor inputs to higher level functions" begin
     # Try a deterministic test function to compare to ForwardDiff
     f(x) = (x[1] * x[2] * sin(x[3]) + exp(x[1] * x[2])) / x[3]
     x = [1, 2, π / 2]
@@ -153,6 +153,15 @@ end
     x_off = OffsetArray([1, 2, π / 2], 0:2)
     stochastic_ad_grad_off = derivative_estimate(f_off, x_off)
     @test stochastic_ad_grad_off ≈ OffsetArray(stochastic_ad_grad, 0:2)
+
+    # Try a Functor
+    f_func(x) = (x[1] * x[2][1] * sin(x[2][2]) + exp(x[1] * x[2][1])) / x[2][2]
+    x_func = (1, [2, π / 2])
+    stochastic_ad_grad_func = derivative_estimate(f_func, x_func)
+    stochastic_ad_grad_func_expected = (stochastic_ad_grad[1], stochastic_ad_grad[2:3])
+    compare_grad_funcs = StochasticAD.structural_map(≈, stochastic_ad_grad_func,
+                                                     stochastic_ad_grad_func_expected)
+    @test all(compare_grad_funcs |> StochasticAD.structural_iterate)
 
     # Test StochasticModel + stochastic_gradient combination
     m = StochasticModel(f, x)

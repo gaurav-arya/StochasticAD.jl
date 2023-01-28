@@ -207,19 +207,14 @@ of the stochastic triple, see [technical details](devdocs.md) for more details.
 ```jldoctest
 julia> using Distributions, Random, StochasticAD; Random.seed!(4321);
 
-julia> derivative_estimate(rand ∘ Bernoulli, 0.5) # A random quantity that averages to 1.
+julia> derivative_estimate(rand ∘ Bernoulli, 0.5) # A random quantity that averages to the true derivative.
 2.0
 
-julia> derivative_estimate(x -> [rand(Bernoulli(x * i/100)) for i in 1:100], 0.5)
-100-element Vector{Float64}:
- 0.010050251256281407
- 0.020202020202020204
- 0.03045685279187817
- 0.04081632653061225
- ⋮
+julia> derivative_estimate(x -> [rand(Bernoulli(x * i/4)) for i in 1:3], 0.5)
+3-element Vector{Float64}:
+ 0.2857142857142857
+ 0.6666666666666666
  0.0
- 0.0
- 2.0
 ```
 """
 function derivative_estimate(f, p; kwargs...)

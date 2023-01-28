@@ -2,7 +2,7 @@ module StochasticAD
 
 ### Public API
 
-export stochastic_triple, derivative_contribution # For working with stochastic triples
+export stochastic_triple, derivative_contribution, perturbations # For working with stochastic triples
 export derivative_estimate, StochasticModel, stochastic_gradient # Higher level functionality
 export new_weight # Particle resampling
 

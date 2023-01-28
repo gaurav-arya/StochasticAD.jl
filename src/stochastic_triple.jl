@@ -142,10 +142,11 @@ end
     stochastic_triple(X, p; backend=StochasticAD.PrunedFIs)
     stochastic_triple(p; backend=StochasticAD.PrunedFIs)
 
-For any `p` that is supported by [`Functors.jl`]() (e.g. scalars, arrays), 
-return an output of similar structure to p, where a particular value contains
+For any `p` that is supported by [`Functors.jl`](https://fluxml.ai/Functors.jl/stable/),
+e.g. scalars or abstract arrays.
+return an output of similar structure to `p``, where a particular value contains
 the stochastic-triple output of `X` when perturbing the corresponding value in `p`
-(i.e. replacing the original value `x` with the triple `x + ε`).
+(i.e. replacing the original value `x` with `x + ε`).
 When `X` is not provided, the identity function is used. 
 
 The `backend` keyword argument describes the algorithm used by the third component

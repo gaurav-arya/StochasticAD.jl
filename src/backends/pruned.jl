@@ -127,9 +127,10 @@ function StochasticAD.combine(::Type{<:PrunedFIs}, Δs_all; rep = nothing)
     PrunedFIs(Δ_combined, state.active_tag, state)
 end
 
-StochasticAD.similar_type(::Type{<:PrunedFIs}, V::Type) = PrunedFIs{V}
-
 ### Miscellaneous
+
+StochasticAD.similar_type(::Type{<:PrunedFIs}, V::Type) = PrunedFIs{V}
+StochasticAD.get_valtype(::Type{<:PrunedFIs{V}}) where {V} = V
 
 function Base.show(io::IO, Δs::PrunedFIs{V}) where {V}
     print(io, "$(pruned_value(Δs)) with probability $(Δs.state.weight)ε, tag $(Δs.tag)")

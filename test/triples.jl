@@ -261,6 +261,105 @@ end
     @test_throws ArgumentError convert(typeof(st1), st2)
 end
 
+@testset "Finite perturbation backend interface" begin for FIs in backends
+    #=
+    Test the backend interface across the finite perturbation backends,
+    which is currently a bit implicitly defined.
+    =#
+    V0 = Int
+    V1 = Float64
+    #=
+    All four of the below approaches should create an empty backend,
+    although the backend's internal state management may differ. 
+    =#
+    Δs0 = StochasticAD.similar_type(FIs, V0)() # used for first triple in computation
+    Δs1 = empty(Δs0)
+    Δs2 = empty(typeof(Δs0))
+    Δs3 = StochasticAD.similar_empty(Δs0, V1)
+    for (Δs, V) in ((Δs0, V0), (Δs1, V0), (Δs2, V0), (Δs3, V1))
+        @test Δs isa FIs
+        @test StochasticAD.get_valtype(Δs) === V
+        @test isempty(Δs)
+        @test iszero(derivative_contribution(Δs))
+    end
+    # Test creation of a single perturbation
+    for Δ in (1, 3.0)
+        Δs0 = StochasticAD.similar_type(FIs, V0)()
+        Δs1 = StochasticAD.similar_new(Δs0, Δ, 3.0)
+        @test Δs1 isa FIs
+        @test StochasticAD.get_valtype(Δs1) === typeof(Δ)
+        @test !isempty(Δs1)
+        @test derivative_contribution(Δs1) == 3Δ
+        # Test StochasticAD.alltrue
+        @test StochasticAD.alltrue(map(_Δ -> true, Δs1))
+        @test !StochasticAD.alltrue(map(_Δ -> false, Δs1))
+    end
+    # Test coupling
+    Δ_coupleds = (3, [4.0, 5.0], (2, [3.0, 4.0]))
+    for Δ_coupled in Δ_coupleds
+        function get_Δs_coupled(; do_combine = false, use_get_rep = false)
+            Δs0 = StochasticAD.similar_type(FIs, Int)()
+            Δs1 = StochasticAD.similar_new(Δs0, 1, 3.0) # perturbation 1
+            Δs2 = StochasticAD.similar_new(Δs0, 1, 2.0) # perturbation 2
+            # A group of perturbations that all stem from perturbation 1. 
+            Δs_all1 = StochasticAD.structural_map(Δ_coupled) do Δ
+                Base.map(_Δ -> Δ, Δs1)
+            end
+            # A group of perturbations that all stem from perturbation 2. 
+            Δs_all2 = StochasticAD.structural_map(Δ_coupled) do Δ
+                Base.map(_Δ -> 2 * Δ, Δs2)
+            end
+            # Join them into a single structure that should be coupled
+            Δs_all = (Δs_all1, Δs_all2)
+            kwargs = use_get_rep ? (; rep = StochasticAD.get_rep(FIs, Δs_all)) : (;)
+            if do_combine
+                return StochasticAD.combine(FIs, Δs_all; kwargs...)
+            else
+                return StochasticAD.couple(FIs, Δs_all; kwargs...)
+            end
+        end
+        Δs_coupled = get_Δs_coupled()
+        @test StochasticAD.get_valtype(Δs_coupled) == typeof((Δ_coupled, Δ_coupled))
+        #=
+        As a test function to apply to the coupled perturbation, we apply
+        a matmul followed by a sigmoid activation function and a sum.
+        =#
+        l = 2 * length(collect(StochasticAD.structural_iterate(Δ_coupled)))
+        A = rand(l, l)
+        function mapfunc(Δ_coupled)
+            arr = collect(StochasticAD.structural_iterate(Δ_coupled))
+            sum(x -> 1 / (1 + exp(-x)), A * arr)
+        end
+        # Test the above function, and also a simple sum.
+        for (mapfunc, check_combine) in ((mapfunc, false),
+                                         (Δ_coupled -> sum(StochasticAD.structural_iterate(Δ_coupled)),
+                                          true))
+            for use_get_rep in (false, true)
+                function get_contribution()
+                    Δs_coupled = get_Δs_coupled(; use_get_rep)
+                    Δs_coupled_mapped = map(mapfunc, Δs_coupled)
+                    return derivative_contribution(Δs_coupled_mapped)
+                end
+                zero_Δ_coupled = StochasticAD.structural_map(zero, Δ_coupled)
+                expected_contribution1 = 3.0 * mapfunc((Δ_coupled, zero_Δ_coupled))
+                expected_contribution2 = 2.0 * mapfunc((zero_Δ_coupled,
+                                                  StochasticAD.structural_map(x -> 2x,
+                                                                              Δ_coupled)))
+                expected_contribution = expected_contribution1 + expected_contribution2
+                @test isapprox(mean(get_contribution() for i in 1:1000),
+                               expected_contribution; rtol = 5e-2)
+                # For a simple sum, this should be equivalent to the combine behaviour.
+                if check_combine
+                    @test isapprox(mean(derivative_contribution(get_Δs_coupled(;
+                                                                               do_combine = true))
+                                        for i in 1:1000), expected_contribution;
+                                   rtol = 5e-2)
+                end
+            end
+        end
+    end
+end end
+
 @testset "StochasticAD.perturbations API" begin for backend in backends
     Random.seed!(4321)
     st = stochastic_triple(rand ∘ Bernoulli, 0.5; backend)

@@ -48,6 +48,3 @@ function structural_map(f, args...)
     fmap((args...) -> args[1] isa AbstractArray ? f.(args...) : f(args...), args...;
          cache = nothing)
 end
-
-# Partial evaluation for convenience
-structural_map(f) = (args...) -> structural_map(f, args...)

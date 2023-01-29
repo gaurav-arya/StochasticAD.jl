@@ -360,12 +360,28 @@ end
     end
 end end
 
-@testset "StochasticAD.perturbations API" begin for backend in backends
+@testset "Getting information about stochastic triples" begin for backend in backends
     Random.seed!(4321)
-    st = stochastic_triple(rand ∘ Bernoulli, 0.5; backend)
+    f(x) = rand(Bernoulli(x)) + x
+    st = stochastic_triple(f, 0.5; backend)
+    # Expected: 0.5 + 1.0ε + (1.0 with probability 2.0ε)
+    dual = ForwardDiff.Dual(0.5, 1.0)
+
+    @test StochasticAD.value(0.5) == 0.5
+    @test StochasticAD.value(st) == 0.5
+    @test StochasticAD.value(dual) == 0.5
+
+    @test iszero(StochasticAD.delta(0.5))
+    @test StochasticAD.delta(st) == 1.0
+    @test StochasticAD.delta(dual) == 1.0
+
     #= 
     NB: since the implementation of perturbations can be backend-specific, the
     below property need not hold in general, but does for the current backends.
     =#
     @test collect(perturbations(st)) == [(1, 2.0)]
+
+    @test StochasticAD.tag(st) === StochasticAD.Tag{typeof(f), Float64}
+    @test StochasticAD.valtype(st) === Float64
+    @test StochasticAD.backendtype(st) === StochasticAD.similar_type(backend, Float64)
 end end

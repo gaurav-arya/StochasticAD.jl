@@ -95,7 +95,7 @@ StochasticAD.alltrue(Δs::DictFIs{Bool}) = all(Δs.dict)
 ### Coupling
 
 function StochasticAD.get_rep(::Type{<:DictFIs}, Δs_all)
-    for Δs in Δs_all
+    for Δs in StochasticAD.structural_iterate(Δs_all)
         if Δs.state.valid
             return Δs
         end
@@ -105,14 +105,15 @@ end
 
 function StochasticAD.couple(::Type{<:DictFIs}, Δs_all; rep = StochasticAD.get_rep(Δs_all))
     all_keys = union(keys.(getfield.(Δs_all, :dict))...)
-    Δs_coupled_dict = [map(Δs -> isassigned(Δs.dict, key) ? Δs.dict[key] :
+    Δs_coupled_dict = [StochasticAD.structural_map(Δs -> isassigned(Δs.dict, key) ? Δs.dict[key] :
                                  zero(eltype(Δs.dict)), Δs_all) for key in all_keys]
     DictFIs(Dictionary(all_keys, Δs_coupled_dict), rep.state)
 end
 
 function StochasticAD.combine(::Type{<:DictFIs}, Δs_all; rep = get_rep(Δs_all))
-    Δs_combined_dict = reduce((Δs1_dict, Δs2_dict) -> mergewith(+, Δs1_dict, Δs2_dict),
-                              getfield.(Δs_all, :dict))
+    Δs_combined_dict = reduce(StochasticAD.structural_iterate(Δs_all)) do Δs1, Δs2
+                            mergewith(+, Δs1.dict, Δs2.dict)
+                        end
     DictFIs(Δs_combined_dict, rep.state)
 end
 

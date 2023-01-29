@@ -92,7 +92,7 @@ StochasticAD.get_rep(::Type{<:PrunedFIs}, Δs_all) = first(Δs_all)
 function get_pruned_state(Δs_all)
     new_state = PrunedFIsState(false)
     total_weight = 0.0
-    for Δs in Δs_all
+    for Δs in StochasticAD.structural_iterate(Δs_all)
         isapproxzero(Δs) && continue
         candidate_state = Δs.state
         if !candidate_state.valid || (candidate_state === new_state)
@@ -116,14 +116,14 @@ end
 # rep is unused.
 function StochasticAD.couple(::Type{<:PrunedFIs}, Δs_all; rep = nothing)
     state = get_pruned_state(Δs_all)
-    Δ_coupled = map(pruned_value, Δs_all) # TODO: perhaps a performance optimization possible here
+    Δ_coupled = StochasticAD.structural_map(pruned_value, Δs_all) # TODO: perhaps a performance optimization possible here
     PrunedFIs(Δ_coupled, state.active_tag, state)
 end
 
 # basically couple combined with a sum.
 function StochasticAD.combine(::Type{<:PrunedFIs}, Δs_all; rep = nothing)
     state = get_pruned_state(Δs_all)
-    Δ_combined = sum(pruned_value(Δs) for Δs in Δs_all)
+    Δ_combined = sum(pruned_value(Δs) for Δs in StochasticAD.structural_iterate(Δs_all))
     PrunedFIs(Δ_combined, state.active_tag, state)
 end
 

@@ -99,7 +99,7 @@ StochasticAD.alltrue(Δs::PrunedFIsAggressive{Bool}) = Δs.Δ
 ### Coupling
 
 function StochasticAD.get_rep(::Type{<:PrunedFIsAggressive}, Δs_all)
-    for Δs in Δs_all
+    for Δs in StochasticAD.structural_iterate(Δs_all)
         if Δs.state.valid
             return Δs
         end
@@ -112,7 +112,7 @@ end
 function StochasticAD.couple(::Type{<:PrunedFIsAggressive}, Δs_all;
                              rep = StochasticAD.get_rep(Δs_all))
     state = rep.state
-    Δ_coupled = map(pruned_value, Δs_all) # TODO: perhaps a performance optimization possible here
+    Δ_coupled = StochasticAD.structural_map(pruned_value, Δs_all) # TODO: perhaps a performance optimization possible here
     PrunedFIsAggressive(Δ_coupled, state.active_tag, state)
 end
 
@@ -120,7 +120,7 @@ end
 function StochasticAD.combine(::Type{<:PrunedFIsAggressive}, Δs_all;
                               rep = StochasticAD.get_rep(Δs_all...))
     state = rep.state
-    Δ_combined = sum(pruned_value(Δs) for Δs in Δs_all)
+    Δ_combined = sum(pruned_value(Δs) for Δs in StochasticAD.structural_iterate(Δs_all))
     PrunedFIsAggressive(Δ_combined, state.active_tag, state)
 end
 

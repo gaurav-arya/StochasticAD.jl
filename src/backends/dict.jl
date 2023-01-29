@@ -46,7 +46,7 @@ function DictFIs{V}(state::DictFIsState) where {V}
     DictFIs{V}(Dictionary{InfinitesimalEvent, V}(), state)
 end
 StochasticAD.similar_empty(Δs::DictFIs, V::Type) = DictFIs{V}(Δs.state)
-Base.empty(Δs::DictFIs{V}) where {V} = similar_empty(Δs::DictFIs, V::Type) # abstracted away
+Base.empty(Δs::DictFIs{V}) where {V} = StochasticAD.similar_empty(Δs::DictFIs, V::Type)
 function Base.empty(::Type{<:DictFIs{V}}) where {V}
     DictFIs{V}(DictFIsState(false))
 end
@@ -95,7 +95,7 @@ StochasticAD.alltrue(Δs::DictFIs{Bool}) = all(Δs.dict)
 ### Coupling
 
 function StochasticAD.get_rep(::Type{<:DictFIs}, Δs_all)
-    for Δs in Δs_all
+    for Δs in StochasticAD.structural_iterate(Δs_all)
         if Δs.state.valid
             return Δs
         end
@@ -103,21 +103,31 @@ function StochasticAD.get_rep(::Type{<:DictFIs}, Δs_all)
     return first(Δs_all)
 end
 
-function StochasticAD.couple(::Type{<:DictFIs}, Δs_all; rep = StochasticAD.get_rep(Δs_all))
-    all_keys = union(keys.(getfield.(Δs_all, :dict))...)
-    Δs_coupled_dict = [map(Δs -> isassigned(Δs.dict, key) ? Δs.dict[key] :
-                                 zero(eltype(Δs.dict)), Δs_all) for key in all_keys]
-    DictFIs(Dictionary(all_keys, Δs_coupled_dict), rep.state)
+function StochasticAD.couple(FIs::Type{<:DictFIs}, Δs_all;
+                             rep = StochasticAD.get_rep(FIs, Δs_all))
+    all_keys = Iterators.map(StochasticAD.structural_iterate(Δs_all)) do Δs
+        keys(Δs.dict)
+    end
+    distinct_keys = unique(all_keys |> Iterators.flatten)
+    Δs_coupled_dict = [StochasticAD.structural_map(Δs -> isassigned(Δs.dict, key) ?
+                                                         Δs.dict[key] :
+                                                         zero(eltype(Δs.dict)), Δs_all)
+                       for key in distinct_keys]
+    DictFIs(Dictionary(distinct_keys, Δs_coupled_dict), rep.state)
 end
 
-function StochasticAD.combine(::Type{<:DictFIs}, Δs_all; rep = get_rep(Δs_all))
-    Δs_combined_dict = reduce((Δs1_dict, Δs2_dict) -> mergewith(+, Δs1_dict, Δs2_dict),
-                              getfield.(Δs_all, :dict))
+function StochasticAD.combine(FIs::Type{<:DictFIs}, Δs_all;
+                              rep = StochasticAD.get_rep(FIs, Δs_all))
+    Δs_dicts = Iterators.map(Δs -> Δs.dict, StochasticAD.structural_iterate(Δs_all))
+    Δs_combined_dict = reduce(Δs_dicts) do Δs_dict1, Δs_dict2
+        mergewith((x, y) -> StochasticAD.structural_map(+, x, y), Δs_dict1, Δs_dict2)
+    end
     DictFIs(Δs_combined_dict, rep.state)
 end
 
 ### Miscellaneous
 
 StochasticAD.similar_type(::Type{<:DictFIs}, V::Type) = DictFIs{V}
+StochasticAD.get_valtype(::Type{<:DictFIs{V}}) where {V} = V
 
 end

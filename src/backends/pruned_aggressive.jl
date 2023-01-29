@@ -38,7 +38,7 @@ function StochasticAD.similar_empty(Δs::PrunedFIsAggressive, V::Type)
     PrunedFIsAggressive{V}(Δs.state)
 end
 function Base.empty(Δs::PrunedFIsAggressive{V}) where {V}
-    similar_empty(Δs::PrunedFIsAggressive, V::Type)
+    StochasticAD.similar_empty(Δs, V)
 end
 # we truly have no clue what the state is here, so use an invalidated state
 function Base.empty(::Type{<:PrunedFIsAggressive{V}}) where {V}
@@ -99,7 +99,7 @@ StochasticAD.alltrue(Δs::PrunedFIsAggressive{Bool}) = Δs.Δ
 ### Coupling
 
 function StochasticAD.get_rep(::Type{<:PrunedFIsAggressive}, Δs_all)
-    for Δs in Δs_all
+    for Δs in StochasticAD.structural_iterate(Δs_all)
         if Δs.state.valid
             return Δs
         end
@@ -109,24 +109,25 @@ end
 
 # for pruning, coupling amounts to getting rid of perturbed values that have been
 # lazily kept around even after (aggressive or lazy) pruning made the perturbation invalid.
-function StochasticAD.couple(::Type{<:PrunedFIsAggressive}, Δs_all;
-                             rep = StochasticAD.get_rep(Δs_all))
+function StochasticAD.couple(FIs::Type{<:PrunedFIsAggressive}, Δs_all;
+                             rep = StochasticAD.get_rep(FIs, Δs_all))
     state = rep.state
-    Δ_coupled = map(pruned_value, Δs_all) # TODO: perhaps a performance optimization possible here
+    Δ_coupled = StochasticAD.structural_map(pruned_value, Δs_all) # TODO: perhaps a performance optimization possible here
     PrunedFIsAggressive(Δ_coupled, state.active_tag, state)
 end
 
 # basically couple combined with a sum.
-function StochasticAD.combine(::Type{<:PrunedFIsAggressive}, Δs_all;
-                              rep = StochasticAD.get_rep(Δs_all...))
+function StochasticAD.combine(FIs::Type{<:PrunedFIsAggressive}, Δs_all;
+                              rep = StochasticAD.get_rep(FIs, Δs_all))
     state = rep.state
-    Δ_combined = sum(pruned_value(Δs) for Δs in Δs_all)
+    Δ_combined = sum(pruned_value(Δs) for Δs in StochasticAD.structural_iterate(Δs_all))
     PrunedFIsAggressive(Δ_combined, state.active_tag, state)
 end
 
-StochasticAD.similar_type(::Type{<:PrunedFIsAggressive}, V::Type) = PrunedFIsAggressive{V}
-
 ### Miscellaneous
+
+StochasticAD.similar_type(::Type{<:PrunedFIsAggressive}, V::Type) = PrunedFIsAggressive{V}
+StochasticAD.get_valtype(::Type{<:PrunedFIsAggressive{V}}) where {V} = V
 
 # should I have a mime input?
 function Base.show(io::IO, mime::MIME"text/plain",

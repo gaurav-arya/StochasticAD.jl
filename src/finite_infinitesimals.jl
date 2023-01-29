@@ -13,6 +13,8 @@ function similar_new end
 function similar_empty end
 function similar_type end
 
+get_valtype(Δs::AbstractFIs) = get_valtype(typeof(Δs))
+
 couple(Δs_all; kwargs...) = couple(eltype(Δs_all), Δs_all; kwargs...)
 combine(Δs_all; kwargs...) = combine(eltype(Δs_all), Δs_all; kwargs...)
 get_rep(Δs_all; kwargs...) = get_rep(eltype(Δs_all), Δs_all; kwargs...)

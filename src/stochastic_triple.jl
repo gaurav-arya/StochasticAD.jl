@@ -31,6 +31,11 @@ Return the primal value of `st`.
 """
 value(x::Real) = x
 value(st::StochasticTriple) = st.value
+#=
+Support ForwardDiff.Dual for internal usage.
+Assumes batch size is 1.
+=#
+value(d::ForwardDiff.Dual) = ForwardDiff.value(d)
 
 """
     delta(st::StochasticTriple)
@@ -39,6 +44,8 @@ Return the almost-sure derivative of `st`, i.e. the rate of infinitesimal change
 """
 delta(x::Real) = zero(x)
 delta(st::StochasticTriple) = st.δ
+# Support ForwardDiff.Dual for internal usage.
+delta(d::ForwardDiff.Dual) = ForwardDiff.partials(d)[1]
 
 """
     perturbations(st::StochasticTriple)
@@ -55,6 +62,27 @@ Return the derivative estimate given by combining the dual and triple components
 """
 derivative_contribution(x::Real) = zero(x)
 derivative_contribution(st::StochasticTriple) = st.δ + derivative_contribution(st.Δs)
+
+"""
+    tag(st::StochasticTriple)
+
+Get the tag of a stochastic triple.
+"""
+tag(::StochasticTriple{T}) where {T} = T
+
+"""
+    valtype(st::StochasticTriple)
+
+Get the underlying type of the value tracked by a stochastic triple.
+"""
+valtype(::StochasticTriple{T, V}) where {T, V} = V
+
+"""
+    backendtype(st::StochasticTriple)
+
+Get the backend type of a stochastic triple.
+"""
+backendtype(::StochasticTriple{T, V, FIs}) where {T, V, FIs} = FIs
 
 ### Extra constructors of stochastic triples
 
@@ -185,7 +213,7 @@ function stochastic_triple(f, p::V; backend = PrunedFIs) where {V}
     return structural_map(map_func, indices)
 end
 
-stochastic_triple(p; kwargs...) = stochastic_triple(x -> x, p; kwargs...)
+stochastic_triple(p; kwargs...) = stochastic_triple(identity, p; kwargs...)
 
 @doc raw"""
     derivative_estimate(X, p; backend=StochasticAD.PrunedFIs)

@@ -5,7 +5,6 @@ using Statistics
 using Distributions
 using LinearAlgebra
 using StochasticAD
-using BenchmarkTools
 using StaticArrays
 using OffsetArrays: Origin
 import ForwardDiff

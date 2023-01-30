@@ -278,7 +278,7 @@ end
     Δs3 = StochasticAD.similar_empty(Δs0, V1)
     for (Δs, V) in ((Δs0, V0), (Δs1, V0), (Δs2, V0), (Δs3, V1))
         @test Δs isa FIs
-        @test StochasticAD.get_valtype(Δs) === V
+        @test StochasticAD.valtype(Δs) === V
         @test isempty(Δs)
         @test iszero(derivative_contribution(Δs))
     end
@@ -287,7 +287,7 @@ end
         Δs0 = StochasticAD.similar_type(FIs, V0)()
         Δs1 = StochasticAD.similar_new(Δs0, Δ, 3.0)
         @test Δs1 isa FIs
-        @test StochasticAD.get_valtype(Δs1) === typeof(Δ)
+        @test StochasticAD.valtype(Δs1) === typeof(Δ)
         @test !isempty(Δs1)
         @test derivative_contribution(Δs1) == 3Δ
         # Test StochasticAD.alltrue
@@ -319,7 +319,7 @@ end
             end
         end
         Δs_coupled = get_Δs_coupled()
-        @test StochasticAD.get_valtype(Δs_coupled) == typeof((Δ_coupled, Δ_coupled))
+        @test StochasticAD.valtype(Δs_coupled) == typeof((Δ_coupled, Δ_coupled))
         #=
         As a test function to apply to the coupled perturbation, we apply
         a matmul followed by a sigmoid activation function and a sum.

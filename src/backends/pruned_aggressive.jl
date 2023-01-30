@@ -127,7 +127,7 @@ end
 ### Miscellaneous
 
 StochasticAD.similar_type(::Type{<:PrunedFIsAggressive}, V::Type) = PrunedFIsAggressive{V}
-StochasticAD.get_valtype(::Type{<:PrunedFIsAggressive{V}}) where {V} = V
+StochasticAD.valtype(::Type{<:PrunedFIsAggressive{V}}) where {V} = V
 
 # should I have a mime input?
 function Base.show(io::IO, mime::MIME"text/plain",

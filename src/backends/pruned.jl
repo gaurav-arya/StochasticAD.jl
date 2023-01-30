@@ -130,7 +130,7 @@ end
 ### Miscellaneous
 
 StochasticAD.similar_type(::Type{<:PrunedFIs}, V::Type) = PrunedFIs{V}
-StochasticAD.get_valtype(::Type{<:PrunedFIs{V}}) where {V} = V
+StochasticAD.valtype(::Type{<:PrunedFIs{V}}) where {V} = V
 
 function Base.show(io::IO, Δs::PrunedFIs{V}) where {V}
     print(io, "$(pruned_value(Δs)) with probability $(Δs.state.weight)ε, tag $(Δs.tag)")

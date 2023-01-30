@@ -26,6 +26,7 @@ const RNG_TYPEFUNCS_WRAP = [:(rand), :(randn), :(randexp)]
 
 """
     structural_iterate(func)
+
 Internal helper function for iterating through the scalar values of a functor, 
 where AbstractFIs are also counted as scalars.
 """
@@ -39,6 +40,7 @@ end
 
 """
     structural_map(f, args)
+
 Internal helper function for a structure-preserving map, 
 often to be used on a function's input/output arguments. 
 Currently uses [fmap](https://fluxml.ai/Functors.jl/stable/api/#Functors.fmap) 

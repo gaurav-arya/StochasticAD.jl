@@ -128,6 +128,6 @@ end
 ### Miscellaneous
 
 StochasticAD.similar_type(::Type{<:DictFIs}, V::Type) = DictFIs{V}
-StochasticAD.get_valtype(::Type{<:DictFIs{V}}) where {V} = V
+StochasticAD.valtype(::Type{<:DictFIs{V}}) where {V} = V
 
 end

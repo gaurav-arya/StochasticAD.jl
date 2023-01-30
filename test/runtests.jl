@@ -1,5 +1,8 @@
 using SafeTestsets
 using Test, Pkg
+import Random
+
+Random.seed!(1234)
 
 const GROUP = get(ENV, "GROUP", "All")
 const is_APPVEYOR = Sys.iswindows() && haskey(ENV, "APPVEYOR")

@@ -41,6 +41,11 @@ makedocs(sitename = "StochasticAD.jl",
              # :autodocs_block, :cross_references, :docs_block, :eval_block, :example_block, :footnote, :meta_block, :missing_docs, :setup_block
          ])
 
-deploydocs(repo = "github.com/gaurav-arya/StochasticAD.jl",
-           devbranch = "main",
-           push_preview = true)
+try
+    deploydocs(repo = "github.com/gaurav-arya/StochasticAD.jl",
+               devbranch = "main",
+               push_preview = true)
+catch e
+    println("Error encountered while deploying docs:")
+    showerror(stdout, e)
+end

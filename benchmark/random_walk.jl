@@ -11,6 +11,7 @@ using .RandomWalkCore: fX, get_dfX
 
 const suite = BenchmarkGroup()
 
+suite["original"] = @benchmarkable $(fX)($p)
 suite["PrunedFIs"] = @benchmarkable derivative_estimate($fX, $p;
                                                         backend = StochasticAD.PrunedFIs)
 suite["PrunedFIsAggressive"] = @benchmarkable derivative_estimate($fX, $p;

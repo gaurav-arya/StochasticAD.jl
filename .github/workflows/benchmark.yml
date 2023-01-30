@@ -1,0 +1,18 @@
+
+name: Benchmarks
+
+on:
+  pull_request:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: julia-actions/setup-julia@latest
+        with:
+          version: 1
+      - name: Install dependencies
+        run: julia -e 'using Pkg; Pkg.activate("tutorials"); Pkg.instantiate();'
+      - name: Run benchmarks
+        run: julia --project=tutorials --color=yes benchmark/runbenchmarks.jl 

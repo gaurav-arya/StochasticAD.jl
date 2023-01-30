@@ -62,4 +62,9 @@ function fd_clever(p, h = 0.001)
     run2 = play(p - h)
     (run1 - run2) / (2h)
 end
+
+# Provide some default parameters
+p = 0.5
+nsamples = 200_000
+
 end

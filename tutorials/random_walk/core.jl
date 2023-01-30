@@ -5,7 +5,6 @@ using Statistics
 using Distributions
 using LinearAlgebra
 using StochasticAD
-using BenchmarkTools
 using StaticArrays
 using OffsetArrays: Origin
 import ForwardDiff
@@ -25,6 +24,7 @@ p_range = 2 .* n_range
 nsamples = 10000 # number of times to run gradient estimators
 
 ## Simulate
+
 function simulate_walk(probs, steps, n, debug = false)
     X = 0
     for i in 1:n
@@ -45,6 +45,7 @@ X(p) = X(p, n)
 fX(p) = fX(p, n)
 
 ## Simulate with score method manually added on
+
 function simulate_walk_score(probs, steps, n, debug = false)
     X = 0.0
     dlogP = 0.0
@@ -69,5 +70,34 @@ function score_fX_deriv(p, n, avg)
 end
 score_X_deriv(p; avg = 0.0) = score_X_deriv(p, n, avg)
 score_fX_deriv(p; avg = 0.0) = score_fX_deriv(p, n, avg)
+
+## Exactly compute transition matrix M
+
+range = 0:n
+range_start = 1 # range[range_start] = 0
+
+function get_M(p)
+    probs = make_probs(p)
+    M = zeros(eltype(first(probs(range[range_start]))), length(range), length(range))
+    low = minimum(range)
+    for x in range
+        for (step, prob) in zip(steps, probs(x))
+            if (x + step) in range
+                M[x + step - low + 1, x - low + 1] = prob
+            end
+        end
+    end
+    M
+end
+
+function probdensity(p, n)
+    M = get_M(p)
+    vec = zeros(length(range))
+    vec[range_start] = 1
+    M^n * vec
+end
+
+get_dX(p, n) = sum(probdensity(p, n) .* range)
+get_dfX(p, n) = sum(probdensity(p, n) .* (f.(range)))
 
 end

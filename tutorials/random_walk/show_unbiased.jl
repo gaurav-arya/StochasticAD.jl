@@ -4,38 +4,11 @@ println("## Exact computation\n")
 using ForwardDiff: derivative
 using BenchmarkTools
 using .RandomWalkCore: n, p, nsamples
-using .RandomWalkCore: X, f, fX, steps
-using .RandomWalkCore: make_probs, score_X_deriv, score_fX_deriv
+using .RandomWalkCore: X, f, fX, get_dX, get_dfX
+using .RandomWalkCore: score_X_deriv, score_fX_deriv
 using StochasticAD
 using Statistics
 import Random
-
-range = 0:n
-range_start = 1 # range[range_start] = 0
-
-function get_M(p)
-    probs = make_probs(p)
-    M = zeros(eltype(first(probs(range[range_start]))), length(range), length(range))
-    low = minimum(range)
-    for x in range
-        for (step, prob) in zip(steps, probs(x))
-            if (x + step) in range
-                M[x + step - low + 1, x - low + 1] = prob
-            end
-        end
-    end
-    M
-end
-
-function get_pde(p, n)
-    M = get_M(p)
-    vec = zeros(length(range))
-    vec[range_start] = 1
-    M^n * vec
-end
-
-get_dX(p, η) = sum(get_pde(p, n) .* range)
-get_dfX(p, η) = sum(get_pde(p, n) .* (f.(range)))
 
 X_deriv = derivative(p -> get_dX(p, n), p)
 fX_deriv = derivative(p -> get_dfX(p, n), p)

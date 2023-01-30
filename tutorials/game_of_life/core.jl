@@ -55,7 +55,7 @@ end
 # An implementation of finite differences that uses "common random numbers"
 # (the same seed), for more accurate checking, albeit with a finite step size h
 # such that there is weight degeneracy as h → 0.
-function fd_clever(p, h = 0.001)
+function fd_clever(p, h = 0.01)
     state = copy(Random.default_rng())
     run1 = play(p + h)
     copy!(Random.default_rng(), state)

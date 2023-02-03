@@ -99,12 +99,9 @@ StochasticAD.alltrue(Δs::PrunedFIsAggressive{Bool}) = Δs.Δ
 ### Coupling
 
 function StochasticAD.get_rep(::Type{<:PrunedFIsAggressive}, Δs_all)
-    for Δs in StochasticAD.structural_iterate(Δs_all)
-        if Δs.state.valid
-            return Δs
-        end
-    end
-    return first(Δs_all)
+    # Get some Δs with a valid state, or any if all are invalid.
+    return reduce((Δs1, Δs2) -> Δs1.state.valid ? Δs1 : Δs2,
+                  StochasticAD.structural_iterate(Δs_all))
 end
 
 # for pruning, coupling amounts to getting rid of perturbed values that have been
@@ -120,7 +117,7 @@ end
 function StochasticAD.combine(FIs::Type{<:PrunedFIsAggressive}, Δs_all;
                               rep = StochasticAD.get_rep(FIs, Δs_all))
     state = rep.state
-    Δ_combined = sum(pruned_value(Δs) for Δs in StochasticAD.structural_iterate(Δs_all))
+    Δ_combined = sum(pruned_value, StochasticAD.structural_iterate(Δs_all))
     PrunedFIsAggressive(Δ_combined, state.active_tag, state)
 end
 

@@ -70,11 +70,11 @@ Base.iszero(Δs::PrunedFIs{<:Tuple}) = isempty(Δs) || all(iszero.(Δs.Δ))
 isapproxzero(Δs::PrunedFIs) = isempty(Δs) || isapprox(Δs.Δ, zero(Δs.Δ))
 
 # we lazily prune, so check if empty first
+# TODO: possibly generalize these methods to all structures for Δs.Δ, as needed.
 pruned_value(Δs::PrunedFIs{V}) where {V} = isempty(Δs) ? zero(V) : Δs.Δ
 pruned_value(Δs::PrunedFIs{<:Tuple}) = isempty(Δs) ? zero.(Δs.Δ) : Δs.Δ
 pruned_value(Δs::PrunedFIs{<:AbstractArray}) = isempty(Δs) ? zero.(Δs.Δ) : Δs.Δ
 StochasticAD.derivative_contribution(Δs::PrunedFIs) = pruned_value(Δs) * Δs.state.weight
-
 StochasticAD.perturbations(Δs::PrunedFIs) = ((pruned_value(Δs), Δs.state.weight),)
 
 ### Unary propagation
@@ -87,28 +87,38 @@ StochasticAD.alltrue(Δs::PrunedFIs{Bool}) = Δs.Δ
 
 ### Coupling
 
-StochasticAD.get_rep(::Type{<:PrunedFIs}, Δs_all) = first(Δs_all)
+function StochasticAD.get_rep(::Type{<:PrunedFIs}, Δs_all)
+    # The code below is a bit ridiculous, but it's faster than `first` for small structures:)
+    foldl((Δs1, Δs2) -> Δs1, StochasticAD.structural_iterate(Δs_all))
+end
 
 function get_pruned_state(Δs_all)
-    new_state = PrunedFIsState(false)
-    total_weight = 0.0
-    for Δs in StochasticAD.structural_iterate(Δs_all)
-        isapproxzero(Δs) && continue
+    function op(reduced, Δs)
+        total_weight, new_state = reduced
+        isapproxzero(Δs) && return (total_weight, new_state)
         candidate_state = Δs.state
-        if !candidate_state.valid || (candidate_state === new_state)
-            continue
+        if !candidate_state.valid ||
+           ((new_state !== nothing) && (candidate_state === new_state))
+            return (total_weight, new_state)
         end
         w = candidate_state.weight
         total_weight += w
         if rand(StochasticAD.RNG) * total_weight < w
-            new_state.valid = false
+            new_state !== nothing && (new_state.valid = false)
             new_state = candidate_state
         else
             candidate_state.valid = false
         end
+        return (total_weight, new_state)
     end
-    new_state.weight = total_weight
-    return new_state
+    (_total_weight, _new_state) = foldl(op, StochasticAD.structural_iterate(Δs_all);
+                                        init = (0.0, nothing))
+    if _new_state !== nothing
+        _new_state.weight = _total_weight
+    else
+        _new_state = PrunedFIsState(false) # TODO: can this be avoided?
+    end
+    return _new_state::PrunedFIsState
 end
 
 # for pruning, coupling amounts to getting rid of perturbed values that have been
@@ -123,7 +133,7 @@ end
 # basically couple combined with a sum.
 function StochasticAD.combine(::Type{<:PrunedFIs}, Δs_all; rep = nothing)
     state = get_pruned_state(Δs_all)
-    Δ_combined = sum(pruned_value(Δs) for Δs in StochasticAD.structural_iterate(Δs_all))
+    Δ_combined = sum(pruned_value, StochasticAD.structural_iterate(Δs_all))
     PrunedFIs(Δ_combined, state.active_tag, state)
 end
 

@@ -13,6 +13,6 @@ jobs:
         with:
           version: 1
       - name: Install dependencies
-        run: julia -e 'using Pkg; Pkg.activate("tutorials"); Pkg.instantiate();'
+        run: julia -e 'using Pkg; Pkg.activate("tutorials"); Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate();'
       - name: Run benchmarks
         run: julia --project=tutorials --color=yes benchmark/runbenchmarks.jl 

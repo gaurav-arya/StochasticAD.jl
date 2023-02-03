@@ -10,7 +10,6 @@ module IterationBenchmark
 using BenchmarkTools
 using StochasticAD
 using StaticArrays
-using Functors
 
 const suite = BenchmarkGroup()
 

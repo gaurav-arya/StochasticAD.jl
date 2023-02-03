@@ -25,15 +25,15 @@ const UNARY_TYPEFUNCS_WRAP = [
 const RNG_TYPEFUNCS_WRAP = [:(rand), :(randn), :(randexp)]
 
 """
-    structural_iterate(func)
+    structural_iterate(args)
 
 Internal helper function for iterating through the scalar values of a functor, 
 where AbstractFIs are also counted as scalars.
 """
-function structural_iterate(func)
+function structural_iterate(args)
     make_iterator(x) = x isa AbstractArray ? x : (x,)
     exclude(x) = Functors.isleaf(x) || (x isa AbstractFIs)
-    iter = fmap(make_iterator, func; walk = Functors.IterateWalk(), cache = nothing,
+    iter = fmap(make_iterator, args; walk = Functors.IterateWalk(), cache = nothing,
                 exclude)
     return iter
 end

@@ -85,9 +85,15 @@ StochasticAD.perturbations(Δs::DictFIs) = [(Δ, event.w) for (event, Δ) in pai
 
 ### Unary propagation
 
-function Base.map(f, Δs::DictFIs)
-    dict = Dictionary(keys(Δs.dict), map(f, collect(Δs.dict)))
+function StochasticAD.map_Δs(f, Δs::DictFIs)
+    # Pass key as state in map
+    mapped_values = map(f, collect(Δs.dict), keys(Δs.dict))
+    dict = Dictionary(keys(Δs.dict), mapped_values)
     DictFIs(dict, Δs.state)
+end
+
+function StochasticAD.filter_state(Δs::DictFIs{V}, key) where {V}
+    haskey(Δs.dict, key) ? Δs.dict[key] : zero(V)
 end
 
 StochasticAD.alltrue(Δs::DictFIs{Bool}) = all(Δs.dict)

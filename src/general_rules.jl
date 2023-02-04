@@ -232,12 +232,12 @@ end
 A simple prototype rule for array indexing. Assumes that underlying type of `st` can index into collection C.
 """
 # TODO: support multiple indices, cartesian indices, non abstract array indexables, other use cases...
-function Base.getindex(C::AbstractArray, st::StochasticTriple{T}) where {T}
+function Base.getindex(C::AbstractArray, st::StochasticTriple{T, V, FIs}) where {T, V, FIs}
     val = C[st.value]
-    function do_map(Δ)
-        return value(C[st.value + Δ]) - value(val)
+    function do_map(Δ, state)
+        return value(C[st.value + Δ], state) - value(val, state)
     end
-    Δs = map(do_map, st.Δs)
+    Δs = StochasticAD.map_Δs(do_map, st.Δs)
     if val isa StochasticTriple
         Δs = combine((Δs, val.Δs))
     end

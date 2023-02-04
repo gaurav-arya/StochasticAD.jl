@@ -29,13 +29,16 @@ end
 
 Return the primal value of `st`.
 """
-value(x::Real) = x
-value(st::StochasticTriple) = st.value
+value(x::Real, state = nothing) = x
+# Experimental method for obtaining the alternate value of a stochastic triple associated with a certain backend state.
+function value(st::StochasticTriple, state = nothing)
+    st.value + (state === nothing ? zero(st.value) : filter_state(st.Δs, state))
+end
 #=
 Support ForwardDiff.Dual for internal usage.
 Assumes batch size is 1.
 =#
-value(d::ForwardDiff.Dual) = ForwardDiff.value(d)
+value(d::ForwardDiff.Dual, state = nothing) = ForwardDiff.value(d)
 
 """
     delta(st::StochasticTriple)

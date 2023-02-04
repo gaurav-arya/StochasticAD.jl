@@ -82,6 +82,8 @@ Base.iszero(Δs::PrunedFIsAggressive) = isempty(Δs) || iszero(Δs.Δ)
 
 # we lazily prune, so check if empty first
 pruned_value(Δs::PrunedFIsAggressive{V}) where {V} = isempty(Δs) ? zero(V) : Δs.Δ
+StochasticAD.filter_state(Δs::PrunedFIsAggressive, _) = pruned_value(Δs)
+
 function StochasticAD.derivative_contribution(Δs::PrunedFIsAggressive)
     pruned_value(Δs) * Δs.state.weight
 end
@@ -90,8 +92,8 @@ StochasticAD.perturbations(Δs::PrunedFIsAggressive) = ((pruned_value(Δs), Δs.
 
 ### Unary propagation
 
-function Base.map(f, Δs::PrunedFIsAggressive)
-    PrunedFIsAggressive(f(Δs.Δ), Δs.tag, Δs.state)
+function StochasticAD.map_Δs(f, Δs::PrunedFIsAggressive)
+    PrunedFIsAggressive(f(Δs.Δ, nothing), Δs.tag, Δs.state)
 end
 
 StochasticAD.alltrue(Δs::PrunedFIsAggressive{Bool}) = Δs.Δ

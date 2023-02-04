@@ -74,13 +74,16 @@ isapproxzero(Δs::PrunedFIs) = isempty(Δs) || isapprox(Δs.Δ, zero(Δs.Δ))
 pruned_value(Δs::PrunedFIs{V}) where {V} = isempty(Δs) ? zero(V) : Δs.Δ
 pruned_value(Δs::PrunedFIs{<:Tuple}) = isempty(Δs) ? zero.(Δs.Δ) : Δs.Δ
 pruned_value(Δs::PrunedFIs{<:AbstractArray}) = isempty(Δs) ? zero.(Δs.Δ) : Δs.Δ
+function StochasticAD.filter_state(Δs::PrunedFIs{V}, state) where {V}
+    Δs.state === state ? pruned_value(Δs) : zero(V)
+end
 StochasticAD.derivative_contribution(Δs::PrunedFIs) = pruned_value(Δs) * Δs.state.weight
 StochasticAD.perturbations(Δs::PrunedFIs) = ((pruned_value(Δs), Δs.state.weight),)
 
 ### Unary propagation
 
-function Base.map(f, Δs::PrunedFIs)
-    PrunedFIs(f(Δs.Δ), Δs.tag, Δs.state)
+function StochasticAD.map_Δs(f, Δs::PrunedFIs)
+    PrunedFIs(f(Δs.Δ, Δs.state), Δs.tag, Δs.state)
 end
 
 StochasticAD.alltrue(Δs::PrunedFIs{Bool}) = Δs.Δ

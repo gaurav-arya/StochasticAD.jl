@@ -135,6 +135,16 @@ end end
     triple_array_index2_deriv = mean(derivative_estimate(array_index2, p) for i in 1:100000)
     exact_array_index2_deriv = ForwardDiff.derivative(array_index2_mean, p)
     @test isapprox(triple_array_index2_deriv, exact_array_index2_deriv, rtol = 5e-2)
+    # Test case where triple and alternate array value are coupled
+    function array_index3(p)
+        st = rand(Bernoulli(p))
+        arr = [-5, st]
+        return arr[st + 1]
+    end
+    array_index3_mean(p) = -5 * (1 - p) + 1 * p
+    triple_array_index3_deriv = mean(derivative_estimate(array_index3, p) for i in 1:100000)
+    exact_array_index3_deriv = ForwardDiff.derivative(array_index3_mean, p)
+    @test isapprox(triple_array_index3_deriv, exact_array_index3_deriv, rtol = 5e-2)
 end
 
 @testset "Array/functor inputs to higher level functions" begin
@@ -293,6 +303,19 @@ end
         # Test StochasticAD.alltrue
         @test StochasticAD.alltrue(map(_Δ -> true, Δs1))
         @test !StochasticAD.alltrue(map(_Δ -> false, Δs1))
+        # Test map
+        Δs1_map = Base.map(Δ -> Δ^2, Δs1)
+        @test derivative_contribution(Δs1_map) ≈ Δ^2 * 3.0
+        # Test map_Δs with filter state
+        Δs1_plus_Δs0 = StochasticAD.map_Δs((Δ, state) -> Δ + StochasticAD.filter_state(Δs0,
+                                                                                   state),
+                                           Δs1)
+        @test derivative_contribution(Δs1_plus_Δs0) ≈ Δ * 3.0
+        Δs1_plus_mapped = StochasticAD.map_Δs((Δ, state) -> Δ +
+                                                            StochasticAD.filter_state(Δs1,
+                                                                                      state),
+                                              Δs1_map)
+        @test derivative_contribution(Δs1_plus_mapped) ≈ Δ * 3.0 + Δ^2 * 3.0
     end
     # Test coupling
     Δ_coupleds = (3, [4.0, 5.0], (2, [3.0, 4.0]))

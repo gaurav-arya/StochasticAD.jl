@@ -24,3 +24,8 @@ function derivative_contribution end
 function alltrue end
 
 function perturbations end
+
+function filter_state end
+
+function map_Δs end
+Base.map(f, Δs::AbstractFIs) = StochasticAD.map_Δs((Δs, _) -> f(Δs), Δs)

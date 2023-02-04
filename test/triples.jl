@@ -303,6 +303,19 @@ end
         # Test StochasticAD.alltrue
         @test StochasticAD.alltrue(map(_Δ -> true, Δs1))
         @test !StochasticAD.alltrue(map(_Δ -> false, Δs1))
+        # Test map
+        Δs1_map = Base.map(Δ -> Δ^2, Δs1)
+        @test derivative_contribution(Δs1_map) ≈ Δ^2 * 3.0
+        # Test map_Δs with filter state
+        Δs1_plus_Δs0 = StochasticAD.map_Δs((Δ, state) -> Δ + StochasticAD.filter_state(Δs0,
+                                                                                   state),
+                                           Δs1)
+        @test derivative_contribution(Δs1_plus_Δs0) ≈ Δ * 3.0
+        Δs1_plus_mapped = StochasticAD.map_Δs((Δ, state) -> Δ +
+                                                            StochasticAD.filter_state(Δs1,
+                                                                                      state),
+                                              Δs1_map)
+        @test derivative_contribution(Δs1_plus_mapped) ≈ Δ * 3.0 + Δ^2 * 3.0
     end
     # Test coupling
     Δ_coupleds = (3, [4.0, 5.0], (2, [3.0, 4.0]))

@@ -19,6 +19,7 @@ println()
 println("## Stochastic triple computation\n")
 
 @btime fX(p)
+@enter ForwardDiff.derivative(p -> fX(p; hardcode_leftright_step = true), p)
 @btime derivative_estimate(fX, p; backend = StochasticAD.PrunedFIsAggressive)
 
 triple_X_derivs = [derivative_estimate(X, p) for i in 1:nsamples]
@@ -27,6 +28,16 @@ println("Stochastic triple X derivative mean: $(mean(triple_X_derivs))")
 println("Stochastic triple X derivative std : $(std(triple_X_derivs))")
 println("Stochastic triple f(X) derivative mean: $(mean(triple_fX_derivs))")
 println("Stochastic triple f(X) derivative std: $(std(triple_fX_derivs))")
+println()
+
+smoothed_X_derivs = [derivative(p -> X(p; hardcode_leftright_step = true), p)
+                     for i in 1:nsamples]
+smoothed_fX_derivs = [derivative(p -> fX(p; hardcode_leftright_step = true), p)
+                      for i in 1:nsamples]
+println("Smoothed X derivative mean: $(mean(smoothed_X_derivs))")
+println("Smoothed X derivative std : $(std(smoothed_X_derivs))")
+println("Smoothed f(X) derivative mean: $(mean(smoothed_fX_derivs))")
+println("Smoothed f(X) derivative std: $(std(smoothed_fX_derivs))")
 println()
 
 println("## Score function computation\n")

@@ -5,6 +5,7 @@ using ForwardDiff
 using OffsetArrays
 using ChainRulesCore
 using Random
+using Zygote
 
 const backends = [
     StochasticAD.PrunedFIs,
@@ -12,11 +13,11 @@ const backends = [
     StochasticAD.DictFIs,
 ]
 
-@testset "Distributions w.r.t. continuous parameter" begin for backend in backends
+@testset "Distributions w.r.t. continuous parameter" begin for backend in vcat(backends,
+                                                                               :smoothing_autodiff)
     MAX = 10000
     nsamples = 100000
     rtol = 5e-2 # friendly tolerance for stochastic comparisons. TODO: more motivated choice of tolerance.
-    ntests = 2 # tests for each setting
 
     ### Make test cases
 
@@ -26,29 +27,27 @@ const backends = [
         Poisson,
         (p -> Categorical([p^2, 1 - p^2])),
         (p -> Categorical([0, p^2, 0, 0, 1 - p^2])), # check that 0's are skipped over
-        (p -> Categorical([0.1, exp(p)] ./ (0.1 + exp(p)))), # test fix for #38 (floating point comparisons in Categorical logic)
+        (p -> Categorical([1.0, exp(p)] ./ (1.0 + exp(p)))), # test fix for #38 (floating point comparisons in Categorical logic)
         (p -> Binomial(3, p)),
         (p -> Binomial(20, p)),
     ]
-    p_ranges = [
-        (0.2, 0.8),
-        (0.2, 0.8),
-        (0.2, 0.8),
-        (0.2, 0.8),
-        (0.2, 0.8),
-        (0.2, 0.8),
-        (0.2, 0.8),
-    ]
-    out_ranges = [0:1, 0:MAX, 0:MAX, 1:2, 0:5, 0:3, 0:20]
+    p_ranges = [(0.2, 0.8) for _ in 1:8]
+    out_ranges = [0:1, 0:MAX, 0:MAX, 1:2, 1:5, 1:2, 0:3, 0:20]
     test_cases = collect(zip(distributions, p_ranges, out_ranges))
+    test_funcs = [x -> 7 * x - 3, x -> (x + 1)^2, x -> sqrt(x + 1)]
 
     if backend == StochasticAD.DictFIs
         # Only test dictionary backend on Bernoulli to speed things up. Should still cover interface.
         test_cases = test_cases[1:1]
+    elseif backend == :smoothing_autodiff
+        # Only test smoothing backend on each unique distribution once to seed tests up. 
+        test_cases = vcat(test_cases[1:4], test_cases[7])
+        # Only test unbiasedness of smoothing for linear function
+        test_funcs = test_funcs[1:1]
     end
 
     for (distr, p_range, out_range) in test_cases
-        for f in [x -> x, x -> (x + 1)^2, x -> sqrt(x + 1)]
+        for f in test_funcs
             function get_mean(p)
                 dp = distr(p)
                 sum(pdf(dp, i) * f(i) for i in out_range)
@@ -56,12 +55,18 @@ const backends = [
 
             low_p, high_p = p_range
             for g in [p -> p, p -> high_p + low_p - p] # test both sides of derivative
-                for i in 1:ntests
-                    full_func = p -> f(rand(distr(g(p))))
-                    p = low_p + (high_p - low_p) * rand()
-                    get_deriv() = derivative_estimate(full_func, p; backend = backend)
+                full_func = f ∘ rand ∘ distr ∘ g
+                p = low_p + (high_p - low_p) * rand()
+                exact_deriv = ForwardDiff.derivative(p -> get_mean(g(p)), p)
+                if backend == :smoothing_autodiff
+                    batched_full_func(p) = mean([full_func(p) for i in 1:nsamples])
+                    triple_deriv_forward = ForwardDiff.derivative(batched_full_func, p)
+                    triple_deriv_backward = Zygote.gradient(batched_full_func, p)[1]
+                    @test isapprox(triple_deriv_forward, exact_deriv, rtol = rtol)
+                    @test isapprox(triple_deriv_backward, exact_deriv, rtol = rtol)
+                else
+                    get_deriv = () -> derivative_estimate(full_func, p; backend = backend)
                     triple_deriv = mean(get_deriv() for i in 1:nsamples)
-                    exact_deriv = ForwardDiff.derivative(p -> get_mean(g(p)), p)
                     @test isapprox(triple_deriv, exact_deriv, rtol = rtol)
                 end
             end

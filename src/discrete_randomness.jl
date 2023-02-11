@@ -1,12 +1,12 @@
 ## Rules for univariate uniparameter discrete distributions
 
 """
-    δtoΔps(d, val::V, δ::Real, Δs::AbstractFIs)
+    δtoΔs(d, val, δ, Δs::AbstractFIs)
 
 Given the parameter `val` of a distribution `d` and an infinitesimal change `δ`,
 return the discrete change in the output, with a similar representation to `Δs`.
 """
-function δtoΔps(d::Geometric, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
+function δtoΔs(d::Geometric, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
     p = succprob(d)
     if δ > 0
         return val > 0 ? similar_new(Δs, -one(V), δ * val / p / (1 - p)) :
@@ -18,7 +18,7 @@ function δtoΔps(d::Geometric, val::V, δ::Real, Δs::AbstractFIs) where {V <: 
     end
 end
 
-function δtoΔps(d::Bernoulli, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
+function δtoΔs(d::Bernoulli, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
     p = succprob(d)
     if δ > 0
         return isone(val) ? similar_empty(Δs, V) : similar_new(Δs, one(V), δ / (1 - p))
@@ -29,7 +29,7 @@ function δtoΔps(d::Bernoulli, val::V, δ::Real, Δs::AbstractFIs) where {V <: 
     end
 end
 
-function δtoΔps(d::Binomial, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
+function δtoΔs(d::Binomial, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
     p = succprob(d)
     n = ntrials(d)
     if δ > 0
@@ -42,7 +42,7 @@ function δtoΔps(d::Binomial, val::V, δ::Real, Δs::AbstractFIs) where {V <: S
     end
 end
 
-function δtoΔps(d::Poisson, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
+function δtoΔs(d::Poisson, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
     p = mean(d) # rate
     if δ > 0
         return similar_new(Δs, 1, δ)
@@ -61,7 +61,7 @@ for (dist, i) in [(:Geometric, :1), (:Bernoulli, :1), (:Binomial, :2), (:Poisson
         st = params(d_st)[$i]
         d = $dist(params(d_st)[1:($i - 1)]..., st.value, params(d_st)[($i + 1):end]...)
         val = convert(Signed, rand(rng, d))
-        Δs1 = δtoΔps(d, val, st.δ, st.Δs)
+        Δs1 = δtoΔs(d, val, st.δ, st.Δs)
 
         low = cdf(d, val - 1)
         high = cdf(d, val)

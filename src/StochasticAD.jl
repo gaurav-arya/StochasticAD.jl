@@ -29,16 +29,17 @@ include("finite_infinitesimals.jl")
 include("backends/pruned.jl")
 include("backends/pruned_aggressive.jl")
 include("backends/dict.jl")
-# TODO: include smoothing backend
+include("backends/smoothed.jl")
 using .PrunedFIsBackend
 using .PrunedFIsAggressiveBackend
 using .DictFIsBackend
+using .SmoothedFIsBackend
 
 include("prelude.jl") # Defines global constants
 include("stochastic_triple.jl") # Defines stochastic triple object and higher level functions
 include("general_rules.jl") # Defines rules for propagation through deterministic functions
 include("discrete_randomness.jl") # Defines rules for propagation through discrete random functions
-# TODO: add smoothing rules
+include("smoothing.jl")
 include("misc.jl") # Miscellaneous functions that do not fit in the usual flow
 
 end

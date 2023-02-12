@@ -19,12 +19,12 @@ make_probs(p) = X -&gt; SA[1 - exp(-X / p), exp(-X / p)]
 f(p, n) = simulate_walk(make_probs(p), steps, n)
 @show f(50, 100) # let&#39;s run a single random walk with p = 50
 @show stochastic_triple(p -&gt; f(p, 100), 50) # let&#39;s see how a single stochastic triple looks like at p = 50</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">StochasticTriple of Int64:
-24 + 0ε + (2 with probability 0.27173034667529966ε, tag 1)</code></pre><p>Time to differentiate! For fun, let&#39;s differentiate the <em>square</em> of the output of the random walk.</p><pre><code class="language-julia hljs">f_squared(p, n) = f(p, n)^2
+26 + 0ε + (2 with probability 0.3743938374496502ε, tag 1)</code></pre><p>Time to differentiate! For fun, let&#39;s differentiate the <em>square</em> of the output of the random walk.</p><pre><code class="language-julia hljs">f_squared(p, n) = f(p, n)^2
 
 samples = [derivative_estimate(p -&gt; f_squared(p, 100), 50) for i in 1:1000] # many samples from derivative program at p = 50
 derivative = mean(samples)
 uncertainty = std(samples) / sqrt(1000)
-println(&quot;derivative of 𝔼[f_squared] = $derivative ± $uncertainty&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">derivative of 𝔼[f_squared] = 29.61020870962594 ± 0.6913315073931514</code></pre><h2 id="Computing-variance"><a class="docs-heading-anchor" href="#Computing-variance">Computing variance</a><a id="Computing-variance-1"></a><a class="docs-heading-anchor-permalink" href="#Computing-variance" title="Permalink"></a></h2><p>A crucial figure of merit for a derivative estimator is its variance. We compute the standard deviation (square root of the variance) of our estimator over a range of <code>n</code>.</p><pre><code class="language-julia hljs">n_range = 10:10:100 # range for testing asymptotic variance behaviour
+println(&quot;derivative of 𝔼[f_squared] = $derivative ± $uncertainty&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">derivative of 𝔼[f_squared] = 29.785056668504886 ± 0.7049770957308316</code></pre><h2 id="Computing-variance"><a class="docs-heading-anchor" href="#Computing-variance">Computing variance</a><a id="Computing-variance-1"></a><a class="docs-heading-anchor-permalink" href="#Computing-variance" title="Permalink"></a></h2><p>A crucial figure of merit for a derivative estimator is its variance. We compute the standard deviation (square root of the variance) of our estimator over a range of <code>n</code>.</p><pre><code class="language-julia hljs">n_range = 10:10:100 # range for testing asymptotic variance behaviour
 p_range = 2 .* n_range
 nsamples = 10000
 
@@ -35,13 +35,13 @@ for (n, p) in zip(n_range, p_range)
     push!(stds_triple, std_triple)
 end
 @show stds_triple</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10-element Vector{Float64}:
- 0.9862583055643925
- 1.5786499140251988
- 2.211602004286446
- 2.8004764727278517
- 3.4273228834643468
- 4.024666385653987
- 4.70260447485501
- 5.266400420465144
- 5.889804271954883
- 6.399995036025887</code></pre><p>For comparison with other unbiased estimators, we also compute <code>stds_score</code> and <code>stds_score_baseline</code> for the <a href="https://arxiv.org/pdf/1906.10652.pdf">score function gradient estimator</a>, both without and with a variance-reducing batch-average control variate (CV). (For details, see <a href="https://github.com/gaurav-arya/StochasticAD.jl/blob/main/tutorials/random_walk/core.jl"><code>core.jl</code></a> and <a href="https://github.com/gaurav-arya/StochasticAD.jl/blob/main/random_walk/compare_score.jl"><code>compare_score.jl</code></a>.) We can now graph the standard deviation of each estimator versus <span>$n$</span>, observing lower variance in the unbiased derivative estimate produced by stochastic triples:</p><img src="../images/compare_score.png" width="50%"/><p>⠀</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../index.html">« Overview</a><a class="docs-footer-nextpage" href="game_of_life.html">Stochastic Game of Life »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.28.0-DEV on <span class="colophon-date" title="Sunday 12 February 2023 16:49">Sunday 12 February 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+ 0.981627735584777
+ 1.5991966760021579
+ 2.2313902973713633
+ 2.8263828044304224
+ 3.4097900793919105
+ 4.041441414563893
+ 4.651339826789869
+ 5.318281955151214
+ 5.906124791048937
+ 6.456270434608347</code></pre><p>For comparison with other unbiased estimators, we also compute <code>stds_score</code> and <code>stds_score_baseline</code> for the <a href="https://arxiv.org/pdf/1906.10652.pdf">score function gradient estimator</a>, both without and with a variance-reducing batch-average control variate (CV). (For details, see <a href="https://github.com/gaurav-arya/StochasticAD.jl/blob/main/tutorials/random_walk/core.jl"><code>core.jl</code></a> and <a href="https://github.com/gaurav-arya/StochasticAD.jl/blob/main/random_walk/compare_score.jl"><code>compare_score.jl</code></a>.) We can now graph the standard deviation of each estimator versus <span>$n$</span>, observing lower variance in the unbiased derivative estimate produced by stochastic triples:</p><img src="../images/compare_score.png" width="50%"/><p>⠀</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../index.html">« Overview</a><a class="docs-footer-nextpage" href="game_of_life.html">Stochastic Game of Life »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.28.0-DEV on <span class="colophon-date" title="Sunday 12 February 2023 17:12">Sunday 12 February 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

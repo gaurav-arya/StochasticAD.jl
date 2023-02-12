@@ -25,28 +25,32 @@ nsamples = 10000 # number of times to run gradient estimators
 
 ## Simulate
 
-function simulate_walk(probs, steps, n, debug = false)
+function simulate_walk(probs, steps, n; debug = false, hardcode_leftright_step = false)
     X = 0
     for i in 1:n
         probs_X = probs(X) # transition probabilities
         debug && @show probs_X
         step_index = rand(Categorical(probs_X)) # produces an integer-valued StochasticTriple
         debug && @show step_index
-        step = steps[step_index] # differentiate through array indexing
+        if hardcode_leftright_step
+            step = 2 * (step_index - 1) - 1
+        else
+            step = steps[step_index] # differentiate through array indexing
+        end
         X += step
         debug && @show X
     end
     return X
 end
 
-X(p, n) = simulate_walk(make_probs(p), steps, n)
-fX(p, n) = f(X(p, n))
-X(p) = X(p, n)
-fX(p) = fX(p, n)
+X(p, n; kwargs...) = simulate_walk(make_probs(p), steps, n; kwargs...)
+fX(p, n; kwargs...) = f(X(p, n; kwargs...))
+X(p; kwargs...) = X(p, n; kwargs...)
+fX(p; kwargs...) = fX(p, n; kwargs...)
 
 ## Simulate with score method manually added on
 
-function simulate_walk_score(probs, steps, n, debug = false)
+function simulate_walk_score(probs, steps, n; debug = false)
     X = 0.0
     dlogP = 0.0
     for i in 1:n

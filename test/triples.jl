@@ -417,3 +417,125 @@ end end
     @test StochasticAD.valtype(st) === Float64
     @test StochasticAD.backendtype(st) === StochasticAD.similar_type(backend, Float64)
 end end
+
+@testset "Propagation via StochasticAD.propagate" begin
+    function form_triple(primal, δ, Δ, Δs_base)
+        Δs = map(_Δ -> Δ, Δs_base)
+        return StochasticAD.StochasticTriple{0}(primal, δ, Δs)
+    end
+
+    function test_propagate(f, primals, Δs; test_deltas = false)
+        Δs_base = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 0, 1.0)
+        _form_triple(x, δ, Δ) = form_triple(x, δ, Δ, Δs_base)
+        out = f(primals...)
+        out_Δ_expected = StochasticAD.structural_map(-,
+                                                     f(StochasticAD.structural_map(+,
+                                                                                   primals,
+                                                                                   Δs)...),
+                                                     f(primals...))
+        if test_deltas
+            duals = StochasticAD.structural_map(primals) do x
+                x isa AbstractFloat ? ForwardDiff.Dual{0}(x, rand(typeof(x))) : x
+            end
+            δs = StochasticAD.structural_map(StochasticAD.delta, duals)
+            out_δ_expected = StochasticAD.structural_map(StochasticAD.delta, f(duals...))
+        else
+            δs = StochasticAD.structural_map(zero, primals)
+            out_δ_expected = StochasticAD.structural_map(zero, out)
+        end
+        input_sts = StochasticAD.structural_map(_form_triple, primals, δs, Δs)
+        out_st = StochasticAD.propagate(f, input_sts...; keep_deltas = Val{test_deltas})
+        # Test type
+        StochasticAD.structural_map(out_st, out, out_δ_expected,
+                                    out_Δ_expected) do x_st, x, δ, Δ
+            @test x_st isa StochasticAD.StochasticTriple{0, typeof(x)}
+            @test StochasticAD.value(x_st) == x
+            @test StochasticAD.delta(x_st) ≈ δ
+            @test perturbations(x_st) == ((Δ, 1.0),)
+        end
+    end
+
+    #=
+    Test propagation through some simple functions. 
+        f1: a simple if statement.
+        f2: involves array-containing-fucntor input and output.
+        f3: involves array-containing-functor input, but real output.
+        f4: length ∘ repr (real or array input, real output).
+        f5: mutates input array! Broken since unsupported.
+        f6: the first-arg (blob) should just be passed through without attempting
+            to perturb. Broken since unsupported.
+        f7: involves matrix-containing-functor input and output.
+    =#
+    function f1(x)
+        if x == 0
+            return 1
+        elseif x == 3
+            return 2
+        else
+            return 5
+        end
+    end
+
+    @test StochasticAD.propagate(f1, 0) === f1(0)
+    for (primal, Δ) in [(0, 3), (0, 4), (3, -1)]
+        test_propagate(f1, (primal,), (Δ,))
+    end
+
+    function f2(arr, scalar)
+        if sum(arr) + scalar <= 5
+            return arr .* scalar, sum(arr) * scalar
+        else
+            return arr .- scalar, sum(arr) - scalar
+        end
+    end
+    f3(arr, scalar) = f2(arr, scalar)[2]
+
+    primals1 = ([1, 1], 2)
+    Δs1 = ([2, 3], 5)
+    primals2 = ([1, 2], 1)
+    Δs2 = ([1, -2], 1)
+    primals3 = ([5, 2], -1)
+    Δs3 = ([-3, 1], 0)
+
+    for (primals, Δs) in [(primals1, Δs1), (primals2, Δs2), (primals3, Δs3)]
+        for test_deltas in (false, true)
+            if test_deltas
+                primals = StochasticAD.structural_map(float, primals)
+                Δs = StochasticAD.structural_map(float, Δs)
+            end
+            test_propagate(f2, primals, Δs; test_deltas)
+            test_propagate(f3, primals, Δs; test_deltas)
+        end
+    end
+
+    f4(x) = Base.length(repr(x))
+
+    for (primals, Δs) in [(2, 11), (([3, 14],), ([14, -152],))]
+        test_propagate(f4, primals, Δs)
+    end
+
+    function f5(arr)
+        if arr == [1, 2]
+            arr .+= 1
+        else
+            arr .-= 1
+        end
+    end
+
+    # Tests for f6 skipped (would break)
+    for (primals, Δs) in [([1, 2], [1, -1]), ([2, 4], [-1, -2]), ([2, 4], [-1, -1])]
+        @test_skip "propagate f5"
+        # test_propagate(f5, primals, Δs)
+    end
+
+    f6(blob, arr) = blob, f5(arr)
+
+    # Tests for f6 missing (would break)
+    @test_skip "propagate f6"
+
+    function f7(mat, scalar)
+        return mat * scalar, scalar + sum(mat)
+    end
+
+    test_propagate(f7, (rand(2, 2), 4.0), (rand(2, 2), 1.0); test_deltas = true)
+end

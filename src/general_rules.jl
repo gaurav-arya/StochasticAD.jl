@@ -6,7 +6,8 @@ const handled_ops = Tuple{DataType, Int}[]
 """
     define_triple_overload(sig)
 
-Given a function signature, defines operator overloading rules for stochastic triples.
+Given the signature type-type of the primal function, define operator
+overloading rules for stochastic triples.
 Currently supports functions with all-real inputs and one real output.
 """
 # TODO: special case optimizations
@@ -232,6 +233,7 @@ end
 A simple prototype rule for array indexing. Assumes that underlying type of `st` can index into collection C.
 """
 # TODO: support multiple indices, cartesian indices, non abstract array indexables, other use cases...
+# Example to fix: A[:, :, st]
 function Base.getindex(C::AbstractArray, st::StochasticTriple{T, V, FIs}) where {T, V, FIs}
     val = C[st.value]
     function do_map(Δ, state)

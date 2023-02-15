@@ -40,6 +40,7 @@ include("stochastic_triple.jl") # Defines stochastic triple object and higher le
 include("general_rules.jl") # Defines rules for propagation through deterministic functions
 include("discrete_randomness.jl") # Defines rules for propagation through discrete random functions
 include("smoothing.jl")
+include("propagate.jl") # Experimental generalized forward propagation functionality
 include("misc.jl") # Miscellaneous functions that do not fit in the usual flow
 
 end

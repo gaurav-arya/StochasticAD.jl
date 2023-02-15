@@ -32,6 +32,7 @@ end
 ### Empty / no perturbation
 
 PrunedFIs{V}(state::PrunedFIsState) where {V} = PrunedFIs{V}(zero(V), -1, state)
+# TODO: avoid allocations here
 StochasticAD.similar_empty(Δs::PrunedFIs, V::Type) = PrunedFIs{V}(PrunedFIsState(false))
 Base.empty(Δs::PrunedFIs{V}) where {V} = StochasticAD.similar_empty(Δs::PrunedFIs, V::Type)
 # we truly have no clue what the state is here, so use an invalidated state
@@ -138,6 +139,12 @@ function StochasticAD.combine(::Type{<:PrunedFIs}, Δs_all; rep = nothing)
     state = get_pruned_state(Δs_all)
     Δ_combined = sum(pruned_value, StochasticAD.structural_iterate(Δs_all))
     PrunedFIs(Δ_combined, state.active_tag, state)
+end
+
+function StochasticAD.scalarize(Δs::PrunedFIs)
+    return StochasticAD.structural_map(Δs.Δ) do Δ
+        return PrunedFIs(Δ, Δs.tag, Δs.state)
+    end
 end
 
 ### Miscellaneous

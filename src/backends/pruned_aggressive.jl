@@ -123,6 +123,12 @@ function StochasticAD.combine(FIs::Type{<:PrunedFIsAggressive}, Δs_all;
     PrunedFIsAggressive(Δ_combined, state.active_tag, state)
 end
 
+function StochasticAD.scalarize(Δs::PrunedFIsAggressive)
+    return StochasticAD.structural_map(Δs.Δ) do Δ
+        return PrunedFIsAggressive(Δ, Δs.tag, Δs.state)
+    end
+end
+
 ### Miscellaneous
 
 StochasticAD.similar_type(::Type{<:PrunedFIsAggressive}, V::Type) = PrunedFIsAggressive{V}

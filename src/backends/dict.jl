@@ -131,6 +131,16 @@ function StochasticAD.combine(FIs::Type{<:DictFIs}, Δs_all;
     DictFIs(Δs_combined_dict, rep.state)
 end
 
+function StochasticAD.scalarize(Δs::DictFIs)
+    tupleify(Δ1, Δ2) = StochasticAD.structural_map(tuple, Δ1, Δ2)
+    Δ_all_allkeys = foldl(tupleify, values(Δs.dict))
+    Δ_all_rep = first(values(Δs.dict))
+    _keys = keys(Δs.dict)
+    return StochasticAD.structural_map(Δ_all_rep, Δ_all_allkeys) do _, Δ_allkeys
+        return DictFIs(Dictionary(_keys, Δ_allkeys), Δs.state)
+    end
+end
+
 ### Miscellaneous
 
 StochasticAD.similar_type(::Type{<:DictFIs}, V::Type) = DictFIs{V}

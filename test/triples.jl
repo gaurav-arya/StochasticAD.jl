@@ -346,8 +346,6 @@ end
                 return StochasticAD.couple(FIs, Δs_all; kwargs...)
             end
         end
-        Δs_coupled = get_Δs_coupled()
-        @test StochasticAD.valtype(Δs_coupled) == typeof((Δ_coupled, Δ_coupled))
         #=
         As a test function to apply to the coupled perturbation, we apply
         a matmul followed by a sigmoid activation function and a sum.
@@ -359,10 +357,12 @@ end
             sum(x -> 1 / (1 + exp(-x)), A * arr)
         end
         # Test the above function, and also a simple sum.
-        for (mapfunc, check_combine) in ((mapfunc, false),
-                                         (Δ_coupled -> sum(StochasticAD.structural_iterate(Δ_coupled)),
-                                          true))
-            for use_get_rep in (false, true)
+        for use_get_rep in (false, true)
+            Δs_coupled = get_Δs_coupled(; use_get_rep)
+            @test StochasticAD.valtype(Δs_coupled) == typeof((Δ_coupled, Δ_coupled))
+            for (mapfunc, check_combine) in ((mapfunc, false),
+                                             (Δ_coupled -> sum(StochasticAD.structural_iterate(Δ_coupled)),
+                                              true))
                 function get_contribution()
                     Δs_coupled = get_Δs_coupled(; use_get_rep)
                     Δs_coupled_mapped = map(mapfunc, Δs_coupled)
@@ -383,6 +383,10 @@ end
                                         for i in 1:1000), expected_contribution;
                                    rtol = 5e-2)
                 end
+                # Check scalarize
+                Δs_coupled2 = StochasticAD.couple(FIs, StochasticAD.scalarize(Δs_coupled))
+                @test derivative_contribution(map(mapfunc, Δs_coupled)) ≈
+                      derivative_contribution(map(mapfunc, Δs_coupled2))
             end
         end
     end

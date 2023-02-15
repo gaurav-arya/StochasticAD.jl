@@ -18,6 +18,7 @@ valtype(Δs::AbstractFIs) = valtype(typeof(Δs))
 couple(Δs_all; kwargs...) = couple(eltype(Δs_all), Δs_all; kwargs...)
 combine(Δs_all; kwargs...) = combine(eltype(Δs_all), Δs_all; kwargs...)
 get_rep(Δs_all; kwargs...) = get_rep(eltype(Δs_all), Δs_all; kwargs...)
+function scalarize end
 
 function derivative_contribution end
 

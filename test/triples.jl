@@ -62,7 +62,7 @@ const backends = [
                     batched_full_func(p) = mean([full_func(p) for i in 1:nsamples])
                     # The array input used for ForwardDiff below is a trick to test multiple partials
                     triple_deriv_forward = mean(ForwardDiff.gradient(arr -> batched_full_func(sum(arr)),
-                                                                     [p, 1 - 2 * p]))
+                                                                     [2 * p, -p]))
                     triple_deriv_backward = Zygote.gradient(batched_full_func, p)[1]
                     @test isapprox(triple_deriv_forward, exact_deriv, rtol = rtol)
                     @test isapprox(triple_deriv_backward, exact_deriv, rtol = rtol)

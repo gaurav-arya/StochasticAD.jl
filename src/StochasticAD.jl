@@ -36,10 +36,10 @@ using .DictFIsBackend
 using .SmoothedFIsBackend
 
 include("prelude.jl") # Defines global constants
+include("smoothing.jl") # Smoothing rules. Placed before general rules so that new_weight frule is caught by overload generation.
 include("stochastic_triple.jl") # Defines stochastic triple object and higher level functions
 include("general_rules.jl") # Defines rules for propagation through deterministic functions
 include("discrete_randomness.jl") # Defines rules for propagation through discrete random functions
-include("smoothing.jl")
 include("propagate.jl") # Experimental generalized forward propagation functionality
 include("misc.jl") # Miscellaneous functions that do not fit in the usual flow
 

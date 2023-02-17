@@ -7,13 +7,19 @@
     Uses a smoothing rule for use in forward and reverse-mode AD, which is exactly unbiased when the quantity is only
     used in linear functions  (e.g. used as an [importance weight](https://en.wikipedia.org/wiki/Importance_sampling)).
 """
+new_weight(p::Real) = 1
+
 function new_weight(p::ForwardDiff.Dual{T}) where {T}
-    δ_p = ForwardDiff.partials(p)
+    Δp = ForwardDiff.partials(p)
     val_p = ForwardDiff.value(p)
     val_p = max(1e-5, val_p) # TODO: is this necessary?
-    ForwardDiff.Dual{T}(1, δ_p / val_p)
+    ForwardDiff.Dual{T}(one(p), Δp / val_p)
 end
-new_weight(p::Real) = 1
+
+function ChainRulesCore.frule((_, Δp), ::typeof(new_weight), p::Real)
+    val_p = max(1e-5, p) # TODO: is this necessary?
+    return one(p), Δp / val_p
+end
 
 function ChainRulesCore.rrule(::typeof(new_weight), p)
     function new_weight_pullback(∇Ω)

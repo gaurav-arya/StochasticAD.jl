@@ -13,7 +13,7 @@ function new_weight(p::ForwardDiff.Dual{T}) where {T}
     Δp = ForwardDiff.partials(p)
     val_p = ForwardDiff.value(p)
     val_p = max(1e-5, val_p) # TODO: is this necessary?
-    ForwardDiff.Dual{T}(one(p), Δp / val_p)
+    ForwardDiff.Dual{T}(one(val_p), Δp / val_p)
 end
 
 function ChainRulesCore.frule((_, Δp), ::typeof(new_weight), p::Real)

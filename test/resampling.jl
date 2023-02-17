@@ -35,6 +35,17 @@ particle_filter = ParticleFilterCore.ParticleFilter(m, stochastic_model, ys,
                                                     ParticleFilterCore.sample_stratified)
 ###
 
+@testset "new weight" begin
+    p = 0.5
+    st = stochastic_triple(p)
+    d = ForwardDiff.Dual(p, (1.0, 2.0))
+    @test new_weight(p) == one(p)
+    @test StochasticAD.value(new_weight(st)) == one(p)
+    @test StochasticAD.delta(new_weight(st)) == 1.0 / p
+    @test ForwardDiff.value(new_weight(d)) == p
+    @test collect(ForwardDiff.partials(new_weight(d))) == [1.0 / p, 2.0 / p]
+end
+
 @testset "forward-mode and reverse-mode AD: single run" begin
     Random.seed!(seed)
     grad_forw = ParticleFilterCore.forw_grad(θtrue, particle_filter)

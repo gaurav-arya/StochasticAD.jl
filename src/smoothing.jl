@@ -47,12 +47,16 @@ for (dist, i, field) in [
     @eval function Base.rand(rng::AbstractRNG,
                              d_dual::$dist{<:ForwardDiff.Dual{T}}) where {T}
         dual = params(d_dual)[$i]
+        # dual could represent an array of duals or a single one; map handles both cases.
         p = map(value, dual)
-        δ = map(delta, dual)
+        # Generate a δ for each partial component.
+        partials_indices = ntuple(identity, length(first(dual).partials))
+        δs = map(i -> map(d -> ForwardDiff.partials(d)[i], dual), partials_indices)
         d = $dist(params(d_dual)[1:($i - 1)]..., p,
                   params(d_dual)[($i + 1):end]...)
         val = convert(Signed, rand(rng, d))
-        ForwardDiff.Dual{T}(val, smoothed_delta(d, val, δ))
+        partials = ForwardDiff.Partials(map(δ -> smoothed_delta(d, val, δ), δs))
+        ForwardDiff.Dual{T}(val, partials)
     end
     @eval function ChainRulesCore.rrule(::typeof(rand), rng::AbstractRNG, d::$dist)
         val = convert(Signed, rand(rng, d))

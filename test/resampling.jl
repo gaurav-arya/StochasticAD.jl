@@ -2,6 +2,7 @@ using StochasticAD
 using Random, Test
 using Distributions
 using LinearAlgebra
+using ForwardDiff
 
 # test forward-mode AD and reverse-mode AD on the particle filter
 
@@ -42,7 +43,7 @@ particle_filter = ParticleFilterCore.ParticleFilter(m, stochastic_model, ys,
     @test new_weight(p) == one(p)
     @test StochasticAD.value(new_weight(st)) == one(p)
     @test StochasticAD.delta(new_weight(st)) == 1.0 / p
-    @test ForwardDiff.value(new_weight(d)) == p
+    @test ForwardDiff.value(new_weight(d)) == one(p)
     @test collect(ForwardDiff.partials(new_weight(d))) == [1.0 / p, 2.0 / p]
 end
 

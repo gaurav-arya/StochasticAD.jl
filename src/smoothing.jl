@@ -7,13 +7,19 @@
     Uses a smoothing rule for use in forward and reverse-mode AD, which is exactly unbiased when the quantity is only
     used in linear functions  (e.g. used as an [importance weight](https://en.wikipedia.org/wiki/Importance_sampling)).
 """
+new_weight(p::Real) = 1
+
 function new_weight(p::ForwardDiff.Dual{T}) where {T}
-    δ_p = ForwardDiff.partials(p)
+    Δp = ForwardDiff.partials(p)
     val_p = ForwardDiff.value(p)
     val_p = max(1e-5, val_p) # TODO: is this necessary?
-    ForwardDiff.Dual{T}(1, δ_p / val_p)
+    ForwardDiff.Dual{T}(one(val_p), Δp / val_p)
 end
-new_weight(p::Real) = 1
+
+function ChainRulesCore.frule((_, Δp), ::typeof(new_weight), p::Real)
+    val_p = max(1e-5, p) # TODO: is this necessary?
+    return one(p), Δp / val_p
+end
 
 function ChainRulesCore.rrule(::typeof(new_weight), p)
     function new_weight_pullback(∇Ω)
@@ -41,12 +47,16 @@ for (dist, i, field) in [
     @eval function Base.rand(rng::AbstractRNG,
                              d_dual::$dist{<:ForwardDiff.Dual{T}}) where {T}
         dual = params(d_dual)[$i]
+        # dual could represent an array of duals or a single one; map handles both cases.
         p = map(value, dual)
-        δ = map(delta, dual)
+        # Generate a δ for each partial component.
+        partials_indices = ntuple(identity, length(first(dual).partials))
+        δs = map(i -> map(d -> ForwardDiff.partials(d)[i], dual), partials_indices)
         d = $dist(params(d_dual)[1:($i - 1)]..., p,
                   params(d_dual)[($i + 1):end]...)
         val = convert(Signed, rand(rng, d))
-        ForwardDiff.Dual{T}(val, smoothed_delta(d, val, δ))
+        partials = ForwardDiff.Partials(map(δ -> smoothed_delta(d, val, δ), δs))
+        ForwardDiff.Dual{T}(val, partials)
     end
     @eval function ChainRulesCore.rrule(::typeof(rand), rng::AbstractRNG, d::$dist)
         val = convert(Signed, rand(rng, d))

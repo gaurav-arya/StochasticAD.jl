@@ -79,7 +79,7 @@ end end
 @testset "Perturbing n of binomial" begin
     function get_triple_deriv(Δ)
         # Manually create a finite perturbation to avoid any randomness in its creation
-        Δs = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), Δ, 3.5)
+        Δs = StochasticAD.similar_new(StochasticAD.create_Δs(PrunedFIsBackend(), Int), Δ, 3.5)
         st = StochasticAD.StochasticTriple{0}(5, 0, Δs)
         st_continuous = stochastic_triple(0.5)
         return derivative_contribution(rand(Binomial(st, st_continuous)))
@@ -242,14 +242,14 @@ end end
     @test d[3] == 5
     # Test that we get an error with discrete random dictionary indices,
     # since this isn't supported and we want to avoid silent failures.
-    Δs = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 1.0, 1.0)
+    Δs = StochasticAD.similar_new(StochasticAD.create_Δs(PrunedFIsBackend(), Int), 1.0, 1.0)
     st = StochasticAD.StochasticTriple{0}(1.0, 0, Δs)
     @test_throws ErrorException d[rand(Bernoulli(st))]
 end
 
 @testset "Coupled comparison" begin
-    Δs_1 = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 1.0, 1.0)
-    Δs_2 = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 1.0, 1.0)
+    Δs_1 = StochasticAD.similar_new(StochasticAD.create_Δs(PrunedFIsBackend(), Int), 1.0, 1.0)
+    Δs_2 = StochasticAD.similar_new(StochasticAD.create_Δs(PrunedFIsBackend(), Int), 1.0, 1.0)
     st_1 = StochasticAD.StochasticTriple{0}(1.0, 0, Δs_1)
     st_2 = StochasticAD.StochasticTriple{0}(1.0, 0, Δs_2)
     @test st_1 == st_1

@@ -8,9 +8,9 @@ using Random
 using Zygote
 
 const backends = [
-    StochasticAD.PrunedFIs,
-    StochasticAD.PrunedFIsAggressive,
-    StochasticAD.DictFIs,
+    StochasticAD.PrunedFIsBackend(),
+    StochasticAD.PrunedFIsAggressiveBackend(),
+    StochasticAD.DictFIsBackend(),
 ]
 
 @testset "Distributions w.r.t. continuous parameter" begin for backend in vcat(backends,
@@ -36,7 +36,7 @@ const backends = [
     test_cases = collect(zip(distributions, p_ranges, out_ranges))
     test_funcs = [x -> 7 * x - 3, x -> (x + 1)^2, x -> sqrt(x + 1)]
 
-    if backend == StochasticAD.DictFIs
+    if backend isa DictFIsBackend
         # Only test dictionary backend on Bernoulli to speed things up. Should still cover interface.
         test_cases = test_cases[1:1]
     elseif backend == :smoothing_autodiff
@@ -67,7 +67,7 @@ const backends = [
                     @test isapprox(triple_deriv_forward, exact_deriv, rtol = rtol)
                     @test isapprox(triple_deriv_backward, exact_deriv, rtol = rtol)
                 else
-                    get_deriv = () -> derivative_estimate(full_func, p; backend = backend)
+                    get_deriv = () -> derivative_estimate(full_func, p; backend)
                     triple_deriv = mean(get_deriv() for i in 1:nsamples)
                     @test isapprox(triple_deriv, exact_deriv, rtol = rtol)
                 end
@@ -79,7 +79,8 @@ end end
 @testset "Perturbing n of binomial" begin
     function get_triple_deriv(Δ)
         # Manually create a finite perturbation to avoid any randomness in its creation
-        Δs = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), Δ, 3.5)
+        Δs = StochasticAD.similar_new(StochasticAD.create_Δs(PrunedFIsBackend(), Int), Δ,
+                                      3.5)
         st = StochasticAD.StochasticTriple{0}(5, 0, Δs)
         st_continuous = stochastic_triple(0.5)
         return derivative_contribution(rand(Binomial(st, st_continuous)))
@@ -117,7 +118,7 @@ end
         end
         tested[x + 1] = true
     end
-    @test stochastic_triple(1.0; backend = backend) != 1
+    @test stochastic_triple(1.0; backend) != 1
 end end
 
 @testset "Array indexing" begin
@@ -242,14 +243,16 @@ end end
     @test d[3] == 5
     # Test that we get an error with discrete random dictionary indices,
     # since this isn't supported and we want to avoid silent failures.
-    Δs = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 1.0, 1.0)
+    Δs = StochasticAD.similar_new(StochasticAD.create_Δs(PrunedFIsBackend(), Int), 1.0, 1.0)
     st = StochasticAD.StochasticTriple{0}(1.0, 0, Δs)
     @test_throws ErrorException d[rand(Bernoulli(st))]
 end
 
 @testset "Coupled comparison" begin
-    Δs_1 = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 1.0, 1.0)
-    Δs_2 = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 1.0, 1.0)
+    Δs_1 = StochasticAD.similar_new(StochasticAD.create_Δs(PrunedFIsBackend(), Int), 1.0,
+                                    1.0)
+    Δs_2 = StochasticAD.similar_new(StochasticAD.create_Δs(PrunedFIsBackend(), Int), 1.0,
+                                    1.0)
     st_1 = StochasticAD.StochasticTriple{0}(1.0, 0, Δs_1)
     st_2 = StochasticAD.StochasticTriple{0}(1.0, 0, Δs_2)
     @test st_1 == st_1
@@ -278,7 +281,7 @@ end
     @test_throws ArgumentError convert(typeof(st1), st2)
 end
 
-@testset "Finite perturbation backend interface" begin for FIs in backends
+@testset "Finite perturbation backend interface" begin for backend in backends
     #=
     Test the backend interface across the finite perturbation backends,
     which is currently a bit implicitly defined.
@@ -289,22 +292,23 @@ end
     All four of the below approaches should create an empty backend,
     although the backend's internal state management may differ. 
     =#
-    Δs0 = StochasticAD.similar_type(FIs, V0)() # used for first triple in computation
+    Δs0 = StochasticAD.create_Δs(backend, V0) # used to create first triple in computation
+    FIs = typeof(Δs0)
     Δs1 = empty(Δs0)
     Δs2 = empty(typeof(Δs0))
     Δs3 = StochasticAD.similar_empty(Δs0, V1)
     for (Δs, V) in ((Δs0, V0), (Δs1, V0), (Δs2, V0), (Δs3, V1))
-        @test Δs isa FIs
         @test StochasticAD.valtype(Δs) === V
+        @test Δs isa StochasticAD.similar_type(FIs, V)
         @test isempty(Δs)
         @test iszero(derivative_contribution(Δs))
     end
     # Test creation of a single perturbation
     for Δ in (1, 3.0)
-        Δs0 = StochasticAD.similar_type(FIs, V0)()
+        Δs0 = StochasticAD.create_Δs(backend, V0)
         Δs1 = StochasticAD.similar_new(Δs0, Δ, 3.0)
-        @test Δs1 isa FIs
         @test StochasticAD.valtype(Δs1) === typeof(Δ)
+        @test Δs1 isa StochasticAD.similar_type(FIs, typeof(Δ))
         @test !isempty(Δs1)
         @test derivative_contribution(Δs1) == 3Δ
         # Test StochasticAD.alltrue
@@ -328,7 +332,7 @@ end
     Δ_coupleds = (3, [4.0, 5.0], (2, [3.0, 4.0]))
     for Δ_coupled in Δ_coupleds
         function get_Δs_coupled(; do_combine = false, use_get_rep = false)
-            Δs0 = StochasticAD.similar_type(FIs, Int)()
+            Δs0 = StochasticAD.create_Δs(backend, Int)
             Δs1 = StochasticAD.similar_new(Δs0, 1, 3.0) # perturbation 1
             Δs2 = StochasticAD.similar_new(Δs0, 1, 2.0) # perturbation 2
             # A group of perturbations that all stem from perturbation 1. 
@@ -417,7 +421,7 @@ end end
 
     @test StochasticAD.tag(st) === StochasticAD.Tag{typeof(f), Float64}
     @test StochasticAD.valtype(st) === Float64
-    @test StochasticAD.backendtype(st) === StochasticAD.similar_type(backend, Float64)
+    @test StochasticAD.valtype(st.Δs) === Float64
 end end
 
 @testset "Propagation via StochasticAD.propagate" begin
@@ -427,7 +431,8 @@ end end
     end
 
     function test_propagate(f, primals, Δs; test_deltas = false)
-        Δs_base = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 0, 1.0)
+        Δs_base = StochasticAD.similar_new(StochasticAD.create_Δs(PrunedFIsBackend(), Int),
+                                           0, 1.0)
         _form_triple(x, δ, Δ) = form_triple(x, δ, Δ, Δs_base)
         out = f(primals...)
         out_Δ_expected = StochasticAD.structural_map(-,

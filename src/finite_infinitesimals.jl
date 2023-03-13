@@ -1,13 +1,22 @@
 ## 
 """
+    AbstractFIsBackend
+
+An abstract type for backend strategies of Finite perturbations that occur with Infinitesimal probability (FIs).
+"""
+abstract type AbstractFIsBackend end
+
+"""
     AbstractFIs{V}
 
-An abstract type for backend representations of Finite perturbations that occur with Infinitesimal probability (FIs).
+An abstract type for concrete backend representations of Finite Infinitesimals. 
 """
 abstract type AbstractFIs{V} end
 
 ### Some of the necessary interface notes below.
 # TODO: document
+
+function create_Δs end
 
 function similar_new end
 function similar_empty end

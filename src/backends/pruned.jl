@@ -1,8 +1,15 @@
-module PrunedFIsBackend
+module PrunedFIsModule
 
 import ..StochasticAD
 
-export PrunedFIs
+export PrunedFIsBackend
+
+"""
+    PrunedFIsBackend <: StochasticAD.AbstractFIsBackend
+
+A backend algorithm that prunes between perturbations as soon as they clash (e.g. added together).
+"""
+struct PrunedFIsBackend <: StochasticAD.AbstractFIsBackend end
 
 """
     PrunedFIsState
@@ -20,7 +27,7 @@ end
 """
     PrunedFIs{V} <: StochasticAD.AbstractFIs{V}
 
-A backend that prunes between perturbations as soon as they clash (e.g. added together).
+The implementing backend structure for PrunedFIsBackend.
 """
 struct PrunedFIs{V} <: StochasticAD.AbstractFIs{V}
     Δ::V
@@ -53,7 +60,7 @@ end
 
 ### Create Δs backend for the first stochastic triple of computation
 
-PrunedFIs{V}() where {V} = PrunedFIs{V}(PrunedFIsState(false))
+StochasticAD.create_Δs(::PrunedFIsBackend, V) = PrunedFIs{V}(PrunedFIsState(false))
 
 ### Convert type of a backend
 

@@ -33,9 +33,9 @@ for (setname, set) in (("tups", tups), ("SAs", SAs))
             flatsuite["foldl_values"] = @benchmarkable foldl(+, $(iter_values))
             flatsuite["iterate_values"] = @benchmarkable for i in $(iter_values)
             end
-            for FIs in [StochasticAD.PrunedFIs, StochasticAD.PrunedFIsAggressive]
-                FIs_suite = flatsuite[FIs] = BenchmarkGroup()
-                Δs = empty(StochasticAD.similar_type(FIs, Int))
+            for backend in [PrunedFIsBackend(), PrunedFIsAggressiveBackend()]
+                FIs_suite = flatsuite[backend] = BenchmarkGroup()
+                Δs = StochasticAD.create_Δs(backend, Int)
                 Δs1 = StochasticAD.similar_new(Δs, 1, 1)
                 Δs_all = StochasticAD.structural_map(x -> map(Δ -> x, Δs1), values)
                 FIs_suite["make_iterate_Δs"] = @benchmarkable StochasticAD.structural_iterate($Δs_all)

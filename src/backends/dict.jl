@@ -1,9 +1,17 @@
-module DictFIsBackend
+module DictFIsModule
 
-export DictFIs
+export DictFIsBackend
 
 import ..StochasticAD
 using Dictionaries
+
+"""
+    DictFIsBackend <: StochasticAD.AbstractFIsBackend
+
+A dictionary backend algorithm which keeps entries for each perturbation that has occurred without pruning. 
+Currently very unoptimized.
+"""
+struct DictFIsBackend <: StochasticAD.AbstractFIsBackend end
 
 """
     DictFIsState    
@@ -30,8 +38,7 @@ Base.:isless(event1::InfinitesimalEvent, event2::InfinitesimalEvent) = event1 < 
 """
     DictFIs{V} <: StochasticAD.AbstractFIs{V}
 
-A dictionary backend which keeps entries for each perturbation that has occurred without pruning. 
-Currently very unoptimized.
+The implementing backend structure for DictFIsBackend.
 """
 struct DictFIs{V} <: StochasticAD.AbstractFIs{V}
     dict::Dictionary{InfinitesimalEvent, V}
@@ -64,7 +71,7 @@ end
 
 ### Create Δs backend for the first stochastic triple of computation
 
-DictFIs{V}() where {V} = DictFIs{V}(DictFIsState())
+StochasticAD.create_Δs(::DictFIsBackend, V) = DictFIs{V}(DictFIsState())
 
 ### Convert type of a backend
 

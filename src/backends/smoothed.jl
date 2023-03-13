@@ -1,4 +1,4 @@
-module SmoothedFIsBackend
+module SmoothedFIsModule
 
 import ..StochasticAD
 

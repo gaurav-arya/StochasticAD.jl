@@ -12,8 +12,8 @@ const suite = BenchmarkGroup()
 
 suite["original"] = @benchmarkable $play($p)
 suite["PrunedFIs"] = @benchmarkable derivative_estimate($play, $p;
-                                                        backend = StochasticAD.PrunedFIs)
+                                                        backend = PrunedFIsBackend())
 suite["PrunedFIsAggressive"] = @benchmarkable derivative_estimate($play, $p;
-                                                                  backend = StochasticAD.PrunedFIsAggressive)
+                                                                  backend = PrunedFIsAggressiveBackend())
 
 end

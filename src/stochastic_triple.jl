@@ -134,15 +134,15 @@ end
 
 ### Creating the first stochastic triple in a computation
 
-function StochasticTriple{T}(value::V, δ::V, backend::Type{<:AbstractFIs}) where {T, V}
-    StochasticTriple{T}(value, δ, similar_type(backend, V)())
+function StochasticTriple{T}(value::V, δ::V, backend::AbstractFIsBackend) where {T, V}
+    StochasticTriple{T}(value, δ, create_Δs(backend, V))
 end
 
-function StochasticTriple{T}(value::V, backend::Type{<:AbstractFIs}) where {T, V}
+function StochasticTriple{T}(value::V, backend::AbstractFIsBackend) where {T, V}
     StochasticTriple{T}(value, zero(V), backend)
 end
 
-function StochasticTriple{T}(value::A, δ::B, backend::Type{<:AbstractFIs}) where {T, A, B}
+function StochasticTriple{T}(value::A, δ::B, backend::AbstractFIsBackend) where {T, A, B}
     V = promote_type(A, B)
     StochasticTriple{T}(convert(V, value), convert(V, δ), backend)
 end
@@ -171,8 +171,8 @@ struct Tag{F, V}
 end
 
 """
-    stochastic_triple(X, p; backend=StochasticAD.PrunedFIs)
-    stochastic_triple(p; backend=StochasticAD.PrunedFIs)
+    stochastic_triple(X, p; backend=StochasticAD.PrunedFIsBackend())
+    stochastic_triple(p; backend=StochasticAD.PrunedFIsBackend())
 
 For any `p` that is supported by [`Functors.jl`](https://fluxml.ai/Functors.jl/stable/),
 e.g. scalars or abstract arrays.
@@ -193,7 +193,7 @@ StochasticTriple of Int64:
 0 + 0ε + (1 with probability 2.0ε, tag 1)
 ```
 """
-function stochastic_triple(f, p::V; backend = PrunedFIs) where {V}
+function stochastic_triple(f, p::V; backend = PrunedFIsBackend()) where {V}
     counter = begin
         c = 0
         (_) -> begin

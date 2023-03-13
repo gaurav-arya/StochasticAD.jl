@@ -5,6 +5,7 @@ module StochasticAD
 export stochastic_triple, derivative_contribution, perturbations # For working with stochastic triples
 export derivative_estimate, StochasticModel, stochastic_gradient # Higher level functionality
 export new_weight # Particle resampling
+export PrunedFIsBackend, PrunedFIsAggressiveBackend, DictFIsBackend
 
 ### Imports
 
@@ -30,10 +31,10 @@ include("backends/pruned.jl")
 include("backends/pruned_aggressive.jl")
 include("backends/dict.jl")
 include("backends/smoothed.jl")
-using .PrunedFIsBackend
-using .PrunedFIsAggressiveBackend
-using .DictFIsBackend
-using .SmoothedFIsBackend
+using .PrunedFIsModule
+using .PrunedFIsAggressiveModule
+using .DictFIsModule
+using .SmoothedFIsModule
 
 include("prelude.jl") # Defines global constants
 include("smoothing.jl") # Smoothing rules. Placed before general rules so that new_weight frule is caught by overload generation.

@@ -18,7 +18,7 @@ suite["add_via_propagate"]["original"] = @benchmarkable StochasticAD.propagate(+
                                                                                keep_deltas = Val{
                                                                                                  true
                                                                                                  })
-for backend in [StochasticAD.PrunedFIs, StochasticAD.PrunedFIsAggressive]
+for backend in [PrunedFIsBackend(), PrunedFIsAggressiveBackend()]
     suite["add"][backend] = @benchmarkable +(st, st) setup=(st = stochastic_triple(0.5;
                                                                                    backend = $backend))
     suite["add_via_propagate_nodeltas"][backend] = @benchmarkable StochasticAD.propagate(+,

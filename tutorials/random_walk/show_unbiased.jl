@@ -19,8 +19,8 @@ println()
 println("## Stochastic triple computation\n")
 
 @btime fX(p)
-@enter ForwardDiff.derivative(p -> fX(p; hardcode_leftright_step = true), p)
-@btime derivative_estimate(fX, p; backend = StochasticAD.PrunedFIsAggressive)
+@btime derivative_estimate(fX, p; backend = PrunedFIsAggressiveBackend())
+@btime derivative_estimate(fX, p; backend = PrunedFIsBackend())
 
 triple_X_derivs = [derivative_estimate(X, p) for i in 1:nsamples]
 triple_fX_derivs = [derivative_estimate(fX, p) for i in 1:nsamples]

@@ -1,8 +1,15 @@
-module PrunedFIsAggressiveBackend
-
-export PrunedFIsAggressive
+module PrunedFIsAggressiveModule
 
 import ..StochasticAD
+
+export PrunedFIsAggressiveBackend
+
+"""
+    PrunedFIsAggressiveBackend <: StochasticAD.AbstractFIsBackend
+
+A backend algorithm that aggressively prunes between perturbations as soon as they are created.
+"""
+struct PrunedFIsAggressiveBackend <: StochasticAD.AbstractFIsBackend end
 
 """
     PrunedFIsAggressiveState
@@ -20,7 +27,7 @@ end
 """
     PrunedFIsAggressive{V} <: StochasticAD.AbstractFIs{V}
 
-A backend that aggressively prunes between perturbations as soon as they are created.
+The implementing backend structure for PrunedFIsAggressiveBackend.
 """
 struct PrunedFIsAggressive{V} <: StochasticAD.AbstractFIs{V}
     Δ::V
@@ -65,7 +72,9 @@ end
 
 ### Create Δs backend for the first stochastic triple of computation
 
-PrunedFIsAggressive{V}() where {V} = PrunedFIsAggressive{V}(PrunedFIsAggressiveState())
+function StochasticAD.create_Δs(::PrunedFIsAggressiveBackend, V)
+    PrunedFIsAggressive{V}(PrunedFIsAggressiveState())
+end
 
 ### Convert type of a backend
 

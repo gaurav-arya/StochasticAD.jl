@@ -418,7 +418,7 @@ end end
 
     @test StochasticAD.tag(st) === StochasticAD.Tag{typeof(f), Float64}
     @test StochasticAD.valtype(st) === Float64
-    @test StochasticAD.backendtype(st) === StochasticAD.similar_type(backend, Float64)
+    @test StochasticAD.valtype(st.Δs) === Float64
 end end
 
 @testset "Propagation via StochasticAD.propagate" begin
@@ -428,7 +428,7 @@ end end
     end
 
     function test_propagate(f, primals, Δs; test_deltas = false)
-        Δs_base = StochasticAD.similar_new(StochasticAD.PrunedFIs{Int}(), 0, 1.0)
+        Δs_base = StochasticAD.similar_new(StochasticAD.create_Δs(PrunedFIsBackend(), Int), 0, 1.0)
         _form_triple(x, δ, Δ) = form_triple(x, δ, Δ, Δs_base)
         out = f(primals...)
         out_Δ_expected = StochasticAD.structural_map(-,

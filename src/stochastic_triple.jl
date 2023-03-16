@@ -170,15 +170,29 @@ end
 struct Tag{F, V}
 end
 
+function stochastic_triple_direction(f, p::V, direction;
+                                     backend = PrunedFIsBackend()) where {V}
+    Δs = create_Δs(backend, Int) # TODO: necessity of hardcoding some type here suggests interface improvements
+    sts = structural_map(p, direction) do p_i, direction_i
+        StochasticTriple{Tag{typeof(f), V}}(p_i, direction_i,
+                                            similar_empty(Δs, typeof(p_i)))
+    end
+    return f(sts)
+end
+
 """
-    stochastic_triple(X, p; backend=PrunedFIsBackend())
-    stochastic_triple(p; backend=PrunedFIsBackend())
+    stochastic_triple(X, p; backend=PrunedFIsBackend(), direction=nothing)
+    stochastic_triple(p; backend=PrunedFIsBackend(), direction=nothing)
 
 For any `p` that is supported by [`Functors.jl`](https://fluxml.ai/Functors.jl/stable/),
-e.g. scalars or abstract arrays.
-return an output of similar structure to `p`, where a particular value contains
+e.g. scalars or abstract arrays,
+differentiate the output with respect to each value of `p`,
+returning an output of similar structure to `p`, where a particular value contains
 the stochastic-triple output of `X` when perturbing the corresponding value in `p`
 (i.e. replacing the original value `x` with `x + ε`).
+
+When `direction` is provided, return only the stochastic-triple output of `X` with respect to a perturbation
+of `p` in that particular direction.
 When `X` is not provided, the identity function is used. 
 
 The `backend` keyword argument describes the algorithm used by the third component
@@ -193,7 +207,10 @@ StochasticTriple of Int64:
 0 + 0ε + (1 with probability 2.0ε, tag 1)
 ```
 """
-function stochastic_triple(f, p::V; backend = PrunedFIsBackend()) where {V}
+function stochastic_triple(f, p; direction = nothing, kwargs...)
+    if direction !== nothing
+        return stochastic_triple_direction(f, p, direction; kwargs...)
+    end
     counter = begin
         c = 0
         (_) -> begin
@@ -202,16 +219,11 @@ function stochastic_triple(f, p::V; backend = PrunedFIsBackend()) where {V}
         end
     end
     indices = structural_map(counter, p)
-    function map_func(perturbed_index)
-        sts = structural_map(indices, p) do i, p_i
-            if i == perturbed_index
-                return StochasticTriple{Tag{typeof(f), V}}(p_i, one(p_i), backend)
-            else
-                return StochasticTriple{Tag{typeof(f), V}}(p_i, zero(p_i), backend)
-            end
+    map_func = perturbed_index -> begin
+        direction = structural_map(indices, p) do i, p_i
+            i == perturbed_index ? one(p_i) : zero(p_i)
         end
-        out = f(sts)
-        return out
+        stochastic_triple_direction(f, p, direction; kwargs...)
     end
     return structural_map(map_func, indices)
 end
@@ -219,7 +231,7 @@ end
 stochastic_triple(p; kwargs...) = stochastic_triple(identity, p; kwargs...)
 
 @doc raw"""
-    derivative_estimate(X, p; backend=PrunedFIsBackend())
+    derivative_estimate(X, p; backend=PrunedFIsBackend(), direction=nothing)
 
 Compute an unbiased estimate of ``\frac{\mathrm{d}\mathbb{E}[X(p)]}{\mathrm{d}p}``, 
 the derivative of the expectation of the random function `X(p)` with respect to its input `p`. 
@@ -232,6 +244,9 @@ scalar in `p` replaced by a derivative estimate of `X(p)` with respect to that e
 For example, if `X(p) <: AbstractMatrix` and `p <: Real`, then the output would be a matrix.
 The `backend` keyword argument describes the algorithm used by the third component
 of the stochastic triple, see [technical details](devdocs.md) for more details.
+
+When `direction` is provided, the output is only differentiated with respect to a perturbation
+of `p` in that direction.
 
 !!! note 
     Since `derivative_estimate` performs forward-mode AD, the required computation time scales

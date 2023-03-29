@@ -85,14 +85,14 @@ Base.isempty(Δs::DictFIs) = isempty(Δs.dict)
 Base.length(Δs::DictFIs) = length(Δs.dict)
 Base.iszero(Δs::DictFIs) = isempty(Δs) || all(iszero.(Δs.dict))
 function StochasticAD.derivative_contribution(Δs::DictFIs{V}) where {V}
-    sum((Δ * event.w for (event, Δ) in pairs(Δs.dict)), init = zero(V))
+    sum((Δ * event.w for (event, Δ) in pairs(Δs.dict)), init = zero(V) * 0.0)
 end
 
 StochasticAD.perturbations(Δs::DictFIs) = [(Δ, event.w) for (event, Δ) in pairs(Δs.dict)]
 
 ### Unary propagation
 
-function StochasticAD.map_Δs(f, Δs::DictFIs)
+function StochasticAD.map_Δs(f, Δs::DictFIs; kwargs...)
     # Pass key as state in map
     mapped_values = map(f, collect(Δs.dict), keys(Δs.dict))
     dict = Dictionary(keys(Δs.dict), mapped_values)

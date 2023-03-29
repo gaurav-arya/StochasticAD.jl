@@ -46,27 +46,32 @@ Currently, we handle deterministic functions `f` with input and output supported
 If `f` has a continuously differentiable component that should be kept,  
 This function is highly experimental, and is intentionally undocumented.
 """
-function propagate(f, args...; keep_deltas = Val{false})
+# TODO: support kwargs to f (or just use kwfunc in macro)
+function propagate(f, args...; keep_deltas = Val{false}, provided_st_rep=nothing)
     #= 
     TODO: maybe don't iterate through every scalar of array below, 
     but rather have special array dispatch
     =#
-    args_iter = structural_iterate(args)
-    function args_fold(arg1, arg2)
-        if arg1 isa StochasticTriple
-            if (arg2 isa StochasticTriple) && (tag(arg1) !== tag(arg2))
-                throw(ArgumentError("Tags of combined stochastic triples do not match!"))
+    st_rep = if provided_st_rep === nothing
+        args_iter = structural_iterate(args)
+        function args_fold(arg1, arg2)
+            if arg1 isa StochasticTriple
+                if (arg2 isa StochasticTriple) && (tag(arg1) !== tag(arg2))
+                    throw(ArgumentError("Tags of combined stochastic triples do not match!"))
+                end
+                return arg1
+            else
+                return arg2
             end
-            return arg1
-        else
-            return arg2
         end
+        foldl(args_fold, args_iter)
+    else
+        provided_st_rep
     end
-    st_rep = foldl(args_fold, args_iter)
+
     if !(st_rep isa StochasticTriple)
         return f(args...)
     end
-    Δs_rep = st_rep.Δs
 
     primal_args = structural_map(get_value, args)
     input_args = keep_deltas == Val{false} ? primal_args : structural_map(strip_Δs, args)
@@ -81,7 +86,7 @@ function propagate(f, args...; keep_deltas = Val{false})
     Δs_all = structural_map(Base.Fix2(get_Δs, backendtype(st_rep)), args;
         only_vals = Val{true}())
     # TODO: Coupling approach below needs to handle non-perturbable objects.
-    Δs_coupled = couple(backendtype(st_rep), Δs_all; rep = Δs_rep, out_rep = val)
+    Δs_coupled = couple(backendtype(st_rep), Δs_all; rep = st_rep.Δs, out_rep = val)
 
     function map_func(Δ_coupled)
         perturbed_args = structural_map(+, primal_args, Δ_coupled)

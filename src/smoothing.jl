@@ -58,7 +58,8 @@ for (dist, i, field) in [
         partials = ForwardDiff.Partials(map(δ -> smoothed_delta(d, val, δ), δs))
         ForwardDiff.Dual{T}(val, partials)
     end
-    @eval function ChainRulesCore.frule((_, _, Δd), ::typeof(rand), rng::AbstractRNG, d::$dist)
+    @eval function ChainRulesCore.frule((_, _, Δd), ::typeof(rand), rng::AbstractRNG,
+                                        d::$dist)
         val = convert(Signed, rand(rng, d))
         Δval = smoothed_delta(d, val, Δd)
         return (val, Δval)

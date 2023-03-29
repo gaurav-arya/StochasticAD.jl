@@ -38,4 +38,4 @@ function perturbations end
 function filter_state end
 
 function map_Δs end
-Base.map(f, Δs::AbstractFIs) = StochasticAD.map_Δs((Δs, _) -> f(Δs), Δs)
+Base.map(f, Δs::AbstractFIs; kwargs...) = StochasticAD.map_Δs((Δs, _) -> f(Δs), Δs; kwargs...)

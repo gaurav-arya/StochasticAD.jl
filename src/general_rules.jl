@@ -95,7 +95,7 @@ function define_triple_overload(sig)
             val, δ0 = frule(args_tangent, f, value(st); kwargs...)
             δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
             if !iszero(st.Δs)
-                Δs = map(Δ -> f(st.value + Δ) - val, st.Δs)
+                Δs = map(Δ -> f(st.value + Δ; kwargs...) - val, st.Δs)
             else
                 Δs = similar_empty(st.Δs, typeof(val))
             end
@@ -112,7 +112,7 @@ function define_triple_overload(sig)
                 val, δ0 = frule(args_tangent, f, value(st), x; kwargs...)
                 δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
                 if !iszero(st.Δs)
-                    Δs = map(Δ -> f(st.value + Δ, x) - val, st.Δs)
+                    Δs = map(Δ -> f(st.value + Δ, x; kwargs...) - val, st.Δs)
                 else
                     Δs = similar_empty(st.Δs, typeof(val))
                 end
@@ -123,7 +123,7 @@ function define_triple_overload(sig)
                 val, δ0 = frule(args_tangent, f, x, value(st); kwargs...)
                 δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
                 if !iszero(st.Δs)
-                    Δs = map(Δ -> f(x, st.value + Δ) - val, st.Δs)
+                    Δs = map(Δ -> f(x, st.value + Δ; kwargs...) - val, st.Δs)
                 else
                     Δs = similar_empty(st.Δs, typeof(val))
                 end
@@ -143,7 +143,7 @@ function define_triple_overload(sig)
                 Δs_coupled = couple(Tuple(Δs_all))
                 vals_in = value.(sts)
                 mapfunc = let vals_in = vals_in
-                    Δ -> (f((vals_in .+ Δ)...) - val)
+                    Δ -> (f((vals_in .+ Δ)...; kwargs...) - val)
                 end
                 Δs = map(mapfunc, Δs_coupled)
             end

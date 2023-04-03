@@ -46,7 +46,9 @@ often to be used on a function's input/output arguments.
 Currently uses [fmap](https://fluxml.ai/Functors.jl/stable/api/#Functors.fmap) 
 from Functors.jl as a backend.
 """
-function structural_map(f, args...)
+function structural_map(f, args...; only_vals = Val{false}())
     fmap((args...) -> args[1] isa AbstractArray ? f.(args...) : f(args...), args...;
-         cache = nothing)
+         cache = nothing,
+         walk = (only_vals isa Val{true} ? Functors.StructuralWalk() :
+                 Functors.DefaultWalk()))
 end

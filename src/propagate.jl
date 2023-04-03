@@ -78,7 +78,8 @@ function propagate(f, args...; keep_deltas = Val{false})
     =#
     out = f(input_args...)
     val = structural_map(value, out)
-    Δs_all = structural_map(Base.Fix2(get_Δs, backendtype(st_rep)), args)
+    Δs_all = structural_map(Base.Fix2(get_Δs, backendtype(st_rep)), args;
+                            only_vals = Val{true}())
     # TODO: Coupling approach below needs to handle non-perturbable objects.
     Δs_coupled = couple(backendtype(st_rep), Δs_all; rep = Δs_rep)
 

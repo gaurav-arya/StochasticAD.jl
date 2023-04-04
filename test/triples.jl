@@ -549,3 +549,10 @@ end end
 
     test_propagate(f7, (rand(2, 2), 4.0), (rand(2, 2), 1.0); test_deltas = true)
 end
+
+@testset "zero'ing of Inf/NaN (#79)" begin
+    st = stochastic_triple(0.5)
+    st_zero = zero(1 / zero(st))
+    @test iszero(StochasticAD.value(st_zero))
+    @test iszero(StochasticAD.delta(st_zero))
+end

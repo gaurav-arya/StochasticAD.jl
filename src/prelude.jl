@@ -5,24 +5,24 @@ const UNARY_PREDICATES = [isinf, isnan, isfinite, iseven, isodd, isreal, isinteg
 const BINARY_PREDICATES = [
     isequal,
     isless,
-    Base.:<,
-    Base.:>,
-    Base.:(==),
-    Base.:(!=),
-    Base.:(<=),
-    Base.:(>=),
+    <,
+    >,
+    ==,
+    !=,
+    <=,
+    >=,
 ]
 
-const UNARY_TYPEFUNCS_NOWRAP = [:(rtoldefault)]
+const UNARY_TYPEFUNCS_NOWRAP = [Base.rtoldefault]
 const UNARY_TYPEFUNCS_WRAP = [
-    :(typemin),
-    :(typemax),
-    :(floatmin),
-    :(floatmax),
-    :(zero),
-    :(one),
+    typemin,
+    typemax,
+    floatmin,
+    floatmax,
+    zero,
+    one,
 ]
-const RNG_TYPEFUNCS_WRAP = [:(rand), :(randn), :(randexp)]
+const RNG_TYPEFUNCS_WRAP = [rand, randn, randexp]
 
 """
     structural_iterate(args)

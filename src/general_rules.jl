@@ -24,7 +24,8 @@ function define_triple_overload(sig)
 
     N = length(ExprTools.parameters(sig)) - 1  # skip the op
 
-    if (opT, N) in handled_ops
+    # Skip already-handled ops, as well as ops that will be handled manually later (and more correctly, see #79).
+    if (opT, N) in handled_ops || (opT.instance in UNARY_TYPEFUNCS_WRAP)
         return
     end
 
@@ -175,26 +176,24 @@ function Base.round(I::Type{<:Integer}, st::StochasticTriple{T, V}) where {T, V}
 end
 
 for op in UNARY_TYPEFUNCS_NOWRAP
-    @eval function Base.$op(::Type{<:StochasticTriple{T, V, FIs}}) where {T, V, FIs}
-        return Base.$op(V)
+    function (::typeof(op))(::Type{<:StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+        return op(V)
     end
 end
 
 for op in UNARY_TYPEFUNCS_WRAP
-    @eval function Base.$op(::Type{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
-        return StochasticTriple{T, V, FIs}(Base.$op(V), zero(V), empty(FIs))
+    function (::typeof(op))(::Type{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+        return StochasticTriple{T, V, FIs}(op(V), zero(V), empty(FIs))
     end
-    if !(op in (:(zero), :(one)))
-        @eval function Base.$op(st::StochasticTriple)
-            return Base.$op(typeof(st))
-        end
+    function (::typeof(op))(st::StochasticTriple)
+        return op(typeof(st))
     end
 end
 
 for op in RNG_TYPEFUNCS_WRAP
-    @eval function Random.$op(rng::AbstractRNG,
-                              ::Type{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
-        return StochasticTriple{T, V, FIs}(Random.$op(rng, V), zero(V), empty(FIs))
+    function (::typeof(op))(rng::AbstractRNG,
+                            ::Type{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+        return StochasticTriple{T, V, FIs}(op(rng, V), zero(V), empty(FIs))
     end
 end
 

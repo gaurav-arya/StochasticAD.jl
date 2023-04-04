@@ -24,7 +24,8 @@ function define_triple_overload(sig)
 
     N = length(ExprTools.parameters(sig)) - 1  # skip the op
 
-    if (opT, N) in handled_ops
+    # Skip already-handled ops, as well as ops that will be handled manually later (and more correctly, see #79).
+    if (opT, N) in handled_ops || (opT.instance in UNARY_TYPEFUNCS_WRAP)
         return
     end
 
@@ -184,10 +185,8 @@ for op in UNARY_TYPEFUNCS_WRAP
     @eval function Base.$op(::Type{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
         return StochasticTriple{T, V, FIs}(Base.$op(V), zero(V), empty(FIs))
     end
-    if !(op in (:(zero), :(one)))
-        @eval function Base.$op(st::StochasticTriple)
-            return Base.$op(typeof(st))
-        end
+    @eval function Base.$op(st::StochasticTriple)
+        return Base.$op(typeof(st))
     end
 end
 

@@ -81,7 +81,7 @@ function propagate(f, args...; keep_deltas = Val{false})
     Δs_all = structural_map(Base.Fix2(get_Δs, backendtype(st_rep)), args;
                             only_vals = Val{true}())
     # TODO: Coupling approach below needs to handle non-perturbable objects.
-    Δs_coupled = couple(backendtype(st_rep), Δs_all; rep = Δs_rep)
+    Δs_coupled = couple(backendtype(st_rep), Δs_all; rep = Δs_rep, out_rep = val)
 
     function map_func(Δ_coupled)
         perturbed_args = structural_map(+, primal_args, Δ_coupled)
@@ -94,7 +94,7 @@ function propagate(f, args...; keep_deltas = Val{false})
     end
     Δs = map(map_func, Δs_coupled)
     # TODO: make sure all FI backends support interface needed below
-    new_out = structural_map(out, scalarize(Δs)) do leaf_out, leaf_Δs
+    new_out = structural_map(out, scalarize(Δs; out_rep = val)) do leaf_out, leaf_Δs
         StochasticAD.StochasticTriple{tag(st_rep)}(value(leaf_out), delta(leaf_out),
                                                    leaf_Δs)
     end

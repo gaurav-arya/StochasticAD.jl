@@ -32,9 +32,7 @@ end
 
 function smoothed_delta(d, val, δ)
     Δs_empty = SmoothedFIs{typeof(val)}(0.0)
-    partial_right = derivative_contribution(δtoΔs(d, val, δ, Δs_empty))
-    partial_left = -derivative_contribution(δtoΔs(d, val, -δ, Δs_empty))
-    return (partial_left + partial_right) / 2
+    return derivative_contribution(δtoΔs(d, val, δ, Δs_empty))
 end
 
 for (dist, i, field) in [

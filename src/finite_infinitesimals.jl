@@ -41,3 +41,8 @@ function map_Δs end
 function Base.map(f, Δs::AbstractFIs; kwargs...)
     StochasticAD.map_Δs((Δs, _) -> f(Δs), Δs; kwargs...)
 end
+
+function new_Δs_strategy end
+
+# Currently only supported / thought through for SmoothedFIs.
+function scale end

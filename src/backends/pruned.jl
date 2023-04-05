@@ -2,7 +2,7 @@ module PrunedFIsModule
 
 import ..StochasticAD
 
-export PrunedFIsBackend
+export PrunedFIsBackend, PrunedFIs
 
 """
     PrunedFIsBackend <: StochasticAD.AbstractFIsBackend
@@ -82,9 +82,7 @@ isapproxzero(Δs::PrunedFIs) = isempty(Δs) || isapprox(Δs.Δ, zero(Δs.Δ))
 pruned_value(Δs::PrunedFIs{V}) where {V} = isempty(Δs) ? zero(V) : Δs.Δ
 pruned_value(Δs::PrunedFIs{<:Tuple}) = isempty(Δs) ? zero.(Δs.Δ) : Δs.Δ
 pruned_value(Δs::PrunedFIs{<:AbstractArray}) = isempty(Δs) ? zero.(Δs.Δ) : Δs.Δ
-function StochasticAD.filter_state(Δs::PrunedFIs{V}, state) where {V}
-    Δs.state === state ? pruned_value(Δs) : zero(V)
-end
+
 StochasticAD.derivative_contribution(Δs::PrunedFIs) = pruned_value(Δs) * Δs.state.weight
 StochasticAD.perturbations(Δs::PrunedFIs) = ((pruned_value(Δs), Δs.state.weight),)
 
@@ -94,7 +92,7 @@ function StochasticAD.map_Δs(f, Δs::PrunedFIs; kwargs...)
     PrunedFIs(f(Δs.Δ, Δs.state), Δs.tag, Δs.state)
 end
 
-StochasticAD.alltrue(Δs::PrunedFIs{Bool}) = Δs.Δ
+StochasticAD.alltrue(f, Δs::PrunedFIs) = f(Δs.Δ)
 
 ### Coupling
 
@@ -135,7 +133,7 @@ end
 # for pruning, coupling amounts to getting rid of perturbed values that have been
 # lazily kept around even after (aggressive or lazy) pruning made the perturbation invalid.
 # rep is unused.
-function StochasticAD.couple(::Type{<:PrunedFIs}, Δs_all; rep = nothing)
+function StochasticAD.couple(::Type{<:PrunedFIs}, Δs_all; rep = nothing, out_rep = nothing)
     state = get_pruned_state(Δs_all)
     Δ_coupled = StochasticAD.structural_map(pruned_value, Δs_all) # TODO: perhaps a performance optimization possible here
     PrunedFIs(Δ_coupled, state.active_tag, state)
@@ -148,10 +146,14 @@ function StochasticAD.combine(::Type{<:PrunedFIs}, Δs_all; rep = nothing)
     PrunedFIs(Δ_combined, state.active_tag, state)
 end
 
-function StochasticAD.scalarize(Δs::PrunedFIs)
+function StochasticAD.scalarize(Δs::PrunedFIs; out_rep = nothing)
     return StochasticAD.structural_map(Δs.Δ) do Δ
         return PrunedFIs(Δ, Δs.tag, Δs.state)
     end
+end
+
+function StochasticAD.filter_state(Δs::PrunedFIs{V}, state) where {V}
+    Δs.state === state ? pruned_value(Δs) : zero(V)
 end
 
 ### Miscellaneous

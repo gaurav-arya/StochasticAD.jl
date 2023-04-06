@@ -240,7 +240,6 @@ function Base.isapprox(x::Real, st::StochasticTriple; kwargs...)
     return Base.isapprox(st, x; kwargs...)
 end
 
-
 # Alternate version of _isassigned that does not fall back on try/catch.
 _isassigned(C, i) = (i in eachindex(C))
 

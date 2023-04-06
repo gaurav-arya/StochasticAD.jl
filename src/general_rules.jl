@@ -240,6 +240,10 @@ function Base.isapprox(x::Real, st::StochasticTriple; kwargs...)
     return Base.isapprox(st, x; kwargs...)
 end
 
+
+# Alternate version of _isassigned that does not fall back on try/catch.
+_isassigned(C, i) = (i in eachindex(C))
+
 """
     Base.getindex(C::AbstractArray, st::StochasticTriple{T})
 
@@ -253,11 +257,11 @@ function Base.getindex(C::AbstractArray, st::StochasticTriple{T, V, FIs}) where 
 
     # TODO: below doesn't support sparse arrays, use something like nextind
     deriv = δ -> begin
-        scale = if isassigned(C, st.value + 1) && isassigned(C, st.value - 1)
+        scale = if _isassigned(C, st.value + 1) && _isassigned(C, st.value - 1)
             1 / 2 * (value(C[st.value + 1]) - value(C[st.value - 1]))
-        elseif isassigned(C, st.value + 1)
+        elseif _isassigned(C, st.value + 1)
             value(C[st.value + 1]) - value(C[st.value])
-        elseif isassigned(C, st.value - 1)
+        elseif _isassigned(C, st.value - 1)
             value(C[st.value]) - value(C[st.value - 1])
         else
             zero(eltype(C))

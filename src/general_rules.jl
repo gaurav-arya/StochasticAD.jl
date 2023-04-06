@@ -265,7 +265,7 @@ function Base.getindex(C::AbstractArray, st::StochasticTriple{T, V, FIs}) where 
         return scale * δ
     end
 
-    Δs = StochasticAD.map_Δs(do_map, st.Δs; deriv, out_rep = val)
+    Δs = StochasticAD.map_Δs(do_map, st.Δs; deriv, out_rep = value(val))
     if val isa StochasticTriple
         Δs = combine((Δs, val.Δs))
     end

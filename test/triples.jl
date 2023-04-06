@@ -156,7 +156,7 @@ end end
                                      for i in 1:10000)
     exact_array_index3_deriv = ForwardDiff.derivative(array_index3_mean, p)
     @test isapprox(triple_array_index3_deriv, exact_array_index3_deriv, rtol = 5e-2)
-end
+end end
 
 @testset "Array/functor inputs to higher level functions" begin for backend in backends
     # Try a deterministic test function to compare to ForwardDiff

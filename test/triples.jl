@@ -148,7 +148,7 @@ end end
     end
     array_index2_mean(p) = sum([p / 2 * p, p / 2 * p, (1 - p) * p] .* arr)
     triple_array_index2_deriv = mean(derivative_estimate(array_index2, p; backend)
-                                     for i in 1:50000) 
+                                     for i in 1:50000)
     exact_array_index2_deriv = ForwardDiff.derivative(array_index2_mean, p)
     @test isapprox(triple_array_index2_deriv, exact_array_index2_deriv, rtol = 5e-2)
     # Test case where triple and alternate array value are coupled

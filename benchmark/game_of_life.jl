@@ -15,5 +15,7 @@ suite["PrunedFIs"] = @benchmarkable derivative_estimate($play, $p;
                                                         backend = PrunedFIsBackend())
 suite["PrunedFIsAggressive"] = @benchmarkable derivative_estimate($play, $p;
                                                                   backend = PrunedFIsAggressiveBackend())
+suite["SmoothedFIs"] = @benchmarkable derivative_estimate($play, $p;
+                                                          backend = SmoothedFIsBackend())
 
 end

@@ -2,7 +2,7 @@ module PrunedFIsAggressiveModule
 
 import ..StochasticAD
 
-export PrunedFIsAggressiveBackend
+export PrunedFIsAggressiveBackend, PrunedFIsAggressive
 
 """
     PrunedFIsAggressiveBackend <: StochasticAD.AbstractFIsBackend
@@ -91,7 +91,6 @@ Base.iszero(Δs::PrunedFIsAggressive) = isempty(Δs) || iszero(Δs.Δ)
 
 # we lazily prune, so check if empty first
 pruned_value(Δs::PrunedFIsAggressive{V}) where {V} = isempty(Δs) ? zero(V) : Δs.Δ
-StochasticAD.filter_state(Δs::PrunedFIsAggressive, _) = pruned_value(Δs)
 
 function StochasticAD.derivative_contribution(Δs::PrunedFIsAggressive)
     pruned_value(Δs) * Δs.state.weight
@@ -105,7 +104,7 @@ function StochasticAD.map_Δs(f, Δs::PrunedFIsAggressive; kwargs...)
     PrunedFIsAggressive(f(Δs.Δ, nothing), Δs.tag, Δs.state)
 end
 
-StochasticAD.alltrue(Δs::PrunedFIsAggressive{Bool}) = Δs.Δ
+StochasticAD.alltrue(f, Δs::PrunedFIsAggressive) = f(Δs.Δ)
 
 ### Coupling
 
@@ -118,7 +117,8 @@ end
 # for pruning, coupling amounts to getting rid of perturbed values that have been
 # lazily kept around even after (aggressive or lazy) pruning made the perturbation invalid.
 function StochasticAD.couple(FIs::Type{<:PrunedFIsAggressive}, Δs_all;
-                             rep = StochasticAD.get_rep(FIs, Δs_all))
+                             rep = StochasticAD.get_rep(FIs, Δs_all),
+                             out_rep = nothing)
     state = rep.state
     Δ_coupled = StochasticAD.structural_map(pruned_value, Δs_all) # TODO: perhaps a performance optimization possible here
     PrunedFIsAggressive(Δ_coupled, state.active_tag, state)
@@ -132,11 +132,13 @@ function StochasticAD.combine(FIs::Type{<:PrunedFIsAggressive}, Δs_all;
     PrunedFIsAggressive(Δ_combined, state.active_tag, state)
 end
 
-function StochasticAD.scalarize(Δs::PrunedFIsAggressive)
+function StochasticAD.scalarize(Δs::PrunedFIsAggressive; out_rep = nothing)
     return StochasticAD.structural_map(Δs.Δ) do Δ
         return PrunedFIsAggressive(Δ, Δs.tag, Δs.state)
     end
 end
+
+StochasticAD.filter_state(Δs::PrunedFIsAggressive, _) = pruned_value(Δs)
 
 ### Miscellaneous
 

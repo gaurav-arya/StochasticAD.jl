@@ -1,6 +1,6 @@
 module DictFIsModule
 
-export DictFIsBackend
+export DictFIsBackend, DictFIs
 
 import ..StochasticAD
 using Dictionaries
@@ -99,11 +99,7 @@ function StochasticAD.map_Δs(f, Δs::DictFIs; kwargs...)
     DictFIs(dict, Δs.state)
 end
 
-function StochasticAD.filter_state(Δs::DictFIs{V}, key) where {V}
-    haskey(Δs.dict, key) ? Δs.dict[key] : zero(V)
-end
-
-StochasticAD.alltrue(Δs::DictFIs{Bool}) = all(Δs.dict)
+StochasticAD.alltrue(f, Δs::DictFIs) = all(map(f, collect(Δs.dict)))
 
 ### Coupling
 
@@ -117,7 +113,8 @@ function StochasticAD.get_rep(::Type{<:DictFIs}, Δs_all)
 end
 
 function StochasticAD.couple(FIs::Type{<:DictFIs}, Δs_all;
-                             rep = StochasticAD.get_rep(FIs, Δs_all))
+                             rep = StochasticAD.get_rep(FIs, Δs_all),
+                             out_rep = nothing)
     all_keys = Iterators.map(StochasticAD.structural_iterate(Δs_all)) do Δs
         keys(Δs.dict)
     end
@@ -138,7 +135,7 @@ function StochasticAD.combine(FIs::Type{<:DictFIs}, Δs_all;
     DictFIs(Δs_combined_dict, rep.state)
 end
 
-function StochasticAD.scalarize(Δs::DictFIs)
+function StochasticAD.scalarize(Δs::DictFIs; out_rep = nothing)
     tupleify(Δ1, Δ2) = StochasticAD.structural_map(tuple, Δ1, Δ2)
     Δ_all_allkeys = foldl(tupleify, values(Δs.dict))
     Δ_all_rep = first(values(Δs.dict))
@@ -146,6 +143,10 @@ function StochasticAD.scalarize(Δs::DictFIs)
     return StochasticAD.structural_map(Δ_all_rep, Δ_all_allkeys) do _, Δ_allkeys
         return DictFIs(Dictionary(_keys, Δ_allkeys), Δs.state)
     end
+end
+
+function StochasticAD.filter_state(Δs::DictFIs{V}, key) where {V}
+    haskey(Δs.dict, key) ? Δs.dict[key] : zero(V)
 end
 
 ### Miscellaneous

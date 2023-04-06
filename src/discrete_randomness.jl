@@ -1,4 +1,7 @@
-## Rules for univariate uniparameter discrete distributions
+struct SingleSidedStrategy end
+struct TwoSidedStrategy end
+
+new_Δs_strategy(Δs) = SingleSidedStrategy()
 
 """
     δtoΔs(d, val, δ, Δs::AbstractFIs)
@@ -6,7 +9,17 @@
 Given the parameter `val` of a distribution `d` and an infinitesimal change `δ`,
 return the discrete change in the output, with a similar representation to `Δs`.
 """
-function δtoΔs(d::Geometric, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
+δtoΔs(d, val, δ, Δs) = δtoΔs(d, val, δ, Δs, new_Δs_strategy(Δs))
+δtoΔs(d, val, δ, Δs, ::SingleSidedStrategy) = _δtoΔs(d, val, δ, Δs)
+function δtoΔs(d, val, δ, Δs, ::TwoSidedStrategy)
+    Δs1 = _δtoΔs(d, val, δ, Δs)
+    Δs2 = _δtoΔs(d, val, -δ, Δs)
+    return combine((scale(Δs1, 0.5), scale(Δs2, -0.5)))
+end
+
+## Rules for univariate uniparameter discrete distributions
+
+function _δtoΔs(d::Geometric, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
     p = succprob(d)
     if δ > 0
         return val > 0 ? similar_new(Δs, -one(V), δ * val / p / (1 - p)) :
@@ -18,7 +31,7 @@ function δtoΔs(d::Geometric, val::V, δ::Real, Δs::AbstractFIs) where {V <: S
     end
 end
 
-function δtoΔs(d::Bernoulli, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
+function _δtoΔs(d::Bernoulli, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
     p = succprob(d)
     if δ > 0
         return isone(val) ? similar_empty(Δs, V) : similar_new(Δs, one(V), δ / (1 - p))
@@ -29,7 +42,7 @@ function δtoΔs(d::Bernoulli, val::V, δ::Real, Δs::AbstractFIs) where {V <: S
     end
 end
 
-function δtoΔs(d::Binomial, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
+function _δtoΔs(d::Binomial, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
     p = succprob(d)
     n = ntrials(d)
     if δ > 0
@@ -42,7 +55,7 @@ function δtoΔs(d::Binomial, val::V, δ::Real, Δs::AbstractFIs) where {V <: Si
     end
 end
 
-function δtoΔs(d::Poisson, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
+function _δtoΔs(d::Poisson, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
     p = mean(d) # rate
     if δ > 0
         return similar_new(Δs, 1, δ)
@@ -72,7 +85,7 @@ for (dist, i) in [(:Geometric, :1), (:Bernoulli, :1), (:Binomial, :2), (:Poisson
             alt_val = quantile(alt_d, rand(RNG) * (high - low) + low)
             convert(Signed, alt_val - val)
         end
-        Δs2 = map(map_func, st.Δs)
+        Δs2 = map(map_func, st.Δs; deriv = δ -> smoothed_delta(d, val, δ), out_rep = val)
 
         StochasticTriple{T}(val, zero(val), combine((Δs2, Δs1); rep = Δs1)) # ensure that tags are in order in combine, in case backend wishes to exploit this 
     end
@@ -134,7 +147,7 @@ end
 
 ### Rule for Categorical variable
 
-function δtoΔs(d::Categorical, val::V, δs, Δs::AbstractFIs) where {V <: Signed}
+function _δtoΔs(d::Categorical, val::V, δs, Δs::AbstractFIs) where {V <: Signed}
     p = params(d)[1]
     left_sum = sum(δs[1:(val - 1)], init = zero(V))
     right_sum = -sum(δs[(val + 1):end], init = zero(V))
@@ -190,13 +203,13 @@ function Base.rand(rng::AbstractRNG,
 
     low = cdf(d, val - 1)
     high = cdf(d, val)
-    Δs_coupled = couple(Δs_all; rep = Δs_rep) # TODO: again, there are possible allocations here
+    Δs_coupled = couple(Δs_all; rep = Δs_rep, out_rep = p) # TODO: again, there are possible allocations here
 
     function map_func(Δ)
         alt_val = quantile(Categorical(p .+ Δ), rand(RNG) * (high - low) + low)
         convert(Signed, alt_val - val)
     end
-    Δs2 = map(map_func, Δs_coupled)
+    Δs2 = map(map_func, Δs_coupled; deriv = δ -> smoothed_delta(d, val, δ), out_rep = val)
 
     StochasticTriple{T}(val, zero(val), combine((Δs2, Δs1); rep = Δs_rep))
 end

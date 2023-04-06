@@ -35,7 +35,7 @@ function define_triple_overload(sig)
         @eval function (f::$opT)(st::StochasticTriple)
             val = value(st)
             out = f(val)
-            if !alltrue(map(Δ -> (f(val + Δ) == out), st.Δs))
+            if !alltrue(Δ -> (f(val + Δ) == out), st.Δs)
                 error("Output of boolean predicate cannot depend on input (unsupported by StochasticAD)")
             end
             return out
@@ -60,7 +60,7 @@ function define_triple_overload(sig)
         @eval function (f::$opT)(st::StochasticTriple, x::Real)
             val = value(st)
             out = f(val, x)
-            if !alltrue(map(Δ -> (f(val + Δ, x) == out), st.Δs))
+            if !alltrue(Δ -> (f(val + Δ, x) == out), st.Δs)
                 error("Output of boolean predicate cannot depend on input (unsupported by StochasticAD)")
             end
             return $return_value_real
@@ -68,7 +68,7 @@ function define_triple_overload(sig)
         @eval function (f::$opT)(x::Real, st::StochasticTriple)
             val = value(st)
             out = f(x, val)
-            if !alltrue(map(Δ -> (f(x, val + Δ) == out), st.Δs))
+            if !alltrue(Δ -> (f(x, val + Δ) == out), st.Δs)
                 error("Output of boolean predicate cannot depend on input (unsupported by StochasticAD)")
             end
             return $return_value_real
@@ -78,9 +78,8 @@ function define_triple_overload(sig)
             val2 = value(st2)
             out = f(val1, val2)
 
-            Δs_coupled = couple((st1.Δs, st2.Δs))
-            safe_perturb = alltrue(map(Δs -> f(val1 + Δs[1], val2 + Δs[2]) == out,
-                                       Δs_coupled))
+            Δs_coupled = couple((st1.Δs, st2.Δs); out_rep = (val1, val2))
+            safe_perturb = alltrue(Δs -> f(val1 + Δs[1], val2 + Δs[2]) == out, Δs_coupled)
             if !safe_perturb
                 error("Output of boolean predicate cannot depend on input (unsupported by StochasticAD)")
             end
@@ -92,11 +91,15 @@ function define_triple_overload(sig)
             return
         end
         @eval function (f::$opT)(st::StochasticTriple{T}; kwargs...) where {T}
-            args_tangent = (NoTangent(), delta(st))
-            val, δ0 = frule(args_tangent, f, value(st); kwargs...)
+            run_frule = δ -> begin
+                args_tangent = (NoTangent(), δ)
+                return frule(args_tangent, f, value(st); kwargs...)
+            end
+            val, δ0 = run_frule(delta(st))
             δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
             if !iszero(st.Δs)
-                Δs = map(Δ -> f(st.value + Δ; kwargs...) - val, st.Δs)
+                Δs = map(Δ -> f(st.value + Δ; kwargs...) - val, st.Δs;
+                         deriv = last ∘ run_frule, out_rep = val)
             else
                 Δs = similar_empty(st.Δs, typeof(val))
             end
@@ -109,22 +112,30 @@ function define_triple_overload(sig)
         end
         for R in AMBIGUOUS_TYPES
             @eval function (f::$opT)(st::StochasticTriple{T}, x::$R; kwargs...) where {T}
-                args_tangent = (NoTangent(), delta(st), zero(x))
-                val, δ0 = frule(args_tangent, f, value(st), x; kwargs...)
+                run_frule = δ -> begin
+                    args_tangent = (NoTangent(), δ, zero(x))
+                    return frule(args_tangent, f, value(st), x; kwargs...)
+                end
+                val, δ0 = run_frule(delta(st))
                 δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
                 if !iszero(st.Δs)
-                    Δs = map(Δ -> f(st.value + Δ, x; kwargs...) - val, st.Δs)
+                    Δs = map(Δ -> f(st.value + Δ, x; kwargs...) - val, st.Δs;
+                             deriv = last ∘ run_frule, out_rep = val)
                 else
                     Δs = similar_empty(st.Δs, typeof(val))
                 end
                 return StochasticTriple{T}(val, δ, Δs)
             end
             @eval function (f::$opT)(x::$R, st::StochasticTriple{T}; kwargs...) where {T}
-                args_tangent = (NoTangent(), zero(x), delta(st))
-                val, δ0 = frule(args_tangent, f, x, value(st); kwargs...)
+                run_frule = δ -> begin
+                    args_tangent = (NoTangent(), zero(x), δ)
+                    return frule(args_tangent, f, x, value(st); kwargs...)
+                end
+                val, δ0 = run_frule(delta(st))
                 δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
                 if !iszero(st.Δs)
-                    Δs = map(Δ -> f(x, st.value + Δ; kwargs...) - val, st.Δs)
+                    Δs = map(Δ -> f(x, st.value + Δ; kwargs...) - val, st.Δs;
+                             deriv = last ∘ run_frule, out_rep = val)
                 else
                     Δs = similar_empty(st.Δs, typeof(val))
                 end
@@ -132,21 +143,24 @@ function define_triple_overload(sig)
             end
         end
         @eval function (f::$opT)(sts::Vararg{StochasticTriple{T}, 2}; kwargs...) where {T}
-            args_tangent = (NoTangent(), delta.(sts)...)
-            args = (f, value.(sts)...)
-            val, δ0 = frule(args_tangent, args...; kwargs...)
+            run_frule = δs -> begin
+                args_tangent = (NoTangent(), δs...)
+                args = (f, value.(sts)...)
+                return frule(args_tangent, args...; kwargs...)
+            end
+            val, δ0 = run_frule(delta.(sts))
             δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
 
             Δs_all = map(st -> getfield(st, :Δs), sts)
             if all(iszero.(Δs_all))
                 Δs = similar_empty(first(sts).Δs, typeof(val))
             else
-                Δs_coupled = couple(Tuple(Δs_all))
                 vals_in = value.(sts)
+                Δs_coupled = couple(Tuple(Δs_all); out_rep = vals_in)
                 mapfunc = let vals_in = vals_in
                     Δ -> (f((vals_in .+ Δ)...; kwargs...) - val)
                 end
-                Δs = map(mapfunc, Δs_coupled)
+                Δs = map(mapfunc, Δs_coupled; deriv = last ∘ run_frule, out_rep = val)
             end
             return StochasticTriple{T}(val, δ, Δs)
         end
@@ -226,6 +240,9 @@ function Base.isapprox(x::Real, st::StochasticTriple; kwargs...)
     return Base.isapprox(st, x; kwargs...)
 end
 
+# Alternate version of _isassigned that does not fall back on try/catch.
+_isassigned(C, i) = (i in eachindex(C))
+
 """
     Base.getindex(C::AbstractArray, st::StochasticTriple{T})
 
@@ -235,10 +252,23 @@ A simple prototype rule for array indexing. Assumes that underlying type of `st`
 # Example to fix: A[:, :, st]
 function Base.getindex(C::AbstractArray, st::StochasticTriple{T, V, FIs}) where {T, V, FIs}
     val = C[st.value]
-    function do_map(Δ, state)
-        return value(C[st.value + Δ], state) - value(val, state)
+    do_map = (Δ, state) -> begin return value(C[st.value + Δ], state) - value(val, state) end
+
+    # TODO: below doesn't support sparse arrays, use something like nextind
+    deriv = δ -> begin
+        scale = if _isassigned(C, st.value + 1) && _isassigned(C, st.value - 1)
+            1 / 2 * (value(C[st.value + 1]) - value(C[st.value - 1]))
+        elseif _isassigned(C, st.value + 1)
+            value(C[st.value + 1]) - value(C[st.value])
+        elseif _isassigned(C, st.value - 1)
+            value(C[st.value]) - value(C[st.value - 1])
+        else
+            zero(eltype(C))
+        end
+        return scale * δ
     end
-    Δs = StochasticAD.map_Δs(do_map, st.Δs)
+
+    Δs = StochasticAD.map_Δs(do_map, st.Δs; deriv, out_rep = value(val))
     if val isa StochasticTriple
         Δs = combine((Δs, val.Δs))
     end

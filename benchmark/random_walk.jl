@@ -17,7 +17,7 @@ suite["PrunedFIs"] = @benchmarkable derivative_estimate($fX, $p;
 suite["PrunedFIsAggressive"] = @benchmarkable derivative_estimate($fX, $p;
                                                                   backend = PrunedFIsAggressiveBackend())
 suite["SmoothedFIs"] = @benchmarkable derivative_estimate($fX, $p;
-                                                                  backend = SmoothedFIsBackend())
+                                                          backend = SmoothedFIsBackend())
 forwarddiff_func = p -> fX(p; hardcode_leftright_step = true)
 suite["ForwardDiff_smoothing"] = @benchmarkable derivative($forwarddiff_func, $p)
 

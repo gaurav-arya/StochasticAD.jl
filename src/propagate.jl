@@ -92,7 +92,7 @@ function propagate(f, args...; keep_deltas = Val{false})
         alt = f(perturbed_args...)
         return structural_map((x, y) -> value(x) - y, alt, val)
     end
-    Δs = map(map_func, Δs_coupled)
+    Δs = map(map_func, Δs_coupled; out_rep = val) # TODO: support deriv here, maybe via ForwardDiff?
     # TODO: make sure all FI backends support interface needed below
     new_out = structural_map(out, scalarize(Δs; out_rep = val)) do leaf_out, leaf_Δs
         StochasticAD.StochasticTriple{tag(st_rep)}(value(leaf_out), delta(leaf_out),

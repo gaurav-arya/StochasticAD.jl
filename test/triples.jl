@@ -13,7 +13,7 @@ const backends = [
     DictFIsBackend(),
 ]
 
-const backends_smoothed = [StochasticAD.SmoothedFIsBackend()]
+const backends_smoothed = [SmoothedFIsBackend()]
 
 @testset "Distributions w.r.t. continuous parameter" begin for backend in vcat(backends,
                                                                                backends_smoothed,
@@ -124,39 +124,42 @@ end
     @test stochastic_triple(1.0; backend) != 1
 end end
 
-@testset "Array indexing" begin for backend in backends
+@testset "Array indexing" begin for backend in vcat(backends, backends_smoothed)
     p = 0.3
     # Test indexing into array of floats with stochastic triple index
+    arr = [3.5, 5.2, 8.4]
+    (backend in backends_smoothed) && (arr[3] = 6.9) # make linear for smoothing test
     function array_index(p)
-        arr = [3.5, 5.2, 8.4]
         index = rand(Categorical([p / 2, p / 2, 1 - p]))
         return arr[index]
     end
-    array_index_mean(p) = p / 2 * 3.5 + p / 2 * 5.2 + (1 - p) * 8.4
+    array_index_mean(p) = sum([p / 2, p / 2, (1 - p)] .* arr)
     triple_array_index_deriv = mean(derivative_estimate(array_index, p; backend)
-                                    for i in 1:10000)
+                                    for i in 1:50000)
     exact_array_index_deriv = ForwardDiff.derivative(array_index_mean, p)
     @test isapprox(triple_array_index_deriv, exact_array_index_deriv, rtol = 5e-2)
+    # Don't run subsequent tests with smoothing backend
+    (backend in backends_smoothed) && continue
     # Test indexing into array of stochastic triples with stochastic triple index
     function array_index2(p)
-        arr = [3.5 * rand(Bernoulli(p)), 5.2 * rand(Bernoulli(p)), 8.4 * rand(Bernoulli(p))]
+        arr2 = [rand(Bernoulli(p)), rand(Bernoulli(p)), rand(Bernoulli(p))] .* arr
         index = rand(Categorical([p / 2, p / 2, 1 - p]))
-        return arr[index]
+        return arr2[index]
     end
-    array_index2_mean(p) = p / 2 * 3.5p + p / 2 * 5.2p + (1 - p) * 8.4p
+    array_index2_mean(p) = sum([p / 2 * p, p / 2 * p, (1 - p) * p] .* arr)
     triple_array_index2_deriv = mean(derivative_estimate(array_index2, p; backend)
-                                     for i in 1:10000)
+                                     for i in 1:50000) 
     exact_array_index2_deriv = ForwardDiff.derivative(array_index2_mean, p)
     @test isapprox(triple_array_index2_deriv, exact_array_index2_deriv, rtol = 5e-2)
     # Test case where triple and alternate array value are coupled
     function array_index3(p)
         st = rand(Bernoulli(p))
-        arr = [-5, st]
-        return arr[st + 1]
+        arr2 = [-5, st]
+        return arr2[st + 1]
     end
     array_index3_mean(p) = -5 * (1 - p) + 1 * p
     triple_array_index3_deriv = mean(derivative_estimate(array_index3, p; backend)
-                                     for i in 1:10000)
+                                     for i in 1:50000)
     exact_array_index3_deriv = ForwardDiff.derivative(array_index3_mean, p)
     @test isapprox(triple_array_index3_deriv, exact_array_index3_deriv, rtol = 5e-2)
 end end
@@ -457,14 +460,14 @@ end end
     @test StochasticAD.valtype(st.Δs) === Float64
 end end
 
-@testset "Propagation via StochasticAD.propagate" begin
+@testset "Propagation via StochasticAD.propagate" begin for backend in backends
     function form_triple(primal, δ, Δ, Δs_base)
         Δs = map(_Δ -> Δ, Δs_base)
         return StochasticAD.StochasticTriple{0}(primal, δ, Δs)
     end
 
     function test_propagate(f, primals, Δs; test_deltas = false)
-        Δs_base = StochasticAD.similar_new(StochasticAD.create_Δs(PrunedFIsBackend(), Int),
+        Δs_base = StochasticAD.similar_new(StochasticAD.create_Δs(backend, Int),
                                            0, 1.0)
         _form_triple(x, δ, Δ) = form_triple(x, δ, Δ, Δs_base)
         out = f(primals...)
@@ -491,7 +494,7 @@ end end
             @test x_st isa StochasticAD.StochasticTriple{0, typeof(x)}
             @test StochasticAD.value(x_st) == x
             @test StochasticAD.delta(x_st) ≈ δ
-            @test perturbations(x_st) == ((Δ, 1.0),)
+            @test collect(perturbations(x_st)) == [(Δ, 1.0)]
         end
     end
 
@@ -578,7 +581,7 @@ end end
     end
 
     test_propagate(f7, (rand(2, 2), 4.0), (rand(2, 2), 1.0); test_deltas = true)
-end
+end end
 
 @testset "zero'ing of Inf/NaN (#79)" begin
     st = stochastic_triple(0.5)

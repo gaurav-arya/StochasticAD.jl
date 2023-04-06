@@ -31,8 +31,9 @@ Return the primal value of `st`.
 """
 value(x::Real, state = nothing) = x
 # Experimental method for obtaining the alternate value of a stochastic triple associated with a certain backend state.
-function value(st::StochasticTriple, state = nothing)
-    st.value + (state === nothing ? zero(st.value) : filter_state(st.Δs, state))
+value(st::StochasticTriple) = st.value
+function value(st::StochasticTriple, state)
+    st.value + filter_state(st.Δs, state)
 end
 #=
 Support ForwardDiff.Dual for internal usage.

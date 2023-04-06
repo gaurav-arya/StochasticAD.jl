@@ -21,7 +21,7 @@ struct SmoothedFIs{V, V_float} <: StochasticAD.AbstractFIs{V}
     δ::V_float
     function SmoothedFIs{V}(δ) where {V}
         # hardcode Float64 representation for now, for simplicity.
-        δ_f64 = StochasticAD.structural_map(Float64, δ)
+        δ_f64 = StochasticAD.structural_map(Base.Fix1(convert, Float64), δ)
         return new{V, typeof(δ_f64)}(δ_f64)
     end
 end

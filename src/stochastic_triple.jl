@@ -88,6 +88,17 @@ Get the backend type of a stochastic triple.
 """
 backendtype(::StochasticTriple{T, V, FIs}) where {T, V, FIs} = FIs
 
+"""
+    smooth_triple(st::StochasticTriple)
+
+Smooth the dual and triple components of a stochastic triple into a single dual component.
+Useful for avoiding unnecessary pruning when running multilinear functions on triples.
+"""
+smooth_triple(x::Real) = x
+function smooth_triple(st::StochasticTriple{T, V, FIs}) where {T, V, FIs}
+    return StochasticTriple{T}(value(st), derivative_contribution(st), empty(FIs))
+end
+
 ### Extra constructors of stochastic triples
 
 function StochasticTriple{T}(value::V, δ::V, Δs::FIs) where {T, V, FIs <: AbstractFIs{V}}

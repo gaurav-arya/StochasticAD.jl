@@ -589,3 +589,12 @@ end end
     @test iszero(StochasticAD.value(st_zero))
     @test iszero(StochasticAD.delta(st_zero))
 end
+
+@testset "smooth_triple" begin
+    f(p) = sum(rand(Bernoulli(p)) * i for i in 1:100)
+    f2(p) = sum(smooth_triple(rand(Bernoulli(p))) * i for i in 1:100)
+    p = 0.6
+    f_est = mean(derivative_estimate(f, p) for i in 1:10000)
+    f2_est = mean(derivative_estimate(f2, p) for i in 1:10000)
+    @test f_est≈f2_est rtol=5e-2
+end

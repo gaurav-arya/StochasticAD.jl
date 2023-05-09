@@ -95,7 +95,7 @@ Smooth the dual and triple components of a stochastic triple into a single dual 
 Useful for avoiding unnecessary pruning when running multilinear functions on triples.
 """
 smooth_triple(x::Real) = x
-function smooth_triple(st::StochasticTriple{T,V,FIs}) where {T,V,FIs}
+function smooth_triple(st::StochasticTriple{T, V, FIs}) where {T, V, FIs}
     return StochasticTriple{T}(value(st), derivative_contribution(st), empty(FIs))
 end
 

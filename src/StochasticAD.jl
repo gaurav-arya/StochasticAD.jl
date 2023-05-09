@@ -6,6 +6,7 @@ export stochastic_triple, derivative_contribution, perturbations, smooth_triple 
 export derivative_estimate, StochasticModel, stochastic_gradient # Higher level functionality
 export new_weight # Particle resampling
 export PrunedFIsBackend, PrunedFIsAggressiveBackend, DictFIsBackend, SmoothedFIsBackend
+export PrunedFIs, PrunedFIsAggressive, DictFIs, SmoothedFIs
 
 ### Imports
 

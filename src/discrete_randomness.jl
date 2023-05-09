@@ -1,5 +1,6 @@
 struct SingleSidedStrategy end
 struct TwoSidedStrategy end
+struct StraightThroughStrategy end
 
 new_Δs_strategy(Δs) = SingleSidedStrategy()
 
@@ -15,6 +16,14 @@ function δtoΔs(d, val, δ, Δs, ::TwoSidedStrategy)
     Δs1 = _δtoΔs(d, val, δ, Δs)
     Δs2 = _δtoΔs(d, val, -δ, Δs)
     return combine((scale(Δs1, 0.5), scale(Δs2, -0.5)))
+end
+# TODO: implement ST for Categorical. If we can do for one hot, subsequent dotting with 1:10
+# may work for our categorical.
+function δtoΔs(d::Union{Bernoulli,Binomial}, val, δ, Δs, ::StraightThroughStrategy)
+    p = succprob(d)
+    Δs1 = _δtoΔs(d, val, δ, Δs)
+    Δs2 = _δtoΔs(d, val, -δ, Δs)
+    return combine((scale(Δs1, 1-p), scale(Δs2, -p)))
 end
 
 ## Rules for univariate uniparameter discrete distributions

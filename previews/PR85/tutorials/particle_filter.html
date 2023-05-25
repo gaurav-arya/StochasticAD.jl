@@ -37,12 +37,12 @@ Stacktrace:
    @ Base ./loading.jl:2010
  [8] top-level scope
    @ stdin:2
-in expression starting at /home/runner/.julia/packages/Plots/esM5q/ext/FileIOExt.jl:1
+in expression starting at /home/runner/.julia/packages/Plots/tDI0A/ext/FileIOExt.jl:1
 in expression starting at stdin:2
 ┌ Error: Error during loading of extension FileIOExt of Plots, use `Base.retry_load_extensions()` to retry.
 │   exception =
 │    1-element ExceptionStack:
-│    Failed to precompile FileIOExt [f5f51d8f-5827-5d2e-939b-192fcd6ec70c] to &quot;/home/runner/.julia/compiled/v1.9/FileIOExt/jl_ipVIxA&quot;.
+│    Failed to precompile FileIOExt [f5f51d8f-5827-5d2e-939b-192fcd6ec70c] to &quot;/home/runner/.julia/compiled/v1.9/FileIOExt/jl_uCjnQt&quot;.
 │    Stacktrace:
 │      [1] error(s::String)
 │        @ Base ./error.jl:35
@@ -79,13 +79,13 @@ in expression starting at stdin:2
 │     [17] (::Documenter.Expanders.var&quot;#16#18&quot;{Documenter.Page, Module, Expr})()
 │        @ Documenter.Expanders ~/.julia/packages/Documenter/RKg3i/src/Expanders.jl:716
 │     [18] (::IOCapture.var&quot;#3#5&quot;{DataType, Documenter.Expanders.var&quot;#16#18&quot;{Documenter.Page, Module, Expr}, Task, IOContext{Base.PipeEndpoint}, IOContext{Base.PipeEndpoint}, Base.PipeEndpoint, Base.PipeEndpoint})()
-│        @ IOCapture ~/.julia/packages/IOCapture/sXY71/src/IOCapture.jl:118
+│        @ IOCapture ~/.julia/packages/IOCapture/8Uj7o/src/IOCapture.jl:119
 │     [19] with_logstate(f::Function, logstate::Any)
 │        @ Base.CoreLogging ./logging.jl:514
 │     [20] with_logger
 │        @ ./logging.jl:626 [inlined]
 │     [21] capture(f::Documenter.Expanders.var&quot;#16#18&quot;{Documenter.Page, Module, Expr}; rethrow::Type, color::Bool)
-│        @ IOCapture ~/.julia/packages/IOCapture/sXY71/src/IOCapture.jl:116
+│        @ IOCapture ~/.julia/packages/IOCapture/8Uj7o/src/IOCapture.jl:116
 │     [22] runner(#unused#::Type{Documenter.Expanders.ExampleBlocks}, node::MarkdownAST.Node{Nothing}, page::Documenter.Page, doc::Documenter.Document)
 │        @ Documenter.Expanders ~/.julia/packages/Documenter/RKg3i/src/Expanders.jl:715
 │     [23] dispatch(::Type{Documenter.Expanders.ExpanderPipeline}, ::MarkdownAST.Node{Nothing}, ::Vararg{Any})
@@ -135,12 +135,12 @@ Stacktrace:
    @ Base ./loading.jl:2010
  [8] top-level scope
    @ stdin:2
-in expression starting at /home/runner/.julia/packages/Plots/esM5q/ext/GeometryBasicsExt.jl:1
+in expression starting at /home/runner/.julia/packages/Plots/tDI0A/ext/GeometryBasicsExt.jl:1
 in expression starting at stdin:2
 ┌ Error: Error during loading of extension GeometryBasicsExt of Plots, use `Base.retry_load_extensions()` to retry.
 │   exception =
 │    1-element ExceptionStack:
-│    Failed to precompile GeometryBasicsExt [b238bd29-021f-5edc-8b0e-16b9cda5f63a] to &quot;/home/runner/.julia/compiled/v1.9/GeometryBasicsExt/jl_0ppZUL&quot;.
+│    Failed to precompile GeometryBasicsExt [b238bd29-021f-5edc-8b0e-16b9cda5f63a] to &quot;/home/runner/.julia/compiled/v1.9/GeometryBasicsExt/jl_Tu5WwX&quot;.
 │    Stacktrace:
 │      [1] error(s::String)
 │        @ Base ./error.jl:35
@@ -177,13 +177,13 @@ in expression starting at stdin:2
 │     [17] (::Documenter.Expanders.var&quot;#16#18&quot;{Documenter.Page, Module, Expr})()
 │        @ Documenter.Expanders ~/.julia/packages/Documenter/RKg3i/src/Expanders.jl:716
 │     [18] (::IOCapture.var&quot;#3#5&quot;{DataType, Documenter.Expanders.var&quot;#16#18&quot;{Documenter.Page, Module, Expr}, Task, IOContext{Base.PipeEndpoint}, IOContext{Base.PipeEndpoint}, Base.PipeEndpoint, Base.PipeEndpoint})()
-│        @ IOCapture ~/.julia/packages/IOCapture/sXY71/src/IOCapture.jl:118
+│        @ IOCapture ~/.julia/packages/IOCapture/8Uj7o/src/IOCapture.jl:119
 │     [19] with_logstate(f::Function, logstate::Any)
 │        @ Base.CoreLogging ./logging.jl:514
 │     [20] with_logger
 │        @ ./logging.jl:626 [inlined]
 │     [21] capture(f::Documenter.Expanders.var&quot;#16#18&quot;{Documenter.Page, Module, Expr}; rethrow::Type, color::Bool)
-│        @ IOCapture ~/.julia/packages/IOCapture/sXY71/src/IOCapture.jl:116
+│        @ IOCapture ~/.julia/packages/IOCapture/8Uj7o/src/IOCapture.jl:116
 │     [22] runner(#unused#::Type{Documenter.Expanders.ExampleBlocks}, node::MarkdownAST.Node{Nothing}, page::Documenter.Page, doc::Documenter.Document)
 │        @ Documenter.Expanders ~/.julia/packages/Documenter/RKg3i/src/Expanders.jl:715
 │     [23] dispatch(::Type{Documenter.Expanders.ExpanderPipeline}, ::MarkdownAST.Node{Nothing}, ::Vararg{Any})
@@ -416,4 +416,4 @@ t3 = measurement(mean(results[&quot;scaling&quot;][&quot;backward&quot;].times),
 @show t1 t2 t3
 
 ts = (t1, t2, t3) ./ 10^6 # ms
-@show ts</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(30.8 ± 1.3, 48.7 ± 3.0, 747.0 ± 34.0)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="game_of_life.html">« Stochastic Game of Life</a><a class="docs-footer-nextpage" href="optimizations.html">Stochastic optimizations with discrete randomness »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.28.0-DEV on <span class="colophon-date" title="Tuesday 9 May 2023 16:53">Tuesday 9 May 2023</span>. Using Julia version 1.9.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+@show ts</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(32.6 ± 1.2, 47.7 ± 2.0, 732.0 ± 23.0)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="game_of_life.html">« Stochastic Game of Life</a><a class="docs-footer-nextpage" href="optimizations.html">Stochastic optimizations with discrete randomness »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.28.0-DEV on <span class="colophon-date" title="Thursday 25 May 2023 01:02">Thursday 25 May 2023</span>. Using Julia version 1.9.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

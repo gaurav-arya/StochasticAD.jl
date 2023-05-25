@@ -1,3 +1,25 @@
+## Helper functions for discrete distributions 
+
+# index of the parameter p
+_param_index(::Geometric) = 1
+_param_index(::Bernoulli) = 1
+_param_index(::Binomial) = 2
+_param_index(::Poisson) = 1
+_param_index(::Categorical) = 1
+# constructors
+for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson, :Categorical]
+    @eval _constructor(::$dist) = $dist
+end
+
+_get_parameter(d) = params(d)[_param_index(d)] 
+# reconstruct probability distribution with new paramter value
+function _reconstruct(d, p)
+    i = _param_index(d)
+    return _constructor(d)(params(d)[1:(i - 1)]..., p, params(d)[(i + 1):end]...)
+end
+
+## Strategies for forming perturbations
+
 struct SingleSidedStrategy end
 struct TwoSidedStrategy end
 struct StraightThroughStrategy end
@@ -35,7 +57,7 @@ function δtoΔs(d, val, δ, Δs::SmoothedFIs, ::StraightThroughStrategy)
     return SmoothedFIs{typeof(val)}(δout)
 end
 
-## Rules for univariate uniparameter discrete distributions
+## Stochastic derivative rules for discrete distributions
 
 function _δtoΔs(d::Geometric, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
     p = succprob(d)
@@ -84,103 +106,6 @@ function _δtoΔs(d::Poisson, val::V, δ::Real, Δs::AbstractFIs) where {V <: Si
     end
 end
 
-### Rules for univariate single-parameter distributions
-
-# index of the parameter p
-_param_index(::Geometric) = 1
-_param_index(::Bernoulli) = 1
-_param_index(::Binomial) = 2
-_param_index(::Poisson) = 1
-# constructors
-for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
-    @eval _constructor(::$dist) = $dist
-end
-
-_get_parameter(d) = params(d)[_param_index(d)] 
-# reconstruct probability distribution with new paramter value
-function _reconstruct(d, p)
-    i = _param_index(d)
-    return _constructor(d)(params(d)[1:(i - 1)]..., p, params(d)[(i + 1):end]...)
-end
-
-for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
-    @eval function Base.rand(rng::AbstractRNG,
-                             d_st::$dist{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
-        st = _get_parameter(d_st)
-        d = _reconstruct(d_st, st.value) 
-        val = convert(Signed, rand(rng, d))
-        Δs1 = δtoΔs(d, val, st.δ, st.Δs)
-
-        low = cdf(d, val - 1)
-        high = cdf(d, val)
-
-        function map_func(Δ)
-            alt_d = _reconstruct(d_st, st.value + Δ)
-            alt_val = quantile(alt_d, rand(RNG) * (high - low) + low)
-            convert(Signed, alt_val - val)
-        end
-        Δs2 = map(map_func, st.Δs; deriv = δ -> smoothed_delta(d, val, δ), out_rep = val)
-
-        StochasticTriple{T}(val, zero(val), combine((Δs2, Δs1); rep = Δs1)) # ensure that tags are in order in combine, in case backend wishes to exploit this 
-    end
-end
-
-"""
-    DiscreteDeltaStochasticTriple{T, V, FIs <: AbstractFIs}
-
-An experimental discrete stochastic triple type used internally for representing perturbations
-to non-real quantities. Currently only used to represent a finite perturbation to the Binomial 
-parameter n.
-
-## Constructor
-
-- `value`: the primal value.
-- `Δs``: some representation of the perturbation to the primal, which can have an unconventional
-         interpretation depending on `T`.
-"""
-struct DiscreteDeltaStochasticTriple{T, V, FIs <: AbstractFIs}
-    value::V
-    Δs::FIs
-    function DiscreteDeltaStochasticTriple{T, V, FIs}(value::V,
-        Δs::FIs) where {T, V,
-        FIs <: AbstractFIs}
-        new{T, V, FIs}(value, Δs)
-    end
-end
-
-function DiscreteDeltaStochasticTriple{T}(val::V, Δs::FIs) where {T, V, FIs <: AbstractFIs}
-    DiscreteDeltaStochasticTriple{T, V, FIs}(val, Δs)
-end
-
-### Handling finite perturbation to Binomial number of trials
-
-function Distributions.Binomial(n::StochasticTriple{T}, p::Real) where {T}
-    return DiscreteDeltaStochasticTriple{T}(Binomial(n.value, p), n.Δs)
-end
-
-# TODO: Support functions other than `rand` called on a perturbed Binomial.
-function Base.rand(rng::AbstractRNG,
-    d_st::DiscreteDeltaStochasticTriple{T, <:Binomial}) where {T}
-    d = d_st.value
-    val = rand(rng, d)
-    function map_func(Δ)
-        if Δ >= 0
-            return rand(StochasticAD.RNG, Binomial(Δ, value(succprob(d))))
-        else
-            return -rand(StochasticAD.RNG,
-                Hypergeometric(value(val), ntrials(d) - value(val), -Δ))
-        end
-    end
-    Δs = map(map_func, d_st.Δs)
-    if val isa StochasticTriple
-        return StochasticTriple{T}(val.value, val.δ, combine((Δs, val.Δs); rep = Δs))
-    else
-        return StochasticTriple{T}(val, zero(val), Δs)
-    end
-end
-
-### Rule for Categorical variable
-
 function _δtoΔs(d::Categorical, val::V, δs, Δs::AbstractFIs) where {V <: Signed}
     p = params(d)[1]
     left_sum = sum(δs[1:(val - 1)], init = zero(V))
@@ -220,14 +145,60 @@ function _δtoΔs(d::Categorical, val::V, δs, Δs::AbstractFIs) where {V <: Sig
     return combine((Δs_left, Δs_right); rep = Δs)
 end
 
+# Define stochastic triple rules
+
+for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
+    @eval function Base.rand(rng::AbstractRNG,
+                             d_st::$dist{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+        st = _get_parameter(d_st)
+        d = _reconstruct(d_st, st.value) 
+        val = convert(Signed, rand(rng, d))
+        Δs1 = δtoΔs(d, val, st.δ, st.Δs)
+
+        low = cdf(d, val - 1)
+        high = cdf(d, val)
+
+        function map_func(Δ)
+            alt_d = _reconstruct(d_st, st.value + Δ)
+            alt_val = quantile(alt_d, rand(RNG) * (high - low) + low)
+            convert(Signed, alt_val - val)
+        end
+        Δs2 = map(map_func, st.Δs; deriv = δ -> smoothed_delta(d, val, δ), out_rep = val)
+
+        StochasticTriple{T}(val, zero(val), combine((Δs2, Δs1); rep = Δs1)) # ensure that tags are in order in combine, in case backend wishes to exploit this 
+    end
+end
+
+# TODO: Support functions other than `rand` called on a perturbed Binomial.
+function Base.rand(rng::AbstractRNG,
+    d_st::DiscreteDeltaStochasticTriple{T, <:Binomial}) where {T}
+    d = d_st.value
+    val = rand(rng, d)
+    function map_func(Δ)
+        if Δ >= 0
+            return rand(StochasticAD.RNG, Binomial(Δ, value(succprob(d))))
+        else
+            return -rand(StochasticAD.RNG,
+                Hypergeometric(value(val), ntrials(d) - value(val), -Δ))
+        end
+    end
+    Δs = map(map_func, d_st.Δs)
+    if val isa StochasticTriple
+        return StochasticTriple{T}(val.value, val.δ, combine((Δs, val.Δs); rep = Δs))
+    else
+        return StochasticTriple{T}(val, zero(val), Δs)
+    end
+end
+
+# currently handle Categorical separately since parameter is a vector
 # what if some elements in vector are not stochastic triples... promotion should take care of that?
 function Base.rand(rng::AbstractRNG,
-    d_st::Categorical{<:StochasticTriple{T},
-        <:AbstractVector{<:StochasticTriple{T, V}}}) where {T,
-    V}
-    sts = params(d_st)[1] # stochastic triple for each probability
+                   d_st::Categorical{<:StochasticTriple{T},
+                                     <:AbstractVector{<:StochasticTriple{T, V}}}) where {T,
+                                                                                         V}
+    sts = _get_parameter(d_st) # stochastic triple for each probability
     p = map(st -> st.value, sts) # try to keep the same type. e.g. static array -> static array. TODO: avoid allocations 
-    d = Categorical(p)
+    d = _reconstruct(d_st, p)
     val = convert(Signed, rand(rng, d))
 
     Δs_all = map(st -> st.Δs, sts)
@@ -240,10 +211,43 @@ function Base.rand(rng::AbstractRNG,
     Δs_coupled = couple(Δs_all; rep = Δs_rep, out_rep = p) # TODO: again, there are possible allocations here
 
     function map_func(Δ)
-        alt_val = quantile(Categorical(p .+ Δ), rand(RNG) * (high - low) + low)
+        alt_val = quantile(_reconstruct(d, p .+ Δ), rand(RNG) * (high - low) + low)
         convert(Signed, alt_val - val)
     end
     Δs2 = map(map_func, Δs_coupled; deriv = δ -> smoothed_delta(d, val, δ), out_rep = val)
 
     StochasticTriple{T}(val, zero(val), combine((Δs2, Δs1); rep = Δs_rep))
+end
+
+## Handling finite perturbation to Binomial number of trials
+
+"""
+    DiscreteDeltaStochasticTriple{T, V, FIs <: AbstractFIs}
+
+An experimental discrete stochastic triple type used internally for representing perturbations
+to non-real quantities. Currently only used to represent a finite perturbation to the Binomial 
+parameter n.
+
+## Constructor
+
+- `value`: the primal value.
+- `Δs``: some representation of the perturbation to the primal, which can have an unconventional
+         interpretation depending on `T`.
+"""
+struct DiscreteDeltaStochasticTriple{T, V, FIs <: AbstractFIs}
+    value::V
+    Δs::FIs
+    function DiscreteDeltaStochasticTriple{T, V, FIs}(value::V,
+                                                      Δs::FIs) where {T, V,
+                                                                      FIs <: AbstractFIs}
+        new{T, V, FIs}(value, Δs)
+    end
+end
+
+function DiscreteDeltaStochasticTriple{T}(val::V, Δs::FIs) where {T, V, FIs <: AbstractFIs}
+    DiscreteDeltaStochasticTriple{T, V, FIs}(val, Δs)
+end
+
+function Distributions.Binomial(n::StochasticTriple{T}, p::Real) where {T}
+    return DiscreteDeltaStochasticTriple{T}(Binomial(n.value, p), n.Δs)
 end

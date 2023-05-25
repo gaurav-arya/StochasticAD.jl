@@ -1,6 +1,7 @@
 struct SingleSidedStrategy end
 struct TwoSidedStrategy end
 struct StraightThroughStrategy end
+struct CombinationStraightThroughStrategy end
 
 new_Δs_strategy(Δs) = SingleSidedStrategy()
 
@@ -19,12 +20,22 @@ function δtoΔs(d, val, δ, Δs, ::TwoSidedStrategy)
 end
 # TODO: implement ST for Categorical. If we can do for one hot, subsequent dotting with 1:10
 # may work for our categorical.
-function δtoΔs(d::Union{Bernoulli,Binomial}, val, δ, Δs, ::StraightThroughStrategy)
+function δtoΔs(d::Union{Bernoulli,Binomial}, val, δ, Δs, ::CombinationStraightThroughStrategy)
     p = succprob(d)
     Δs1 = _δtoΔs(d, val, δ, Δs)
     Δs2 = _δtoΔs(d, val, -δ, Δs)
     return combine((scale(Δs1, 1-p), scale(Δs2, -p)))
 end
+
+# Implement general straight through strategy, only supporting SmoothedFIs
+# since no meaningful interpretation in purely discrete case.
+function δtoΔs(d, val, δ, Δs::SmoothedFIs, ::StraightThroughStrategy)
+    i = _param_index(d)
+    p = params(d)[i]
+    δout = ForwardDiff.derivative(a -> mean(_reconstruct(d, p + a * δ)), 0.0)
+    return SmoothedFIs{typeof(val)}(δout)
+end
+
 
 ## Rules for univariate uniparameter discrete distributions
 
@@ -77,11 +88,28 @@ end
 
 ### Rules for univariate single-parameter distributions
 
-for (dist, i) in [(:Geometric, :1), (:Bernoulli, :1), (:Binomial, :2), (:Poisson, :1)] # i = index of the parameter p
+# index of the parameter p
+_param_index(::Geometric) = 1
+_param_index(::Bernoulli) = 1
+_param_index(::Binomial) = 2
+_param_index(::Poisson) = 1
+# constructors
+for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
+    @eval _constructor(::$dist) = $dist
+end
+
+# reconstruct probability distribution with new paramter value
+function _reconstruct(d, p)
+    i = _param_index(d)
+    return _constructor(d)(params(d)[1:(i - 1)]..., p, params(d)[(i + 1):end]...)
+end
+
+for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
     @eval function Base.rand(rng::AbstractRNG,
-        d_st::$dist{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
-        st = params(d_st)[$i]
-        d = $dist(params(d_st)[1:($i - 1)]..., st.value, params(d_st)[($i + 1):end]...)
+                             d_st::$dist{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+        i = _param_index(d_st)
+        st = params(d_st)[i]
+        d = _reconstruct(d_st, st.value) 
         val = convert(Signed, rand(rng, d))
         Δs1 = δtoΔs(d, val, st.δ, st.Δs)
 
@@ -89,8 +117,8 @@ for (dist, i) in [(:Geometric, :1), (:Bernoulli, :1), (:Binomial, :2), (:Poisson
         high = cdf(d, val)
 
         function map_func(Δ)
-            alt_d = $dist(params(d_st)[1:($i - 1)]..., st.value + Δ,
-                params(d_st)[($i + 1):end]...)
+            alt_d = $dist(params(d_st)[1:(i - 1)]..., st.value + Δ,
+                          params(d_st)[(i + 1):end]...)
             alt_val = quantile(alt_d, rand(RNG) * (high - low) + low)
             convert(Signed, alt_val - val)
         end

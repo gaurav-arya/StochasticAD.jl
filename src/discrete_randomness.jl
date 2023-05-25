@@ -30,12 +30,10 @@ end
 # Implement general straight through strategy, only supporting SmoothedFIs
 # since no meaningful interpretation in purely discrete case.
 function δtoΔs(d, val, δ, Δs::SmoothedFIs, ::StraightThroughStrategy)
-    i = _param_index(d)
-    p = params(d)[i]
+    p = _get_parameter(d) 
     δout = ForwardDiff.derivative(a -> mean(_reconstruct(d, p + a * δ)), 0.0)
     return SmoothedFIs{typeof(val)}(δout)
 end
-
 
 ## Rules for univariate uniparameter discrete distributions
 
@@ -98,6 +96,7 @@ for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
     @eval _constructor(::$dist) = $dist
 end
 
+_get_parameter(d) = params(d)[_param_index(d)] 
 # reconstruct probability distribution with new paramter value
 function _reconstruct(d, p)
     i = _param_index(d)
@@ -107,8 +106,7 @@ end
 for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
     @eval function Base.rand(rng::AbstractRNG,
                              d_st::$dist{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
-        i = _param_index(d_st)
-        st = params(d_st)[i]
+        st = _get_parameter(d_st)
         d = _reconstruct(d_st, st.value) 
         val = convert(Signed, rand(rng, d))
         Δs1 = δtoΔs(d, val, st.δ, st.Δs)
@@ -117,8 +115,7 @@ for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
         high = cdf(d, val)
 
         function map_func(Δ)
-            alt_d = $dist(params(d_st)[1:(i - 1)]..., st.value + Δ,
-                          params(d_st)[(i + 1):end]...)
+            alt_d = _reconstruct(d_st, st.value + Δ)
             alt_val = quantile(alt_d, rand(RNG) * (high - low) + low)
             convert(Signed, alt_val - val)
         end

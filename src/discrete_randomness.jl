@@ -169,27 +169,6 @@ for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
     end
 end
 
-# TODO: Support functions other than `rand` called on a perturbed Binomial.
-function Base.rand(rng::AbstractRNG,
-    d_st::DiscreteDeltaStochasticTriple{T, <:Binomial}) where {T}
-    d = d_st.value
-    val = rand(rng, d)
-    function map_func(Δ)
-        if Δ >= 0
-            return rand(StochasticAD.RNG, Binomial(Δ, value(succprob(d))))
-        else
-            return -rand(StochasticAD.RNG,
-                Hypergeometric(value(val), ntrials(d) - value(val), -Δ))
-        end
-    end
-    Δs = map(map_func, d_st.Δs)
-    if val isa StochasticTriple
-        return StochasticTriple{T}(val.value, val.δ, combine((Δs, val.Δs); rep = Δs))
-    else
-        return StochasticTriple{T}(val, zero(val), Δs)
-    end
-end
-
 # currently handle Categorical separately since parameter is a vector
 # what if some elements in vector are not stochastic triples... promotion should take care of that?
 function Base.rand(rng::AbstractRNG,
@@ -250,4 +229,25 @@ end
 
 function Distributions.Binomial(n::StochasticTriple{T}, p::Real) where {T}
     return DiscreteDeltaStochasticTriple{T}(Binomial(n.value, p), n.Δs)
+end
+
+# TODO: Support functions other than `rand` called on a perturbed Binomial.
+function Base.rand(rng::AbstractRNG,
+                   d_st::DiscreteDeltaStochasticTriple{T, <:Binomial}) where {T}
+    d = d_st.value
+    val = rand(rng, d)
+    function map_func(Δ)
+        if Δ >= 0
+            return rand(StochasticAD.RNG, Binomial(Δ, value(succprob(d))))
+        else
+            return -rand(StochasticAD.RNG,
+                         Hypergeometric(value(val), ntrials(d) - value(val), -Δ))
+        end
+    end
+    Δs = map(map_func, d_st.Δs)
+    if val isa StochasticTriple
+        return StochasticTriple{T}(val.value, val.δ, combine((Δs, val.Δs); rep = Δs))
+    else
+        return StochasticTriple{T}(val, zero(val), Δs)
+    end
 end

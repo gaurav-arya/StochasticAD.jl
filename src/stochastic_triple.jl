@@ -216,7 +216,7 @@ julia> using Distributions, Random, StochasticAD; Random.seed!(4321);
 
 julia> stochastic_triple(rand ∘ Bernoulli, 0.5)
 StochasticTriple of Int64:
-0 + 0ε + (1 with probability 2.0ε, tag 1)
+0 + 0ε + (1 with probability 2.0ε)
 ```
 """
 function stochastic_triple(f, p; direction = nothing, kwargs...)

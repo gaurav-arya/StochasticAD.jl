@@ -17,11 +17,9 @@ struct PrunedFIsBackend <: StochasticAD.AbstractFIsBackend end
 State maintained by pruning backend.
 """
 mutable struct PrunedFIsState
-    active_tag::Int64 # 0 is always a dummy tag
     weight::Float64
-    tag_count::Int64
     valid::Bool
-    PrunedFIsState(valid = true) = new(0, 0.0, 0, valid)
+    PrunedFIsState(valid = true) = new(0.0, valid)
 end
 
 """
@@ -31,14 +29,13 @@ The implementing backend structure for PrunedFIsBackend.
 """
 struct PrunedFIs{V} <: StochasticAD.AbstractFIs{V}
     Δ::V
-    tag::Int
     state::PrunedFIsState
     # directly called when propagating an existing perturbation
 end
 
 ### Empty / no perturbation
 
-PrunedFIs{V}(state::PrunedFIsState) where {V} = PrunedFIs{V}(zero(V), -1, state)
+PrunedFIs{V}(state::PrunedFIsState) where {V} = PrunedFIs{V}(zero(V), state)
 # TODO: avoid allocations here
 StochasticAD.similar_empty(Δs::PrunedFIs, V::Type) = PrunedFIs{V}(PrunedFIsState(false))
 Base.empty(Δs::PrunedFIs{V}) where {V} = StochasticAD.similar_empty(Δs::PrunedFIs, V::Type)
@@ -52,9 +49,7 @@ end
 function StochasticAD.similar_new(Δs::PrunedFIs, Δ::V, w::Real) where {V}
     state = PrunedFIsState()
     state.weight += w
-    state.tag_count = 1
-    state.active_tag = 1
-    Δs = PrunedFIs{V}(Δ, 1, state)
+    Δs = PrunedFIs{V}(Δ, state)
     return Δs
 end
 
@@ -65,13 +60,13 @@ StochasticAD.create_Δs(::PrunedFIsBackend, V) = PrunedFIs{V}(PrunedFIsState(fal
 ### Convert type of a backend
 
 function PrunedFIs{V}(Δs::PrunedFIs) where {V}
-    PrunedFIs{V}(convert(V, Δs.Δ), Δs.tag, Δs.state)
+    PrunedFIs{V}(convert(V, Δs.Δ), Δs.state)
 end
 
 ### Getting information about perturbations
 
 # "empty" here means no perturbation or a perturbation that has been pruned away
-Base.isempty(Δs::PrunedFIs) = !Δs.state.valid || (Δs.tag != Δs.state.active_tag)
+Base.isempty(Δs::PrunedFIs) = !Δs.state.valid
 Base.length(Δs::PrunedFIs) = isempty(Δs) ? 0 : 1
 Base.iszero(Δs::PrunedFIs) = isempty(Δs) || iszero(Δs.Δ)
 Base.iszero(Δs::PrunedFIs{<:Tuple}) = isempty(Δs) || all(iszero.(Δs.Δ))
@@ -89,7 +84,7 @@ StochasticAD.perturbations(Δs::PrunedFIs) = ((pruned_value(Δs), Δs.state.weig
 ### Unary propagation
 
 function StochasticAD.map_Δs(f, Δs::PrunedFIs; kwargs...)
-    PrunedFIs(f(Δs.Δ, Δs.state), Δs.tag, Δs.state)
+    PrunedFIs(f(Δs.Δ, Δs.state), Δs.state)
 end
 
 StochasticAD.alltrue(f, Δs::PrunedFIs) = f(Δs.Δ)
@@ -136,19 +131,19 @@ end
 function StochasticAD.couple(::Type{<:PrunedFIs}, Δs_all; rep = nothing, out_rep = nothing)
     state = get_pruned_state(Δs_all)
     Δ_coupled = StochasticAD.structural_map(pruned_value, Δs_all) # TODO: perhaps a performance optimization possible here
-    PrunedFIs(Δ_coupled, state.active_tag, state)
+    PrunedFIs(Δ_coupled, state)
 end
 
 # basically couple combined with a sum.
 function StochasticAD.combine(::Type{<:PrunedFIs}, Δs_all; rep = nothing)
     state = get_pruned_state(Δs_all)
     Δ_combined = sum(pruned_value, StochasticAD.structural_iterate(Δs_all))
-    PrunedFIs(Δ_combined, state.active_tag, state)
+    PrunedFIs(Δ_combined, state)
 end
 
 function StochasticAD.scalarize(Δs::PrunedFIs; out_rep = nothing)
     return StochasticAD.structural_map(Δs.Δ) do Δ
-        return PrunedFIs(Δ, Δs.tag, Δs.state)
+        return PrunedFIs(Δ, Δs.state)
     end
 end
 
@@ -162,7 +157,7 @@ StochasticAD.similar_type(::Type{<:PrunedFIs}, V::Type) = PrunedFIs{V}
 StochasticAD.valtype(::Type{<:PrunedFIs{V}}) where {V} = V
 
 function Base.show(io::IO, Δs::PrunedFIs{V}) where {V}
-    print(io, "$(pruned_value(Δs)) with probability $(Δs.state.weight)ε, tag $(Δs.tag)")
+    print(io, "$(pruned_value(Δs)) with probability $(Δs.state.weight)ε")
 end
 
 end

@@ -17,3 +17,19 @@ The package can be installed with the Julia package manager:
 julia> using Pkg;
 julia> Pkg.add("StochasticAD");
 ```
+
+## Citation
+
+```
+@inproceedings{arya2022automatic,
+ author = {Arya, Gaurav and Schauer, Moritz and Sch\"{a}fer, Frank and Rackauckas, Christopher},
+ booktitle = {Advances in Neural Information Processing Systems},
+ editor = {S. Koyejo and S. Mohamed and A. Agarwal and D. Belgrave and K. Cho and A. Oh},
+ pages = {10435--10447},
+ publisher = {Curran Associates, Inc.},
+ title = {Automatic Differentiation of Programs with Discrete Randomness},
+ url = {https://proceedings.neurips.cc/paper_files/paper/2022/file/43d8e5fc816c692f342493331d5e98fc-Paper-Conference.pdf},
+ volume = {35},
+ year = {2022}
+}
+```

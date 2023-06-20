@@ -65,6 +65,7 @@ perturbations(st::StochasticTriple) = perturbations(st.Δs)
 Return the derivative estimate given by combining the dual and triple components of `st`.
 """
 derivative_contribution(x::Real) = zero(x)
+derivative_contribution(d::ForwardDiff.Dual) = delta(d)
 derivative_contribution(st::StochasticTriple) = st.δ + derivative_contribution(st.Δs)
 
 """

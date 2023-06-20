@@ -24,11 +24,11 @@ end
 @show stds_score_baseline
 
 fig = plot(RandomWalkCore.n_range, stds_score, color = 2, label = "score-function",
-           size = (300, 250),
-           xlabel = L"n", ylabel = "standard deviation", legend = :topleft)
+    size = (300, 250),
+    xlabel = L"n", ylabel = "standard deviation", legend = :topleft)
 scatter!(RandomWalkCore.n_range, stds_score, color = 2, label = false)
 plot!(RandomWalkCore.n_range, stds_score_baseline, color = 3,
-      label = "score-function w/ CV")
+    label = "score-function w/ CV")
 scatter!(RandomWalkCore.n_range, stds_score_baseline, color = 3, label = false)
 plot!(RandomWalkCore.n_range, stds_triple, color = 1, label = "stochastic triples")
 scatter!(RandomWalkCore.n_range, stds_triple, color = 1, label = false)
@@ -57,11 +57,11 @@ end
 @show stds_score_baseline
 
 fig = plot(RandomWalkCore.n_range, stds_score, color = 2, label = "score-function",
-           size = (300, 250),
-           xlabel = L"n", ylabel = "standard deviation", legend = :topleft)
+    size = (300, 250),
+    xlabel = L"n", ylabel = "standard deviation", legend = :topleft)
 scatter!(RandomWalkCore.n_range, stds_score, color = 2, label = false)
 plot!(RandomWalkCore.n_range, stds_score_baseline, color = 3,
-      label = "score-function w/ CV")
+    label = "score-function w/ CV")
 scatter!(RandomWalkCore.n_range, stds_score_baseline, color = 3, label = false)
 plot!(RandomWalkCore.n_range, stds_triple, color = 1, label = "stochastic triples")
 scatter!(RandomWalkCore.n_range, stds_triple, color = 1, label = false)

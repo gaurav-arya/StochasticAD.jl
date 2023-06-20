@@ -16,7 +16,7 @@ Random.seed!(seed)
 T = 3
 d = 2
 A(θ, a = 0.01) = [exp(-a)*cos(θ[]) exp(-a)*sin(θ[])
-                  -exp(-a)*sin(θ[]) exp(-a)*cos(θ[])]
+    -exp(-a)*sin(θ[]) exp(-a)*cos(θ[])]
 obs(x, θ) = MvNormal(x, 0.01 * collect(I(d)))
 dyn(x, θ) = MvNormal(A(θ) * x, 0.02 * collect(I(d)))
 x0 = [2.0, 0.0] # start value of the simulation
@@ -33,7 +33,7 @@ xs, ys = ParticleFilterCore.simulate_single(stochastic_model, θtrue)
 ### initialize sampler
 m = 1000
 particle_filter = ParticleFilterCore.ParticleFilter(m, stochastic_model, ys,
-                                                    ParticleFilterCore.sample_stratified)
+    ParticleFilterCore.sample_stratified)
 ###
 
 @testset "new weight" begin

@@ -13,11 +13,11 @@ const suite = BenchmarkGroup()
 
 suite["original"] = @benchmarkable $(fX)($p)
 suite["PrunedFIs"] = @benchmarkable derivative_estimate($fX, $p;
-                                                        backend = PrunedFIsBackend())
+    backend = PrunedFIsBackend())
 suite["PrunedFIsAggressive"] = @benchmarkable derivative_estimate($fX, $p;
-                                                                  backend = PrunedFIsAggressiveBackend())
+    backend = PrunedFIsAggressiveBackend())
 suite["SmoothedFIs"] = @benchmarkable derivative_estimate($fX, $p;
-                                                          backend = SmoothedFIsBackend())
+    backend = SmoothedFIsBackend())
 forwarddiff_func = p -> fX(p; hardcode_leftright_step = true)
 suite["ForwardDiff_smoothing"] = @benchmarkable derivative($forwarddiff_func, $p)
 

@@ -34,7 +34,7 @@ function structural_iterate(args)
     make_iterator(x) = x isa AbstractArray ? x : (x,)
     exclude(x) = Functors.isleaf(x) || (x isa AbstractFIs)
     iter = fmap(make_iterator, args; walk = Functors.IterateWalk(), cache = nothing,
-                exclude)
+        exclude)
     return iter
 end
 
@@ -48,7 +48,7 @@ from Functors.jl as a backend.
 """
 function structural_map(f, args...; only_vals = Val{false}())
     fmap((args...) -> args[1] isa AbstractArray ? f.(args...) : f(args...), args...;
-         cache = nothing,
-         walk = (only_vals isa Val{true} ? Functors.StructuralWalk() :
-                 Functors.DefaultWalk()))
+        cache = nothing,
+        walk = (only_vals isa Val{true} ? Functors.StructuralWalk() :
+                Functors.DefaultWalk()))
 end

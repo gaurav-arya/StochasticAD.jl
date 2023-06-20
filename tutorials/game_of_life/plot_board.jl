@@ -8,11 +8,11 @@ _, board, history = stochastic_triple(p -> GoLCore.play(p; log = true), p)
 
 anim1 = @animate for (i, board) in enumerate(history)
     heatmap(collect(StochasticAD.value.(board)), title = "time $i", clim = (-1, 1),
-            c = :grays)
+        c = :grays)
 end
 anim2 = @animate for (i, board) in enumerate(history)
     heatmap(collect(StochasticAD.derivative_contribution.(board)), title = "time $i",
-            clim = (-1, 1), c = :grays)
+        clim = (-1, 1), c = :grays)
 end
 
 gif(anim1, "game.gif", fps = 15)

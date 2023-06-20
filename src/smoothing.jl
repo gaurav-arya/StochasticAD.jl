@@ -43,7 +43,7 @@ for (dist, i, field) in [
     (:Categorical, :1, :p),
 ] # i = index of parameter p
     @eval function Base.rand(rng::AbstractRNG,
-                             d_dual::$dist{<:ForwardDiff.Dual{T}}) where {T}
+        d_dual::$dist{<:ForwardDiff.Dual{T}}) where {T}
         dual = params(d_dual)[$i]
         # dual could represent an array of duals or a single one; map handles both cases.
         p = map(value, dual)
@@ -51,13 +51,13 @@ for (dist, i, field) in [
         partials_indices = ntuple(identity, length(first(dual).partials))
         δs = map(i -> map(d -> ForwardDiff.partials(d)[i], dual), partials_indices)
         d = $dist(params(d_dual)[1:($i - 1)]..., p,
-                  params(d_dual)[($i + 1):end]...)
+            params(d_dual)[($i + 1):end]...)
         val = convert(Signed, rand(rng, d))
         partials = ForwardDiff.Partials(map(δ -> smoothed_delta(d, val, δ), δs))
         ForwardDiff.Dual{T}(val, partials)
     end
     @eval function ChainRulesCore.frule((_, _, Δd), ::typeof(rand), rng::AbstractRNG,
-                                        d::$dist)
+        d::$dist)
         val = convert(Signed, rand(rng, d))
         Δval = smoothed_delta(d, val, Δd)
         return (val, Δval)

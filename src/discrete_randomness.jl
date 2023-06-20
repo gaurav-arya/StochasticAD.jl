@@ -70,7 +70,7 @@ end
 
 for (dist, i) in [(:Geometric, :1), (:Bernoulli, :1), (:Binomial, :2), (:Poisson, :1)] # i = index of the parameter p
     @eval function Base.rand(rng::AbstractRNG,
-                             d_st::$dist{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+        d_st::$dist{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
         st = params(d_st)[$i]
         d = $dist(params(d_st)[1:($i - 1)]..., st.value, params(d_st)[($i + 1):end]...)
         val = convert(Signed, rand(rng, d))
@@ -81,7 +81,7 @@ for (dist, i) in [(:Geometric, :1), (:Bernoulli, :1), (:Binomial, :2), (:Poisson
 
         function map_func(Δ)
             alt_d = $dist(params(d_st)[1:($i - 1)]..., st.value + Δ,
-                          params(d_st)[($i + 1):end]...)
+                params(d_st)[($i + 1):end]...)
             alt_val = quantile(alt_d, rand(RNG) * (high - low) + low)
             convert(Signed, alt_val - val)
         end
@@ -108,8 +108,8 @@ struct DiscreteDeltaStochasticTriple{T, V, FIs <: AbstractFIs}
     value::V
     Δs::FIs
     function DiscreteDeltaStochasticTriple{T, V, FIs}(value::V,
-                                                      Δs::FIs) where {T, V,
-                                                                      FIs <: AbstractFIs}
+        Δs::FIs) where {T, V,
+        FIs <: AbstractFIs}
         new{T, V, FIs}(value, Δs)
     end
 end
@@ -126,7 +126,7 @@ end
 
 # TODO: Support functions other than `rand` called on a perturbed Binomial.
 function Base.rand(rng::AbstractRNG,
-                   d_st::DiscreteDeltaStochasticTriple{T, <:Binomial}) where {T}
+    d_st::DiscreteDeltaStochasticTriple{T, <:Binomial}) where {T}
     d = d_st.value
     val = rand(rng, d)
     function map_func(Δ)
@@ -134,7 +134,7 @@ function Base.rand(rng::AbstractRNG,
             return rand(StochasticAD.RNG, Binomial(Δ, value(succprob(d))))
         else
             return -rand(StochasticAD.RNG,
-                         Hypergeometric(value(val), ntrials(d) - value(val), -Δ))
+                Hypergeometric(value(val), ntrials(d) - value(val), -Δ))
         end
     end
     Δs = map(map_func, d_st.Δs)
@@ -188,9 +188,9 @@ end
 
 # what if some elements in vector are not stochastic triples... promotion should take care of that?
 function Base.rand(rng::AbstractRNG,
-                   d_st::Categorical{<:StochasticTriple{T},
-                                     <:AbstractVector{<:StochasticTriple{T, V}}}) where {T,
-                                                                                         V}
+    d_st::Categorical{<:StochasticTriple{T},
+        <:AbstractVector{<:StochasticTriple{T, V}}}) where {T,
+    V}
     sts = params(d_st)[1] # stochastic triple for each probability
     p = map(st -> st.value, sts) # try to keep the same type. e.g. static array -> static array. TODO: avoid allocations 
     d = Categorical(p)

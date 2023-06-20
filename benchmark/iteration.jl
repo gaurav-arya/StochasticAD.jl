@@ -15,10 +15,10 @@ const suite = BenchmarkGroup()
 
 # Examples consist of flat and non-flat versions of structures, to test zero-cost iteration.
 tups = Dict("easy" => (ntuple(identity, 3), (1, (2, 3))),
-            "hard" => (ntuple(identity, 9), (1, (2, 3), (4, (5, (6, 7, 8), 9)))))
+    "hard" => (ntuple(identity, 9), (1, (2, 3), (4, (5, (6, 7, 8), 9)))))
 SAs = Dict("easy" => (SA[1, 2, 3], (1, SA[2, 3])),
-           "hard" => (SA[1, 2, 3, 4, 5, 6, 7, 8, 9],
-                      (1, SA[2, 3], (4, (5, SA[6, 7, 8], 9)))))
+    "hard" => (SA[1, 2, 3, 4, 5, 6, 7, 8, 9],
+        (1, SA[2, 3], (4, (5, SA[6, 7, 8], 9)))))
 
 for (setname, set) in (("tups", tups), ("SAs", SAs))
     suite[setname] = BenchmarkGroup()
@@ -42,9 +42,9 @@ for (setname, set) in (("tups", tups), ("SAs", SAs))
                 # We don't interpolate backend directly in below (i.e. do $FIs) because string interpolating a type
                 # seems to lead to slow benchmarks.
                 FIs_suite["couple_same"] = @benchmarkable StochasticAD.couple(typeof($Δs),
-                                                                              $Δs_all)
+                    $Δs_all)
                 FIs_suite["combine_same"] = @benchmarkable StochasticAD.combine(typeof($Δs),
-                                                                                $Δs_all)
+                    $Δs_all)
             end
         end
     end

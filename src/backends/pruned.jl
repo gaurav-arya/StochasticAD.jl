@@ -116,7 +116,7 @@ function get_pruned_state(Δs_all)
         return (total_weight, new_state)
     end
     (_total_weight, _new_state) = foldl(op, StochasticAD.structural_iterate(Δs_all);
-                                        init = (0.0, nothing))
+        init = (0.0, nothing))
     if _new_state !== nothing
         _new_state.weight = _total_weight
     else

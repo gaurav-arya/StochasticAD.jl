@@ -54,9 +54,9 @@ function generate_system(d, T)
     ### initialize filters
     m = 1000 # number of particles
     kalman_filter = ParticleFilterCore.KalmanFilter(d, stochastic_model, H_Kalman, R_Kalman,
-                                                    Q_Kalman, ys)
+        Q_Kalman, ys)
     particle_filter = ParticleFilterCore.ParticleFilter(m, stochastic_model, ys,
-                                                        ParticleFilterCore.sample_stratified)
+        ParticleFilterCore.sample_stratified)
 
     return θtrue, xs, ys, stochastic_model, kalman_filter, particle_filter
 end

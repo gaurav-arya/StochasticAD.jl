@@ -17,105 +17,7 @@ using Measurements
 using UnPack
 using Plots
 using LaTeXStrings
-using BenchmarkTools</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">ERROR: LoadError: ArgumentError: Package FileIO [5789e2e9-d7fb-5bc7-8068-2c6fae9b9549] is required but does not seem to be installed:
- - Run `Pkg.instantiate()` to install all recorded dependencies.
-
-Stacktrace:
- [1] _require(pkg::Base.PkgId, env::String)
-   @ Base ./loading.jl:1774
- [2] _require_prelocked(uuidkey::Base.PkgId, env::String)
-   @ Base ./loading.jl:1660
- [3] macro expansion
-   @ ./loading.jl:1648 [inlined]
- [4] macro expansion
-   @ ./lock.jl:267 [inlined]
- [5] require(into::Module, mod::Symbol)
-   @ Base ./loading.jl:1611
- [6] include
-   @ ./Base.jl:457 [inlined]
- [7] include_package_for_output(pkg::Base.PkgId, input::String, depot_path::Vector{String}, dl_load_path::Vector{String}, load_path::Vector{String}, concrete_deps::Vector{Pair{Base.PkgId, UInt128}}, source::String)
-   @ Base ./loading.jl:2045
- [8] top-level scope
-   @ stdin:3
-in expression starting at /home/runner/.julia/packages/Plots/rz1WP/ext/FileIOExt.jl:1
-in expression starting at stdin:3
-┌ Error: Error during loading of extension FileIOExt of Plots, use `Base.retry_load_extensions()` to retry.
-│   exception =
-│    1-element ExceptionStack:
-│    Failed to precompile FileIOExt [f5f51d8f-5827-5d2e-939b-192fcd6ec70c] to &quot;/home/runner/.julia/compiled/v1.9/FileIOExt/jl_EAtbWb&quot;.
-│    Stacktrace:
-│      [1] error(s::String)
-│        @ Base ./error.jl:35
-│      [2] compilecache(pkg::Base.PkgId, path::String, internal_stderr::IO, internal_stdout::IO, keep_loaded_modules::Bool)
-│        @ Base ./loading.jl:2296
-│      [3] compilecache
-│        @ ./loading.jl:2163 [inlined]
-│      [4] _require(pkg::Base.PkgId, env::Nothing)
-│        @ Base ./loading.jl:1805
-│      [5] _require_prelocked(uuidkey::Base.PkgId, env::Nothing)
-│        @ Base ./loading.jl:1660
-│      [6] _require_prelocked(uuidkey::Base.PkgId)
-│        @ Base ./loading.jl:1658
-│      [7] run_extension_callbacks(extid::Base.ExtensionId)
-│        @ Base ./loading.jl:1255
-│      [8] run_extension_callbacks(pkgid::Base.PkgId)
-│        @ Base ./loading.jl:1290
-│      [9] run_package_callbacks(modkey::Base.PkgId)
-│        @ Base ./loading.jl:1124
-│     [10] _require_prelocked(uuidkey::Base.PkgId, env::String)
-│        @ Base ./loading.jl:1667
-│     [11] macro expansion
-│        @ ./loading.jl:1648 [inlined]
-│     [12] macro expansion
-│        @ ./lock.jl:267 [inlined]
-│     [13] require(into::Module, mod::Symbol)
-│        @ Base ./loading.jl:1611
-│     [14] eval
-│        @ ./boot.jl:370 [inlined]
-│     [15] #17
-│        @ ~/.julia/packages/Documenter/OvSCn/src/Expanders.jl:717 [inlined]
-│     [16] cd(f::Documenter.Expanders.var&quot;#17#19&quot;{Module, Expr}, dir::String)
-│        @ Base.Filesystem ./file.jl:112
-│     [17] (::Documenter.Expanders.var&quot;#16#18&quot;{Documenter.Page, Module, Expr})()
-│        @ Documenter.Expanders ~/.julia/packages/Documenter/OvSCn/src/Expanders.jl:716
-│     [18] (::IOCapture.var&quot;#3#5&quot;{DataType, Documenter.Expanders.var&quot;#16#18&quot;{Documenter.Page, Module, Expr}, Task, IOContext{Base.PipeEndpoint}, IOContext{Base.PipeEndpoint}, Base.PipeEndpoint, Base.PipeEndpoint})()
-│        @ IOCapture ~/.julia/packages/IOCapture/8Uj7o/src/IOCapture.jl:119
-│     [19] with_logstate(f::Function, logstate::Any)
-│        @ Base.CoreLogging ./logging.jl:514
-│     [20] with_logger
-│        @ ./logging.jl:626 [inlined]
-│     [21] capture(f::Documenter.Expanders.var&quot;#16#18&quot;{Documenter.Page, Module, Expr}; rethrow::Type, color::Bool)
-│        @ IOCapture ~/.julia/packages/IOCapture/8Uj7o/src/IOCapture.jl:116
-│     [22] runner(#unused#::Type{Documenter.Expanders.ExampleBlocks}, node::MarkdownAST.Node{Nothing}, page::Documenter.Page, doc::Documenter.Document)
-│        @ Documenter.Expanders ~/.julia/packages/Documenter/OvSCn/src/Expanders.jl:715
-│     [23] dispatch(::Type{Documenter.Expanders.ExpanderPipeline}, ::MarkdownAST.Node{Nothing}, ::Vararg{Any})
-│        @ Documenter.Selectors ~/.julia/packages/Documenter/OvSCn/src/utilities/Selectors.jl:170
-│     [24] expand(doc::Documenter.Document)
-│        @ Documenter.Expanders ~/.julia/packages/Documenter/OvSCn/src/Expanders.jl:44
-│     [25] runner(#unused#::Type{Documenter.Builder.ExpandTemplates}, doc::Documenter.Document)
-│        @ Documenter.Builder ~/.julia/packages/Documenter/OvSCn/src/Builder.jl:233
-│     [26] dispatch(#unused#::Type{Documenter.Builder.DocumentPipeline}, x::Documenter.Document)
-│        @ Documenter.Selectors ~/.julia/packages/Documenter/OvSCn/src/utilities/Selectors.jl:170
-│     [27] #37
-│        @ ~/.julia/packages/Documenter/OvSCn/src/makedocs.jl:228 [inlined]
-│     [28] withenv(::Documenter.var&quot;#37#39&quot;{Documenter.Document}, ::Pair{String, Nothing}, ::Vararg{Pair{String, Nothing}})
-│        @ Base ./env.jl:197
-│     [29] #36
-│        @ ~/.julia/packages/Documenter/OvSCn/src/makedocs.jl:227 [inlined]
-│     [30] cd(f::Documenter.var&quot;#36#38&quot;{Documenter.Document}, dir::String)
-│        @ Base.Filesystem ./file.jl:112
-│     [31] makedocs(; debug::Bool, format::Documenter.HTMLWriter.HTML, kwargs::Base.Pairs{Symbol, Any, NTuple{5, Symbol}, NamedTuple{(:sitename, :authors, :modules, :pages, :strict), Tuple{String, String, Vector{Module}, Vector{Pair{String, Any}}, Vector{Symbol}}}})
-│        @ Documenter ~/.julia/packages/Documenter/OvSCn/src/makedocs.jl:227
-│     [32] top-level scope
-│        @ ~/work/StochasticAD.jl/StochasticAD.jl/docs/make.jl:30
-│     [33] include(mod::Module, _path::String)
-│        @ Base ./Base.jl:457
-│     [34] exec_options(opts::Base.JLOptions)
-│        @ Base ./client.jl:307
-│     [35] _start()
-│        @ Base ./client.jl:522
-└ @ Base loading.jl:1261
-ERROR: LoadError: ArgumentError: Package GeometryBasics [5c1252a2-5f33-56bf-86c9-59e7332b4326] is required but does not seem to be installed:
+using BenchmarkTools</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">ERROR: LoadError: ArgumentError: Package GeometryBasics [5c1252a2-5f33-56bf-86c9-59e7332b4326] is required but does not seem to be installed:
  - Run `Pkg.instantiate()` to install all recorded dependencies.
 
 Stacktrace:
@@ -140,7 +42,7 @@ in expression starting at stdin:3
 ┌ Error: Error during loading of extension GeometryBasicsExt of Plots, use `Base.retry_load_extensions()` to retry.
 │   exception =
 │    1-element ExceptionStack:
-│    Failed to precompile GeometryBasicsExt [b238bd29-021f-5edc-8b0e-16b9cda5f63a] to &quot;/home/runner/.julia/compiled/v1.9/GeometryBasicsExt/jl_lGWy0h&quot;.
+│    Failed to precompile GeometryBasicsExt [b238bd29-021f-5edc-8b0e-16b9cda5f63a] to &quot;/home/runner/.julia/compiled/v1.9/GeometryBasicsExt/jl_EqJ5J1&quot;.
 │    Stacktrace:
 │      [1] error(s::String)
 │        @ Base ./error.jl:35
@@ -416,4 +318,4 @@ t3 = measurement(mean(results[&quot;scaling&quot;][&quot;backward&quot;].times),
 @show t1 t2 t3
 
 ts = (t1, t2, t3) ./ 10^6 # ms
-@show ts</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(37.2 ± 1.4, 57.6 ± 3.0, 912.0 ± 25.0)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="game_of_life.html">« Stochastic Game of Life</a><a class="docs-footer-nextpage" href="optimizations.html">Stochastic optimizations with discrete randomness »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.28.0-DEV on <span class="colophon-date" title="Tuesday 20 June 2023 07:46">Tuesday 20 June 2023</span>. Using Julia version 1.9.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+@show ts</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(32.6 ± 1.0, 49.0 ± 2.3, 746.0 ± 23.0)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="game_of_life.html">« Stochastic Game of Life</a><a class="docs-footer-nextpage" href="optimizations.html">Stochastic optimizations with discrete randomness »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.28.0-DEV on <span class="colophon-date" title="Tuesday 20 June 2023 07:55">Tuesday 20 June 2023</span>. Using Julia version 1.9.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

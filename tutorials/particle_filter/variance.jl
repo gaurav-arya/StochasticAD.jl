@@ -13,7 +13,7 @@ for T in Ts
     θtrue, xs, ys, stochastic_model, kalman_filter, particle_filter = generate_system(d, T)
     xs, ys = ParticleFilterCore.simulate_single(stochastic_model, θtrue)
     particle_filter = ParticleFilterCore.ParticleFilter(m, stochastic_model, ys,
-                                                        ParticleFilterCore.sample_stratified)
+        ParticleFilterCore.sample_stratified)
     ### compute var of gradients
     # Gradient of the particle filter *with* differentiation of the resampling step
     var_pf = @time var([ParticleFilterCore.forw_grad(θtrue, particle_filter) for i in 1:100])
@@ -31,7 +31,7 @@ end
 # pick an arbitrary coordinate
 index = 1 # take derivative with respect to first parameter
 fig = plot(Ts, getindex.(vars_pf, index), color = 1, label = "unbiased", size = (300, 250),
-           xlabel = L"n", ylabel = "variance", legend = :topleft, y_scale = :log)
+    xlabel = L"n", ylabel = "variance", legend = :topleft, y_scale = :log)
 scatter!(Ts, getindex.(vars_pf, index), color = 1, label = false)
 plot!(Ts, getindex.(vars_pf_biased, index), color = 2, label = "biased")
 scatter!(Ts, getindex.(vars_pf_biased, index), color = 2, label = false)
@@ -47,7 +47,7 @@ for d in ds
     θtrue, xs, ys, stochastic_model, kalman_filter, particle_filter = generate_system(d, 10)
     xs, ys = ParticleFilterCore.simulate_single(stochastic_model, θtrue)
     particle_filter = ParticleFilterCore.ParticleFilter(m, stochastic_model, ys,
-                                                        ParticleFilterCore.sample_stratified)
+        ParticleFilterCore.sample_stratified)
     ### compute var of gradients
     # Gradient of the particle filter *with* differentiation of the resampling step
     var_pf = @time var([ParticleFilterCore.forw_grad(θtrue, particle_filter) for i in 1:50])
@@ -60,7 +60,7 @@ for d in ds
 end
 
 fig = plot(ds, getindex.(vars_pf, index), color = 1, label = "unbiased", size = (300, 250),
-           xlabel = L"d", ylabel = "variance", legend = :topleft, y_scale = :log)
+    xlabel = L"d", ylabel = "variance", legend = :topleft, y_scale = :log)
 scatter!(ds, getindex.(vars_pf, index), color = 1, label = false)
 plot!(ds, getindex.(vars_pf_biased, index), color = 2, label = "biased")
 scatter!(ds, getindex.(vars_pf_biased, index), color = 2, label = false)

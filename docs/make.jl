@@ -7,9 +7,9 @@ using Documenter, StochasticAD, DocThemeIndigo
 
 indigo = DocThemeIndigo.install(StochasticAD)
 format = Documenter.HTML(prettyurls = false,
-                         assets = [indigo, "assets/extra_styles.css"],
-                         repolink = "https://github.com/gaurav-arya/StochasticAD.jl",
-                         edit_link = "main")
+    assets = [indigo, "assets/extra_styles.css"],
+    repolink = "https://github.com/gaurav-arya/StochasticAD.jl",
+    edit_link = "main")
 
 ### Pagination
 
@@ -29,23 +29,23 @@ pages = [
 ### Make docs
 
 makedocs(sitename = "StochasticAD.jl",
-         authors = "Gaurav Arya and other contributors",
-         modules = [StochasticAD],
-         format = format,
-         pages = pages,
-         strict = [
-             :doctest,
-             :linkcheck,
-             :parse_error,
-             :example_block,
-             # Other available options are
-             # :autodocs_block, :cross_references, :docs_block, :eval_block, :example_block, :footnote, :meta_block, :missing_docs, :setup_block
-         ])
+    authors = "Gaurav Arya and other contributors",
+    modules = [StochasticAD],
+    format = format,
+    pages = pages,
+    strict = [
+        :doctest,
+        :linkcheck,
+        :parse_error,
+        :example_block,
+        # Other available options are
+        # :autodocs_block, :cross_references, :docs_block, :eval_block, :example_block, :footnote, :meta_block, :missing_docs, :setup_block
+    ])
 
 try
     deploydocs(repo = "github.com/gaurav-arya/StochasticAD.jl",
-               devbranch = "main",
-               push_preview = true)
+        devbranch = "main",
+        push_preview = true)
 catch e
     println("Error encountered while deploying docs:")
     showerror(stdout, e)

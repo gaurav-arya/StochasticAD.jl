@@ -21,9 +21,9 @@ end
 
 function play_game_of_life(p, all_probs, N, T, log = false)
     dual_type = promote_type(typeof(rand(Bernoulli(p))),
-                             typeof.(rand.(Bernoulli.(all_probs)))...) # TODO: better way of getting the concrete type
+        typeof.(rand.(Bernoulli.(all_probs)))...) # TODO: better way of getting the concrete type
     board = OffsetArray(zeros(dual_type, 2 * N + 3, 2 * N + 3), (-(N + 1)):(N + 1),
-                        (-(N + 1)):(N + 1)) # pad by 1
+        (-(N + 1)):(N + 1)) # pad by 1
     for i in (-N):N
         for j in (-N):N
             board[i, j] = rand(Bernoulli(p))

@@ -99,7 +99,7 @@ function define_triple_overload(sig)
             δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
             if !iszero(st.Δs)
                 Δs = map(Δ -> f(st.value + Δ; kwargs...) - val, st.Δs;
-                         deriv = last ∘ run_frule, out_rep = val)
+                    deriv = last ∘ run_frule, out_rep = val)
             else
                 Δs = similar_empty(st.Δs, typeof(val))
             end
@@ -120,7 +120,7 @@ function define_triple_overload(sig)
                 δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
                 if !iszero(st.Δs)
                     Δs = map(Δ -> f(st.value + Δ, x; kwargs...) - val, st.Δs;
-                             deriv = last ∘ run_frule, out_rep = val)
+                        deriv = last ∘ run_frule, out_rep = val)
                 else
                     Δs = similar_empty(st.Δs, typeof(val))
                 end
@@ -135,7 +135,7 @@ function define_triple_overload(sig)
                 δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
                 if !iszero(st.Δs)
                     Δs = map(Δ -> f(x, st.value + Δ; kwargs...) - val, st.Δs;
-                             deriv = last ∘ run_frule, out_rep = val)
+                        deriv = last ∘ run_frule, out_rep = val)
                 else
                     Δs = similar_empty(st.Δs, typeof(val))
                 end
@@ -206,7 +206,7 @@ end
 
 for op in RNG_TYPEFUNCS_WRAP
     function (::typeof(op))(rng::AbstractRNG,
-                            ::Type{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+        ::Type{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
         return StochasticTriple{T, V, FIs}(op(rng, V), zero(V), empty(FIs))
     end
 end
@@ -223,15 +223,15 @@ way. (E.g. by catching the chain rule for isapprox and recursively calling isapp
 on the values.)
 =#
 function Base.isapprox(st1::StochasticTriple, st2::StochasticTriple;
-                       atol::Real = 0, rtol::Real = Base.rtoldefault(st1, st2, atol),
-                       nans::Bool = false, norm::Function = abs)
+    atol::Real = 0, rtol::Real = Base.rtoldefault(st1, st2, atol),
+    nans::Bool = false, norm::Function = abs)
     (isfinite(st1) && isfinite(st2) &&
      norm(st1 - st2) <= max(atol, rtol * max(norm(st1), norm(st2)))) ||
         (nans && isnan(st1) && isnan(st2))
 end
 function Base.isapprox(st1::StochasticTriple, x::Real;
-                       atol::Real = 0, rtol::Real = Base.rtoldefault(st1, x, atol),
-                       nans::Bool = false, norm::Function = abs)
+    atol::Real = 0, rtol::Real = Base.rtoldefault(st1, x, atol),
+    nans::Bool = false, norm::Function = abs)
     (isfinite(st1) && isfinite(x) &&
      norm(st1 - x) <= max(atol, rtol * max(norm(st1), norm(x)))) ||
         (nans && isnan(st1) && isnan(x))
@@ -252,7 +252,9 @@ A simple prototype rule for array indexing. Assumes that underlying type of `st`
 # Example to fix: A[:, :, st]
 function Base.getindex(C::AbstractArray, st::StochasticTriple{T, V, FIs}) where {T, V, FIs}
     val = C[st.value]
-    do_map = (Δ, state) -> begin return value(C[st.value + Δ], state) - value(val, state) end
+    do_map = (Δ, state) -> begin
+        return value(C[st.value + Δ], state) - value(val, state)
+    end
 
     # TODO: below doesn't support sparse arrays, use something like nextind
     deriv = δ -> begin

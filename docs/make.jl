@@ -16,13 +16,14 @@ format = Documenter.HTML(prettyurls = false,
 pages = [
     "Overview" => "index.md",
     "Tutorials" => [
-        "tutorials/random_walk.md",
-        "tutorials/game_of_life.md",
-        "tutorials/particle_filter.md",
-        "tutorials/optimizations.md",
+        # "tutorials/random_walk.md",
+        # "tutorials/game_of_life.md",
+        # "tutorials/particle_filter.md",
+        # "tutorials/optimizations.md",
+        "tutorials/random_scattering.md",
     ],
-    "Public API" => "public_api.md",
-    "Limitations" => "limitations.md",
+    # "Public API" => "public_api.md",
+    # "Limitations" => "limitations.md",
 ]
 
 ### Make docs

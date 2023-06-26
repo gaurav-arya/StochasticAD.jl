@@ -24,6 +24,7 @@ struct SingleSidedStrategy end
 struct TwoSidedStrategy end
 struct StraightThroughStrategy end
 struct CombinationStraightThroughStrategy end
+struct DropStrategy end
 
 new_Δs_strategy(Δs) = SingleSidedStrategy()
 
@@ -40,17 +41,16 @@ function δtoΔs(d, val, δ, Δs, ::TwoSidedStrategy)
     Δs2 = _δtoΔs(d, val, -δ, Δs)
     return combine((scale(Δs1, 0.5), scale(Δs2, -0.5)))
 end
-# TODO: implement ST for Categorical. If we can do for one hot, subsequent dotting with 1:10
-# may work for our categorical.
+# TODO: implement ST for other distributions 
 function δtoΔs(d::Union{Bernoulli,Binomial}, val, δ, Δs, ::CombinationStraightThroughStrategy)
     p = succprob(d)
     Δs1 = _δtoΔs(d, val, δ, Δs)
     Δs2 = _δtoΔs(d, val, -δ, Δs)
     return combine((scale(Δs1, 1-p), scale(Δs2, -p)))
 end
+δtoΔs(d, val::V, δ, Δs, ::DropStrategy) where {V} = similar_empty(Δs, V)
 
-# Implement general straight through strategy, only supporting SmoothedFIs
-# since no meaningful interpretation in purely discrete case.
+# Implement straight through strategy, works for all distrs but only supports SmoothedFIs
 function δtoΔs(d, val, δ, Δs::SmoothedFIs, ::StraightThroughStrategy)
     p = _get_parameter(d) 
     δout = ForwardDiff.derivative(a -> mean(_reconstruct(d, p + a * δ)), 0.0)

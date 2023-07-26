@@ -167,7 +167,7 @@ function Base.summary(::StochasticTriple{T, V}) where {T, V}
 end
 
 function Base.show(io::IO, ::MIME"text/plain", st::StochasticTriple)
-    println(io, "$(summary(st)):")
+    #println(io, "$(summary(st)):")
     show(io, st)
 end
 
@@ -242,6 +242,9 @@ function stochastic_triple(f, p; direction = nothing, kwargs...)
 end
 
 stochastic_triple(p; kwargs...) = stochastic_triple(identity, p; kwargs...)
+
+dual_number(f, p; kwargs...) = stochastic_triple(f, p; backend=StochasticAD.DropFIsBackend(), kwargs...)
+dual_number(p; kwargs...) = dual_number(identity, p; kwargs...)
 
 @doc raw"""
     derivative_estimate(X, p; backend=PrunedFIsBackend(), direction=nothing)

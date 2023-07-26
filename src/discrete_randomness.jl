@@ -1,5 +1,6 @@
 struct SingleSidedStrategy end
 struct TwoSidedStrategy end
+struct IgnoreDiscreteStrategy end
 
 new_Δs_strategy(Δs) = SingleSidedStrategy()
 
@@ -15,6 +16,9 @@ function δtoΔs(d, val, δ, Δs, ::TwoSidedStrategy)
     Δs1 = _δtoΔs(d, val, δ, Δs)
     Δs2 = _δtoΔs(d, val, -δ, Δs)
     return combine((scale(Δs1, 0.5), scale(Δs2, -0.5)))
+end
+function δtoΔs(d, val::V, δ, Δs, ::IgnoreDiscreteStrategy) where {V}
+    return similar_empty(Δs, V)
 end
 
 ## Rules for univariate uniparameter discrete distributions

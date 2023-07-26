@@ -101,4 +101,8 @@ function Base.show(io::IO, Δs::DropFIs)
     print(io, "")
 end
 
+function Base.summary(::StochasticAD.StochasticTriple{T, V, FIs}) where {T, V, FIs<:DropFIs}
+    return "Dual Number of $V"
+end
+
 end

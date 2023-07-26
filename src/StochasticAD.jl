@@ -27,6 +27,33 @@ const RNG = copy(Random.default_rng())
 ### Files responsible for backends
 
 include("finite_infinitesimals.jl")
+
+""" 
+    StochasticTriple{T, V <: Real, FIs <: AbstractFIs{V}}
+
+Stores the primal value of the computation, alongside a "dual" component
+representing an infinitesimal change, and a "triple" component that tracks
+discrete change(s) with infinitesimal probability. 
+
+Pretty printed as "value + δε + ({pretty print of Δs})".
+
+## Constructor
+
+- `value`: the primal value.
+- `δ`: the value of the almost-sure derivative, i.e. the rate of "infinitesimal" change.
+- `Δs`: alternate values with associated weights, i.e. Finite perturbations with Infinitesimal probability,
+        represented by a backend `FIs <: AbstractFIs`.
+"""
+struct StochasticTriple{T, V <: Real, FIs <: AbstractFIs{V}} <: Real
+    value::V
+    δ::V # infinitesimal change
+    Δs::FIs # finite changes with infinitesimal probabilities # (Δ = 3, p = 1*h)
+    function StochasticTriple{T, V, FIs}(value::V, δ::V,
+        Δs::FIs) where {T, V, FIs <: AbstractFIs{V}}
+        new{T, V, FIs}(value, δ, Δs)
+    end
+end
+
 include("backends/pruned.jl")
 include("backends/pruned_aggressive.jl")
 include("backends/dict.jl")

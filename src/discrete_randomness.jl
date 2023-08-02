@@ -11,7 +11,7 @@ for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson, :Categorical]
     @eval _constructor(::$dist) = $dist
 end
 
-_get_parameter(d) = params(d)[_param_index(d)] 
+_get_parameter(d) = params(d)[_param_index(d)]
 # reconstruct probability distribution with new paramter value
 function _reconstruct(d, p)
     i = _param_index(d)
@@ -42,17 +42,17 @@ function δtoΔs(d, val, δ, Δs, ::TwoSidedStrategy)
     return combine((scale(Δs1, 0.5), scale(Δs2, -0.5)))
 end
 # TODO: implement ST for other distributions 
-function δtoΔs(d::Union{Bernoulli,Binomial}, val, δ, Δs, ::StraightThroughStrategy)
+function δtoΔs(d::Union{Bernoulli, Binomial}, val, δ, Δs, ::StraightThroughStrategy)
     p = succprob(d)
     Δs1 = _δtoΔs(d, val, δ, Δs)
     Δs2 = _δtoΔs(d, val, -δ, Δs)
-    return combine((scale(Δs1, 1-p), scale(Δs2, -p)))
+    return combine((scale(Δs1, 1 - p), scale(Δs2, -p)))
 end
 δtoΔs(d, val::V, δ, Δs, ::DropStrategy) where {V} = similar_empty(Δs, V)
 
 # Implement straight through strategy, works for all distrs but only supports SmoothedFIs
 function δtoΔs(d, val, δ, Δs::SmoothedFIs, ::SmoothedStraightThroughStrategy)
-    p = _get_parameter(d) 
+    p = _get_parameter(d)
     δout = ForwardDiff.derivative(a -> mean(_reconstruct(d, p + a * δ)), 0.0)
     return SmoothedFIs{typeof(val)}(δout)
 end
@@ -149,9 +149,9 @@ end
 
 for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
     @eval function Base.rand(rng::AbstractRNG,
-                             d_st::$dist{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+        d_st::$dist{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
         st = _get_parameter(d_st)
-        d = _reconstruct(d_st, st.value) 
+        d = _reconstruct(d_st, st.value)
         val = convert(Signed, rand(rng, d))
         Δs1 = δtoΔs(d, val, st.δ, st.Δs)
 
@@ -172,9 +172,9 @@ end
 # currently handle Categorical separately since parameter is a vector
 # what if some elements in vector are not stochastic triples... promotion should take care of that?
 function Base.rand(rng::AbstractRNG,
-                   d_st::Categorical{<:StochasticTriple{T},
-                                     <:AbstractVector{<:StochasticTriple{T, V}}}) where {T,
-                                                                                         V}
+    d_st::Categorical{<:StochasticTriple{T},
+        <:AbstractVector{<:StochasticTriple{T, V}}}) where {T,
+    V}
     sts = _get_parameter(d_st) # stochastic triple for each probability
     p = map(st -> st.value, sts) # try to keep the same type. e.g. static array -> static array. TODO: avoid allocations 
     d = _reconstruct(d_st, p)
@@ -217,8 +217,8 @@ struct DiscreteDeltaStochasticTriple{T, V, FIs <: AbstractFIs}
     value::V
     Δs::FIs
     function DiscreteDeltaStochasticTriple{T, V, FIs}(value::V,
-                                                      Δs::FIs) where {T, V,
-                                                                      FIs <: AbstractFIs}
+        Δs::FIs) where {T, V,
+        FIs <: AbstractFIs}
         new{T, V, FIs}(value, Δs)
     end
 end
@@ -233,7 +233,7 @@ end
 
 # TODO: Support functions other than `rand` called on a perturbed Binomial.
 function Base.rand(rng::AbstractRNG,
-                   d_st::DiscreteDeltaStochasticTriple{T, <:Binomial}) where {T}
+    d_st::DiscreteDeltaStochasticTriple{T, <:Binomial}) where {T}
     d = d_st.value
     val = rand(rng, d)
     function map_func(Δ)
@@ -241,7 +241,7 @@ function Base.rand(rng::AbstractRNG,
             return rand(StochasticAD.RNG, Binomial(Δ, value(succprob(d))))
         else
             return -rand(StochasticAD.RNG,
-                         Hypergeometric(value(val), ntrials(d) - value(val), -Δ))
+                Hypergeometric(value(val), ntrials(d) - value(val), -Δ))
         end
     end
     Δs = map(map_func, d_st.Δs)

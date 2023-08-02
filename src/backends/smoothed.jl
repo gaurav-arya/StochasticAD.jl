@@ -42,8 +42,8 @@ StochasticAD.new_Δs_strategy(::SmoothedFIs) = StochasticAD.TwoSidedStrategy()
 
 ### Scale a perturbation
 
-function StochasticAD.scale(Δs::SmoothedFIs{V}, scale::Real) where {V}
-    SmoothedFIs{V}(Δs.δ * scale)
+function StochasticAD.scale(Δs::SmoothedFIs{V}, a::Real) where {V}
+    SmoothedFIs{V}(Δs.δ * a)
 end
 
 ### Create Δs backend for the first stochastic triple of computation

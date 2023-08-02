@@ -20,11 +20,11 @@ end
 
 ## Strategies for forming perturbations
 
-struct SingleSidedStrategy end
-struct TwoSidedStrategy end
-struct SmoothedStraightThroughStrategy end
-struct StraightThroughStrategy end
-struct DropStrategy end
+struct SingleSidedStrategy <: AbstractPerturbationStrategy end
+struct TwoSidedStrategy <: AbstractPerturbationStrategy end
+struct SmoothedStraightThroughStrategy <: AbstractPerturbationStrategy end
+struct StraightThroughStrategy <: AbstractPerturbationStrategy end
+struct DropStrategy <: AbstractPerturbationStrategy end
 
 new_Δs_strategy(Δs) = SingleSidedStrategy()
 

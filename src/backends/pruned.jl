@@ -93,7 +93,7 @@ StochasticAD.alltrue(f, Δs::PrunedFIs) = f(Δs.Δ)
 
 function StochasticAD.get_rep(::Type{<:PrunedFIs}, Δs_all)
     # The code below is a bit ridiculous, but it's faster than `first` for small structures:)
-    foldl((Δs1, Δs2) -> Δs1, StochasticAD.structural_iterate(Δs_all))
+    return StochasticAD.get_any(Δs_all)
 end
 
 function get_pruned_state(Δs_all)

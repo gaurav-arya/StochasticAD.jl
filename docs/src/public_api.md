@@ -12,7 +12,11 @@ StochasticAD.value
 StochasticAD.delta
 StochasticAD.perturbations
 ```
-Note that [`derivative_estimate`](@ref) is simply the composition of [`stochastic_triple`](@ref) and [`derivative_contribution`](@ref). 
+Note that [`derivative_estimate`](@ref) is simply the composition of [`stochastic_triple`](@ref) and [`derivative_contribution`](@ref). We also provide a convenience function for mimicking the behaviour
+of standard AD, where derivatives of discrete random steps are dropped:
+```@docs
+StochasticAD.dual_number
+```
 
 ## Smoothing
 

@@ -20,11 +20,11 @@ end
 
 ## Strategies for forming perturbations
 
-struct SingleSidedStrategy end
-struct TwoSidedStrategy end
-struct SmoothedStraightThroughStrategy end
-struct StraightThroughStrategy end
-struct DropStrategy end
+struct SingleSidedStrategy <: AbstractPerturbationStrategy end
+struct TwoSidedStrategy <: AbstractPerturbationStrategy end
+struct SmoothedStraightThroughStrategy <: AbstractPerturbationStrategy end
+struct StraightThroughStrategy <: AbstractPerturbationStrategy end
+struct IgnoreDiscreteStrategy <: AbstractPerturbationStrategy end
 
 new_Δs_strategy(Δs) = SingleSidedStrategy()
 
@@ -48,7 +48,7 @@ function δtoΔs(d::Union{Bernoulli, Binomial}, val, δ, Δs, ::StraightThroughS
     Δs2 = _δtoΔs(d, val, -δ, Δs)
     return combine((scale(Δs1, 1 - p), scale(Δs2, -p)))
 end
-δtoΔs(d, val::V, δ, Δs, ::DropStrategy) where {V} = similar_empty(Δs, V)
+δtoΔs(d, val::V, δ, Δs, ::IgnoreDiscreteStrategy) where {V} = similar_empty(Δs, V)
 
 # Implement straight through strategy, works for all distrs but only supports SmoothedFIs
 function δtoΔs(d, val, δ, Δs::SmoothedFIs, ::SmoothedStraightThroughStrategy)

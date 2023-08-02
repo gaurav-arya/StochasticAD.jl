@@ -243,6 +243,12 @@ end
 
 stochastic_triple(p; kwargs...) = stochastic_triple(identity, p; kwargs...)
 
+function dual_number(f, p; backend=PrunedFIsBackend(), kwargs...)
+    backend = StrategyWrapperBackend(backend, IgnoreDiscreteStrategy())
+    stochastic_triple(f, p; backend, kwargs...)
+end
+dual_number(p; kwargs...) = dual_number(identity, p; kwargs...)
+
 @doc raw"""
     derivative_estimate(X, p; backend=PrunedFIsBackend(), direction=nothing)
 

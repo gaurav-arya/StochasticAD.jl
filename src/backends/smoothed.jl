@@ -94,7 +94,7 @@ end
 
 ### Miscellaneous
 
-StochasticAD.similar_type(::Type{<:SmoothedFIs}, V::Type) = SmoothedFIs{V}
+StochasticAD.similar_type(::Type{<:SmoothedFIs}, V::Type) = SmoothedFIs{V, Float64}
 StochasticAD.valtype(::Type{<:SmoothedFIs{V}}) where {V} = V
 
 function Base.show(io::IO, Δs::SmoothedFIs)

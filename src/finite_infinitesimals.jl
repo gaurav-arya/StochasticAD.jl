@@ -24,9 +24,12 @@ function similar_type end
 
 valtype(Δs::AbstractFIs) = valtype(typeof(Δs))
 
-couple(Δs_all; kwargs...) = couple(eltype(Δs_all), Δs_all; kwargs...)
-combine(Δs_all; kwargs...) = combine(eltype(Δs_all), Δs_all; kwargs...)
-get_rep(Δs_all; kwargs...) = get_rep(eltype(Δs_all), Δs_all; kwargs...)
+# TODO: typeof ∘ first is a loose check, should make more robust.
+# Done rather than eltype to avoid unnecessary unions over the type params, when we ultimately
+# only essentially care about the parameterless type.
+couple(Δs_all; kwargs...) = couple(typeof(first(Δs_all)), Δs_all; kwargs...) 
+combine(Δs_all; kwargs...) = combine(typeof(first(Δs_all)), Δs_all; kwargs...)
+get_rep(Δs_all; kwargs...) = get_rep(typeof(first(Δs_all)), Δs_all; kwargs...)
 function scalarize end
 
 function derivative_contribution end
@@ -84,8 +87,8 @@ function similar_empty(Δs::StrategyWrapperFIs, V)
     return StrategyWrapperFIs(similar_empty(Δs.Δs, V), Δs.strategy)
 end
 
-function similar_type(Δs::StrategyWrapperFIs, V)
-    return StrategyWrapperFIs(similar_type(Δs.Δs, V), Δs.strategy)
+function similar_type(::Type{<:StrategyWrapperFIs{V0, FIs, S}}, V) where {V0, FIs, S}
+    return StrategyWrapperFIs{V, similar_type(FIs, V), S}
 end
 
 function valtype(Δs::StrategyWrapperFIs)
@@ -108,8 +111,8 @@ function get_rep(::Type{<:StrategyWrapperFIs{V, FIs}}, Δs_all; kwargs...) where
 end
 
 function scalarize(Δs::StrategyWrapperFIs; kwargs...)
-    return structural_map(scalarize(Δs.Δs; kwargs...)) do Δs
-        StrategyWrapperFIs(Δs, Δs.strategy)
+    return structural_map(scalarize(Δs.Δs; kwargs...)) do _Δs
+        StrategyWrapperFIs(_Δs, Δs.strategy)
     end
 end
 
@@ -137,8 +140,8 @@ function new_Δs_strategy(Δs::StrategyWrapperFIs)
     return Δs.strategy
 end
 
-function Base.empty(Δs::Type{<:StrategyWrapperFIs{V, FIs, S}}) where {V, FIs, S}
-    return StrategyWrapperFIs(empty(FIs), empty(S))
+function Base.empty(::Type{<:StrategyWrapperFIs{V, FIs, S}}) where {V, FIs, S}
+    return StrategyWrapperFIs(empty(FIs), empty(S)) 
 end
 
 function Base.empty(Δs::StrategyWrapperFIs)
@@ -160,6 +163,8 @@ end
 function scale(Δs::StrategyWrapperFIs, a)
     return StrategyWrapperFIs(scale(Δs.Δs, a), Δs.strategy)
 end
+
+derivative_contribution(Δs::StrategyWrapperFIs) = derivative_contribution(Δs.Δs)
 
 function (::Type{<:StrategyWrapperFIs{V}})(Δs::StrategyWrapperFIs) where {V}
     StrategyWrapperFIs(similar_type(typeof(Δs.Δs), V)(Δs.Δs), Δs.strategy)

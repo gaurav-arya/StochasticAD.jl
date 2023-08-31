@@ -50,11 +50,12 @@ function δtoΔs(d::Union{Bernoulli, Binomial}, val, δ, Δs, ::StraightThroughS
 end
 δtoΔs(d, val::V, δ, Δs, ::IgnoreDiscreteStrategy) where {V} = similar_empty(Δs, V)
 
-# Implement straight through strategy, works for all distrs but only supports SmoothedFIs
-function δtoΔs(d, val, δ, Δs::SmoothedFIs, ::SmoothedStraightThroughStrategy)
+# Implement straight through strategy, works for all distrs, but does something that is only
+# meaningful for smoothed backends (using one(val))
+function δtoΔs(d, val, δ, Δs, ::SmoothedStraightThroughStrategy)
     p = _get_parameter(d)
     δout = ForwardDiff.derivative(a -> mean(_reconstruct(d, p + a * δ)), 0.0)
-    return SmoothedFIs{typeof(val)}(δout)
+    return similar_new(Δs, one(val), δout)
 end
 
 ## Stochastic derivative rules for discrete distributions

@@ -47,7 +47,7 @@ If `f` has a continuously differentiable component that should be kept,
 This function is highly experimental, and is intentionally undocumented.
 """
 # TODO: support kwargs to f (or just use kwfunc in macro)
-function propagate(f, args...; keep_deltas = Val{false}, provided_st_rep=nothing)
+function propagate(f, args...; keep_deltas = Val{false}, provided_st_rep = nothing)
     #= 
     TODO: maybe don't iterate through every scalar of array below, 
     but rather have special array dispatch

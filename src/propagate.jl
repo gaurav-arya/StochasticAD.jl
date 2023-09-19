@@ -47,7 +47,11 @@ If `f` has a continuously differentiable component that should be kept,
 This function is highly experimental, and is intentionally undocumented.
 """
 # TODO: support kwargs to f (or just use kwfunc in macro)
-function propagate(f, args...; keep_deltas = Val{false}, provided_st_rep = nothing, deriv=nothing)
+function propagate(f,
+    args...;
+    keep_deltas = Val{false},
+    provided_st_rep = nothing,
+    deriv = nothing)
     #= 
     TODO: maybe don't iterate through every scalar of array below, 
     but rather have special array dispatch
@@ -97,8 +101,8 @@ function propagate(f, args...; keep_deltas = Val{false}, provided_st_rep = nothi
         alt = f(perturbed_args...)
         return structural_map((x, y) -> value(x) - y, alt, val)
     end
-    Δs = map(map_func, Δs_coupled; out_rep = val, deriv) 
-    # TODO: make sure all FI backends support interface needed below
+    Δs = map(map_func, Δs_coupled; out_rep = val, deriv)
+    u   # TODO: make sure all FI backends support interface needed below
     new_out = structural_map(out, scalarize(Δs; out_rep = val)) do leaf_out, leaf_Δs
         StochasticAD.StochasticTriple{tag(st_rep)}(value(leaf_out), delta(leaf_out),
             leaf_Δs)

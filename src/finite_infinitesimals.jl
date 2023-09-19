@@ -26,7 +26,7 @@ valtype(Δs::AbstractFIs) = valtype(typeof(Δs))
 
 # TODO: typeof ∘ first is a loose check, should make more robust.
 # TODO: perhaps deprecate these methods in favor of an explicit first argument?
-couple(Δs_all; kwargs...) = couple(typeof(first(Δs_all)), Δs_all; kwargs...) 
+couple(Δs_all; kwargs...) = couple(typeof(first(Δs_all)), Δs_all; kwargs...)
 combine(Δs_all; kwargs...) = combine(typeof(first(Δs_all)), Δs_all; kwargs...)
 get_rep(Δs_all; kwargs...) = get_rep(typeof(first(Δs_all)), Δs_all; kwargs...)
 function scalarize end
@@ -140,7 +140,7 @@ function new_Δs_strategy(Δs::StrategyWrapperFIs)
 end
 
 function Base.empty(::Type{<:StrategyWrapperFIs{V, FIs, S}}) where {V, FIs, S}
-    return StrategyWrapperFIs(empty(FIs), empty(S)) 
+    return StrategyWrapperFIs(empty(FIs), empty(S))
 end
 
 function Base.empty(Δs::StrategyWrapperFIs)

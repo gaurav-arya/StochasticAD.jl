@@ -25,8 +25,7 @@ function similar_type end
 valtype(Δs::AbstractFIs) = valtype(typeof(Δs))
 
 # TODO: typeof ∘ first is a loose check, should make more robust.
-# Done rather than eltype to avoid unnecessary unions over the type params, when we ultimately
-# only essentially care about the parameterless type.
+# TODO: perhaps deprecate these methods in favor of an explicit first argument?
 couple(Δs_all; kwargs...) = couple(typeof(first(Δs_all)), Δs_all; kwargs...) 
 combine(Δs_all; kwargs...) = combine(typeof(first(Δs_all)), Δs_all; kwargs...)
 get_rep(Δs_all; kwargs...) = get_rep(typeof(first(Δs_all)), Δs_all; kwargs...)

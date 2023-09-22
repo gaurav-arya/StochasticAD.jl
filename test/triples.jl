@@ -13,7 +13,10 @@ const backends = [
     DictFIsBackend(),
 ]
 
-const backends_smoothed = [SmoothedFIsBackend()]
+const backends_smoothed = [
+    SmoothedFIsBackend(),
+    StrategyWrapperFIsBackend(SmoothedFIsBackend(), StochasticAD.TwoSidedStrategy()),
+]
 
 @testset "Distributions w.r.t. continuous parameter" begin
     for backend in vcat(backends,

@@ -15,7 +15,7 @@ const backends = [
 
 const backends_smoothed = [
     SmoothedFIsBackend(),
-    StrategyWrapperFIsBackend(SmoothedFIsBackend(), StochasticAD.SingleSidedStrategy()),
+    StrategyWrapperFIsBackend(SmoothedFIsBackend(), StochasticAD.TwoSidedStrategy()),
 ]
 
 @testset "Distributions w.r.t. continuous parameter" begin

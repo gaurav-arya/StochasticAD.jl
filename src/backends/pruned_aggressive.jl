@@ -100,8 +100,10 @@ StochasticAD.perturbations(Δs::PrunedFIsAggressive) = ((pruned_value(Δs), Δs.
 
 ### Unary propagation
 
-function StochasticAD.map_Δs(f, Δs::PrunedFIsAggressive; kwargs...)
-    PrunedFIsAggressive(f(Δs.Δ, nothing), Δs.tag, Δs.state)
+function StochasticAD.weighted_map_Δs(f, Δs::PrunedFIsAggressive; kwargs...)
+    Δ_out, weight_out = f(Δs.Δ, nothing)
+    Δs.state.weight *= weight_out
+    PrunedFIsAggressive(Δ_out, Δs.tag, Δs.state)
 end
 
 StochasticAD.alltrue(f, Δs::PrunedFIsAggressive) = f(Δs.Δ)

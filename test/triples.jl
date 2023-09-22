@@ -347,6 +347,10 @@ end
             # We use a dummy deriv here and below. TODO: use a more interesting dummy for better testing.
             Δs1_map = Base.map(Δ -> Δ^2, Δs1; deriv = identity, out_rep = Δ)
             !is_smoothed_backend && @test derivative_contribution(Δs1_map) ≈ Δ^2 * 3.0
+            # Test map with weight (make a new copy so that original does not get reweighted)
+            Δs2 = StochasticAD.similar_new(StochasticAD.create_Δs(backend, V0), Δ, 3.0)
+            Δs2_weight_map = StochasticAD.weighted_map_Δs((Δ, _) -> (Δ^2, 2.0), Δs2; deriv = identity, out_rep = Δ)
+            !is_smoothed_backend && @test derivative_contribution(Δs2_weight_map) ≈ Δ^2 * 3.0 * 2.0
             # Test map_Δs with filter state
             if !is_smoothed_backend
                 Δs1_plus_Δs0 = StochasticAD.map_Δs((Δ, state) -> Δ +

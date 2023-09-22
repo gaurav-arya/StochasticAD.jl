@@ -40,12 +40,6 @@ end
 
 StochasticAD.new_Δs_strategy(::SmoothedFIs) = StochasticAD.TwoSidedStrategy()
 
-### Scale a perturbation
-
-function StochasticAD.scale(Δs::SmoothedFIs{V}, a::Real) where {V}
-    SmoothedFIs{V}(Δs.δ * a)
-end
-
 ### Create Δs backend for the first stochastic triple of computation
 
 StochasticAD.create_Δs(::SmoothedFIsBackend, V) = SmoothedFIs{V}(0.0)
@@ -66,7 +60,7 @@ StochasticAD.derivative_contribution(Δs::SmoothedFIs) = Δs.δ
 
 ### Unary propagation
 
-function StochasticAD.map_Δs(f, Δs::SmoothedFIs; deriv, out_rep, kwargs...)
+function StochasticAD.weighted_map_Δs(f, Δs::SmoothedFIs; deriv, out_rep, kwargs...)
     SmoothedFIs{typeof(out_rep)}(deriv(Δs.δ))
 end
 

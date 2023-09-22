@@ -92,10 +92,13 @@ StochasticAD.perturbations(Δs::DictFIs) = [(Δ, event.w) for (event, Δ) in pai
 
 ### Unary propagation
 
-function StochasticAD.map_Δs(f, Δs::DictFIs; kwargs...)
+function StochasticAD.weighted_map_Δs(f, Δs::DictFIs; kwargs...)
     # Pass key as state in map
-    mapped_values = map(f, collect(Δs.dict), keys(Δs.dict))
-    dict = Dictionary(keys(Δs.dict), mapped_values)
+    mapped_values_and_weights = map(f, collect(Δs.dict), keys(Δs.dict))
+    mapped_values = first.(mapped_values_and_weights)
+    mapped_weights = last.(mapped_values_and_weights)
+    scaled_events = map((event, a) -> InfinitesimalEvent(event.tag, event.w * a), keys(Δs.dict), mapped_weights)
+    dict = Dictionary(scaled_events, mapped_values)
     DictFIs(dict, Δs.state)
 end
 

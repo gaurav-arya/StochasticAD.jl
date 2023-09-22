@@ -179,7 +179,7 @@ for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
             alt_val = quantile(alt_d, rand(RNG) * (high - low) + low)
             convert(Signed, alt_val - val)
         end
-        function enumeration(Δ)
+        function enumeration(Δ, _)
             alt_d = get_alt_d(Δ)
             if _has_finite_support(alt_d)
                 map(_get_support(alt_d)) do alt_val
@@ -231,7 +231,7 @@ function Base.rand(rng::AbstractRNG,
         alt_val = quantile(alt_d, rand(RNG) * (high - low) + low)
         convert(Signed, alt_val - val)
     end
-    function enumeration(Δ)
+    function enumeration(Δ, _)
         alt_d = get_alt_d(Δ)
         if _has_finite_support(alt_d)
             map(_get_support(alt_d)) do alt_val

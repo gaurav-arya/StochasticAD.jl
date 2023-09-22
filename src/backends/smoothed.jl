@@ -66,7 +66,7 @@ StochasticAD.derivative_contribution(Δs::SmoothedFIs) = Δs.δ
 
 ### Unary propagation
 
-function StochasticAD.map_Δs(f, Δs::SmoothedFIs; deriv, out_rep)
+function StochasticAD.map_Δs(f, Δs::SmoothedFIs; deriv, out_rep, kwargs...)
     SmoothedFIs{typeof(out_rep)}(deriv(Δs.δ))
 end
 

@@ -52,7 +52,8 @@ end
 function scale(Δs::AbstractFIs, a::Real)
     StochasticAD.weighted_map_Δs((Δs, state) -> (f(Δs, state), a),
         Δs;
-        deriv = Base.Fix1(*, a))
+        deriv = Base.Fix1(*, a),
+        out_rep = Δs)
 end
 
 function new_Δs_strategy end

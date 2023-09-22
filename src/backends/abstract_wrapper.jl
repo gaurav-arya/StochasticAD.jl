@@ -94,10 +94,6 @@ Base.isempty(Δs::AbstractWrapperFIs) = isempty(Δs.Δs)
 Base.length(Δs::AbstractWrapperFIs) = length(Δs.Δs)
 Base.iszero(Δs::AbstractWrapperFIs) = iszero(Δs.Δs)
 
-function StochasticAD.scale(Δs::AbstractWrapperFIs, a)
-    reconstruct_wrapper(Δs, StochasticAD.scale(Δs.Δs, a))
-end
-
 function StochasticAD.derivative_contribution(Δs::AbstractWrapperFIs)
     StochasticAD.derivative_contribution(Δs.Δs)
 end

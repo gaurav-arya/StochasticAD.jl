@@ -79,8 +79,8 @@ function StochasticAD.filter_state(Δs::AbstractWrapperFIs, state)
     StochasticAD.filter_state(Δs.Δs, state)
 end
 
-function StochasticAD.map_Δs(f, Δs::AbstractWrapperFIs; kwargs...)
-    reconstruct_wrapper(Δs, StochasticAD.map_Δs(f, Δs.Δs; kwargs...))
+function StochasticAD.weighted_map_Δs(f, Δs::AbstractWrapperFIs; kwargs...)
+    reconstruct_wrapper(Δs, StochasticAD.weighted_map_Δs(f, Δs.Δs; kwargs...))
 end
 
 StochasticAD.new_Δs_strategy(Δs::AbstractWrapperFIs) = StochasticAD.new_Δs_strategy(Δs.Δs)
@@ -93,10 +93,6 @@ Base.empty(Δs::AbstractWrapperFIs) = reconstruct_wrapper(Δs, empty(Δs.Δs))
 Base.isempty(Δs::AbstractWrapperFIs) = isempty(Δs.Δs)
 Base.length(Δs::AbstractWrapperFIs) = length(Δs.Δs)
 Base.iszero(Δs::AbstractWrapperFIs) = iszero(Δs.Δs)
-
-function StochasticAD.scale(Δs::AbstractWrapperFIs, a)
-    reconstruct_wrapper(Δs, StochasticAD.scale(Δs.Δs, a))
-end
 
 function StochasticAD.derivative_contribution(Δs::AbstractWrapperFIs)
     StochasticAD.derivative_contribution(Δs.Δs)

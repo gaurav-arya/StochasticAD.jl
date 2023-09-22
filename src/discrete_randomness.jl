@@ -6,17 +6,30 @@ _param_index(::Bernoulli) = 1
 _param_index(::Binomial) = 2
 _param_index(::Poisson) = 1
 _param_index(::Categorical) = 1
+
+_get_parameter(d) = params(d)[_param_index(d)]
+
 # constructors
 for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson, :Categorical]
     @eval _constructor(::$dist) = $dist
 end
 
-_get_parameter(d) = params(d)[_param_index(d)]
 # reconstruct probability distribution with new paramter value
 function _reconstruct(d, p)
     i = _param_index(d)
     return _constructor(d)(params(d)[1:(i - 1)]..., p, params(d)[(i + 1):end]...)
 end
+
+# support of probability distribution
+_has_finite_support(d) = false
+_has_finite_support(d::Union{Bernoulli, Binomial, Categorical}) = true
+
+_get_support(d::Union{Bernoulli, Binomial, Categorical}) = minimum(d):maximum(d)
+# manual overloads to ensure that static-ness is preserved for Bernoulli's and Categoricals with static arrays.
+# since mapping over the range above could result in allocating vectors.
+_get_support(::Bernoulli) = (0, 1)
+# the map below looks a bit silly, but it gives us a collection of the categories with the same structure as probs(d). 
+_get_support(d::Categorical) = map((val, prob) -> val, 1:ncategories(d), probs(d))
 
 ## Strategies for forming perturbations
 
@@ -150,7 +163,8 @@ end
 
 for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
     @eval function Base.rand(rng::AbstractRNG,
-        d_st::$dist{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+        d_st::$dist{StochasticTriple{T, V, FIs}};
+        stochastic_ad_map_kwargs = (;)) where {T, V, FIs}
         st = _get_parameter(d_st)
         d = _reconstruct(d_st, st.value)
         val = convert(Signed, rand(rng, d))
@@ -159,12 +173,33 @@ for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
         low = cdf(d, val - 1)
         high = cdf(d, val)
 
+        get_alt_d(Δ) = _reconstruct(d_st, st.value + Δ)
         function map_func(Δ)
-            alt_d = _reconstruct(d_st, st.value + Δ)
+            alt_d = get_alt_d(Δ)
             alt_val = quantile(alt_d, rand(RNG) * (high - low) + low)
             convert(Signed, alt_val - val)
         end
-        Δs2 = map(map_func, st.Δs; deriv = δ -> smoothed_delta(d, val, δ), out_rep = val)
+        function enumeration(Δ)
+            alt_d = get_alt_d(Δ)
+            if _has_finite_support(alt_d)
+                map(_get_support(alt_d)) do alt_val
+                    # interval intersect of (cdf(alt_d, alt_val - 1), cdf(alt_d, alt_val)) and (low, high)
+                    alt_low = cdf(alt_d, alt_val - 1)
+                    alt_high = cdf(alt_d, alt_val)
+                    prob_alt = max(0.0, min(alt_high, high) - max(alt_low, low)) /
+                               (high - low)
+                    return (alt_val - val, prob_alt)
+                end
+            else
+                error("enumeration not supported for distribution $d. Does $d have finite support?")
+            end
+        end
+        Δs2 = map(map_func,
+            st.Δs;
+            enumeration,
+            deriv = δ -> smoothed_delta(d, val, δ),
+            out_rep = val,
+            stochastic_ad_map_kwargs...)
 
         StochasticTriple{T}(val, zero(val), combine((Δs2, Δs1); rep = Δs1)) # ensure that tags are in order in combine, in case backend wishes to exploit this 
     end
@@ -174,7 +209,7 @@ end
 # what if some elements in vector are not stochastic triples... promotion should take care of that?
 function Base.rand(rng::AbstractRNG,
     d_st::Categorical{<:StochasticTriple{T},
-        <:AbstractVector{<:StochasticTriple{T, V}}}) where {T,
+        <:AbstractVector{<:StochasticTriple{T, V}}}; stochastic_ad_map_kwargs = (;)) where {T,
     V}
     sts = _get_parameter(d_st) # stochastic triple for each probability
     p = map(st -> st.value, sts) # try to keep the same type. e.g. static array -> static array. TODO: avoid allocations 
@@ -190,11 +225,32 @@ function Base.rand(rng::AbstractRNG,
     high = cdf(d, val)
     Δs_coupled = couple(Δs_all; rep = Δs_rep, out_rep = p) # TODO: again, there are possible allocations here
 
+    get_alt_d(Δ) = _reconstruct(d, p .+ Δ)
     function map_func(Δ)
-        alt_val = quantile(_reconstruct(d, p .+ Δ), rand(RNG) * (high - low) + low)
+        alt_d = get_alt_d(Δ)
+        alt_val = quantile(alt_d, rand(RNG) * (high - low) + low)
         convert(Signed, alt_val - val)
     end
-    Δs2 = map(map_func, Δs_coupled; deriv = δ -> smoothed_delta(d, val, δ), out_rep = val)
+    function enumeration(Δ)
+        alt_d = get_alt_d(Δ)
+        if _has_finite_support(alt_d)
+            map(_get_support(alt_d)) do alt_val
+                # interval intersect of (cdf(alt_d, alt_val - 1), cdf(alt_d, alt_val)) and (low, high)
+                alt_low = cdf(alt_d, alt_val - 1)
+                alt_high = cdf(alt_d, alt_val)
+                prob_alt = max(0.0, min(alt_high, high) - max(alt_low, low)) / (high - low)
+                return (alt_val - val, prob_alt)
+            end
+        else
+            error("enumeration not supported for distribution $d. Does $d have finite support?")
+        end
+    end
+    Δs2 = map(map_func,
+        Δs_coupled;
+        enumeration,
+        deriv = δ -> smoothed_delta(d, val, δ),
+        out_rep = val,
+        stochastic_ad_map_kwargs...)
 
     StochasticTriple{T}(val, zero(val), combine((Δs2, Δs1); rep = Δs_rep))
 end

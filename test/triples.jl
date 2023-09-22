@@ -621,3 +621,9 @@ end
     f2_est = mean(derivative_estimate(f2, p) for i in 1:10000)
     @test f_est≈f2_est rtol=5e-2
 end
+
+@testset "No unnecessary float promotion" begin
+    f(p) = rand(Bernoulli(p))^2
+    st = stochastic_triple(f, 0.5)
+    @test StochasticAD.valtype(st) == typeof(convert(Signed, f(0.5)))
+end

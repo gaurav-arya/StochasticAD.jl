@@ -42,10 +42,18 @@ function perturbations end
 function filter_state end
 
 function weighted_map_Δs end
-map_Δs(f, Δs::AbstractFIs; kwargs...) = StochasticAD.weighted_map_Δs((Δs, state) -> (f(Δs, state), 1.0), Δs; kwargs...)
-Base.map(f, Δs::AbstractFIs; kwargs...) = StochasticAD.map_Δs((Δs, _) -> f(Δs), Δs; kwargs...)
+function map_Δs(f, Δs::AbstractFIs; kwargs...)
+    StochasticAD.weighted_map_Δs((Δs, state) -> (f(Δs, state), 1.0), Δs; kwargs...)
+end
+function Base.map(f, Δs::AbstractFIs; kwargs...)
+    StochasticAD.map_Δs((Δs, _) -> f(Δs), Δs; kwargs...)
+end
 # We also add a scale to deriv for scaling smoothed perturbations 
-scale(Δs::AbstractFIs, a::Real) = StochasticAD.weighted_map_Δs((Δs, state) -> (f(Δs, state), a), Δs; deriv = Base.Fix1(*, a))
+function scale(Δs::AbstractFIs, a::Real)
+    StochasticAD.weighted_map_Δs((Δs, state) -> (f(Δs, state), a),
+        Δs;
+        deriv = Base.Fix1(*, a))
+end
 
 function new_Δs_strategy end
 

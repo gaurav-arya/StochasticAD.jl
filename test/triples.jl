@@ -355,6 +355,11 @@ end
                 out_rep = Δ)
             !is_smoothed_backend &&
                 @test derivative_contribution(Δs2_weight_map) ≈ Δ^2 * 3.0 * 2.0
+            # Also test scale
+            w2 = derivative_contribution(Δs2)
+            Δs2_scaled = StochasticAD.scale(Δs2, 2.0)
+            w2_scaled = derivative_contribution(Δs2_scaled)
+            @test w2_scaled ≈ 2.0 * w2
             # Test map_Δs with filter state
             if !is_smoothed_backend
                 Δs1_plus_Δs0 = StochasticAD.map_Δs((Δ, state) -> Δ +

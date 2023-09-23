@@ -50,7 +50,7 @@ function Base.map(f, Δs::AbstractFIs; kwargs...)
 end
 # We also add a scale to deriv for scaling smoothed perturbations 
 function scale(Δs::AbstractFIs, a::Real)
-    StochasticAD.weighted_map_Δs((Δs, state) -> (f(Δs, state), a),
+    StochasticAD.weighted_map_Δs((Δ, state) -> (Δ, a),
         Δs;
         deriv = Base.Fix1(*, a),
         out_rep = Δs)

@@ -109,8 +109,8 @@ function get_pruned_state(Δs_all)
             return (total_weight, new_state)
         end
         w = candidate_state.weight
-        total_weight += w
-        if rand(StochasticAD.RNG) * total_weight < w
+        total_weight += abs(w)
+        if rand(StochasticAD.RNG) * total_weight < abs(w)
             new_state !== nothing && (new_state.valid = false)
             new_state = candidate_state
         else
@@ -121,7 +121,7 @@ function get_pruned_state(Δs_all)
     (_total_weight, _new_state) = foldl(op, StochasticAD.structural_iterate(Δs_all);
         init = (0.0, nothing))
     if _new_state !== nothing
-        _new_state.weight = _total_weight
+        _new_state.weight = _total_weight * sign(_new_state.weight)
     else
         _new_state = PrunedFIsState(false) # TODO: can this be avoided?
     end

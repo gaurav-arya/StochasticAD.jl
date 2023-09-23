@@ -1,5 +1,4 @@
 using Pkg
-Pkg.add(url = "https://github.com/JuliaDocs/Documenter.jl") # Documenter.jl has some unreleased features I want. TODO: remove
 
 using Documenter, StochasticAD, DocThemeIndigo
 
@@ -31,7 +30,8 @@ makedocs(sitename = "StochasticAD.jl",
     authors = "Gaurav Arya and other contributors",
     modules = [StochasticAD],
     format = format,
-    pages = pages)
+    pages = pages,
+    warnonly = [:missing_docs])
 
 try
     deploydocs(repo = "github.com/gaurav-arya/StochasticAD.jl",

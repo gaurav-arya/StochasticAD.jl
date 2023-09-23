@@ -31,15 +31,7 @@ makedocs(sitename = "StochasticAD.jl",
     authors = "Gaurav Arya and other contributors",
     modules = [StochasticAD],
     format = format,
-    pages = pages,
-    strict = [
-        :doctest,
-        :linkcheck,
-        :parse_error,
-        :example_block,
-        # Other available options are
-        # :autodocs_block, :cross_references, :docs_block, :eval_block, :example_block, :footnote, :meta_block, :missing_docs, :setup_block
-    ])
+    pages = pages)
 
 try
     deploydocs(repo = "github.com/gaurav-arya/StochasticAD.jl",

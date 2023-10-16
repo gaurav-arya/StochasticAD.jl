@@ -18,6 +18,7 @@ dispatch may be necessary. For example, consider the following function which ma
 ```@example rule
 import Random # hide
 Random.seed!(1234) # hide
+using Distributions
 function mygeometric(p)
     x = 0
     while !(rand(Bernoulli(p)))
@@ -40,7 +41,7 @@ Y_L = X + 1, w_L = -\frac{x+1}{p}.
 Using these expressions, we can now write the dispatch rule for stochastic triples:
 
 ```@example rule
-using StochasticAD, Distributions
+using StochasticAD
 import StochasticAD: StochasticTriple, similar_new, similar_empty, combine
 function mygeometric(p_st::StochasticTriple{T}) where {T}
     p = p_st.value

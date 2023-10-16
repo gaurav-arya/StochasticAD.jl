@@ -21,6 +21,7 @@ pages = [
         "tutorials/optimizations.md",
     ],
     "Public API" => "public_api.md",
+    "Developer documentation" => "devdocs.md",
     "Limitations" => "limitations.md",
 ]
 

@@ -39,7 +39,8 @@ end
 """
     propagate(f, args...; keep_deltas = Val(false))
 
-Propagates `args` through a function `f`, handling stochastic triples appropriately.
+Propagates `args` through a function `f`, handling stochastic triples by independently running `f` on the primal
+and the alternatives, rather than by inspecting the internals of `f` (which may possibly be unsupported by `StochasticAD`).
 Currently handles deterministic functions `f` with any input and output that is `fmap`-able by `Functors.jl`.
 If `f` has a continuously differentiable component, provide `keep_deltas = Val(true)`.
 

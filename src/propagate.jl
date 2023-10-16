@@ -37,21 +37,55 @@ function strip_Δs(arg)
 end
 
 """
-    propagate(f, args...; keep_deltas = Val{true})
+    propagate(f, args...; keep_deltas = Val(false))
 
 Propagates `args` through a function `f`, handling stochastic triples appropriately.
-This functionality is orthogonal to dispatch: the idea is for this function to be
-the "backend" for operator overloading rules. 
-Currently, we handle deterministic functions `f` with input and output supported by `Functors.jl`.
-If `f` has a continuously differentiable component that should be kept,  
-This function is highly experimental, and is intentionally undocumented.
+Currently handles deterministic functions `f` with any input and output that is `fmap`-able by `Functors.jl`.
+If `f` has a continuously differentiable component, provide `keep_deltas = Val(true)`.
+
+This functionality is orthogonal to dispatch: the idea is for this function to be the "backend" for operator 
+overloading rules based on dispatch. For example:
+
+```jldoctest
+using StochasticAD, Distributions
+import Random # hide
+Random.seed!(4321) # hide
+
+function mybranch(x)
+    str = repr(x) # string-valued intermediate!
+    if length(str) < 2
+        return 3
+    else
+        return 7
+    end
+end
+
+function f(x)
+    return mybranch(9 + rand(Bernoulli(x)))
+end
+
+# stochastic_triple(f, 0.5) # this would fail
+
+# Add a dispatch rule for mybranch using StochasticAD.propagate
+mybranch(x::StochasticAD.StochasticTriple) = StochasticAD.propagate(mybranch, x)
+
+stochastic_triple(f, 0.5) # now works
+
+# output
+
+StochasticTriple of Int64:
+3 + 0ε + (4 with probability 2.0ε)
+```
+
+!!! warning
+    This function is experimental and subject to change.
 """
-# TODO: support kwargs to f (or just use kwfunc in macro)
 function propagate(f,
     args...;
-    keep_deltas = Val{false},
+    keep_deltas = Val(false),
     provided_st_rep = nothing,
     deriv = nothing)
+    # TODO: support kwargs to f (or just use kwfunc in macro)
     #= 
     TODO: maybe don't iterate through every scalar of array below, 
     but rather have special array dispatch
@@ -78,7 +112,7 @@ function propagate(f,
     end
 
     primal_args = structural_map(get_value, args)
-    input_args = keep_deltas == Val{false} ? primal_args : structural_map(strip_Δs, args)
+    input_args = keep_deltas isa Val{false} ? primal_args : structural_map(strip_Δs, args)
     #= 
     TODO: the below is dangerous is general.
     It should be safe so long as f does not close over stochastic triples.

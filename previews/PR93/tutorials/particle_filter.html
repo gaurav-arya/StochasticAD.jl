@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Differentiable particle filter · StochasticAD.jl</title><meta name="title" content="Differentiable particle filter · StochasticAD.jl"/><meta property="og:title" content="Differentiable particle filter · StochasticAD.jl"/><meta property="twitter:title" content="Differentiable particle filter · StochasticAD.jl"/><meta name="description" content="Documentation for StochasticAD.jl."/><meta property="og:description" content="Documentation for StochasticAD.jl."/><meta property="twitter:description" content="Documentation for StochasticAD.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.048/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.4/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script><link href="../assets/indigo.css" rel="stylesheet" type="text/css"/><link href="../assets/extra_styles.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../index.html">StochasticAD.jl</a></span></div><form class="docs-search" action="../search.html"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs (Ctrl + /)"/></form><ul class="docs-menu"><li><a class="tocitem" href="../index.html">Overview</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="random_walk.html">Random walk</a></li><li><a class="tocitem" href="game_of_life.html">Stochastic Game of Life</a></li><li class="is-active"><a class="tocitem" href="particle_filter.html">Differentiable particle filter</a><ul class="internal"><li><a class="tocitem" href="#Setup"><span>Setup</span></a></li><li><a class="tocitem" href="#Model"><span>Model</span></a></li><li><a class="tocitem" href="#Visualization"><span>Visualization</span></a></li><li><a class="tocitem" href="#Bias"><span>Bias</span></a></li><li><a class="tocitem" href="#Benchmark"><span>Benchmark</span></a></li></ul></li><li><a class="tocitem" href="optimizations.html">Stochastic optimizations with discrete randomness</a></li><li><a class="tocitem" href="random_scattering.html">Random scattering (deflection) of a single particle</a></li></ul></li><li><a class="tocitem" href="../public_api.html">Public API</a></li><li><a class="tocitem" href="../limitations.html">Limitations</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><div class="docs-left"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href="particle_filter.html">Differentiable particle filter</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="particle_filter.html">Differentiable particle filter</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/gaurav-arya/StochasticAD.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/gaurav-arya/StochasticAD.jl/blob/main/docs/src/tutorials/particle_filter.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Differentiable-particle-filter"><a class="docs-heading-anchor" href="#Differentiable-particle-filter">Differentiable particle filter</a><a id="Differentiable-particle-filter-1"></a><a class="docs-heading-anchor-permalink" href="#Differentiable-particle-filter" title="Permalink"></a></h1><p>Using a bootstrap particle sampler, we can approximate the posterior distributions of the states given noisy and partial observations of the state of a hidden Markov model by a cloud of <code>K</code> weighted particles with weights <code>W</code>.</p><p>In this tutorial, we are going to:</p><ul><li>implement a differentiable particle filter based on <code>StochasticAD.jl</code>.</li><li>visualize the particle filter in <span>$d = 2$</span> dimensions.</li><li>compare the gradient based on the differentiable particle filter to a biased gradient estimator as well as to the gradient of a differentiable Kalman filter.</li><li>show how to benchmark primal evaluation, forward- and reverse-mode AD of the particle filter.</li></ul><h2 id="Setup"><a class="docs-heading-anchor" href="#Setup">Setup</a><a id="Setup-1"></a><a class="docs-heading-anchor-permalink" href="#Setup" title="Permalink"></a></h2><p>We will make use of several julia packages. For example, we are going to use <code>Distributions</code> and <code>DistributionsAD</code> that implement the reparameterization trick for Gaussian distributions used in the observation and state-transition model, which we specify below. We also import <code>GaussianDistributions.jl</code> to implement the differentiable Kalman filter.</p><h3 id="Package-dependencies"><a class="docs-heading-anchor" href="#Package-dependencies">Package dependencies</a><a id="Package-dependencies-1"></a><a class="docs-heading-anchor-permalink" href="#Package-dependencies" title="Permalink"></a></h3><pre><code class="language-julia hljs"># activate tutorial project file
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Differentiable particle filter · StochasticAD.jl</title><meta name="title" content="Differentiable particle filter · StochasticAD.jl"/><meta property="og:title" content="Differentiable particle filter · StochasticAD.jl"/><meta property="twitter:title" content="Differentiable particle filter · StochasticAD.jl"/><meta name="description" content="Documentation for StochasticAD.jl."/><meta property="og:description" content="Documentation for StochasticAD.jl."/><meta property="twitter:description" content="Documentation for StochasticAD.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script><link href="../assets/indigo.css" rel="stylesheet" type="text/css"/><link href="../assets/extra_styles.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../index.html">StochasticAD.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../index.html">Overview</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="random_walk.html">Random walk</a></li><li><a class="tocitem" href="game_of_life.html">Stochastic Game of Life</a></li><li class="is-active"><a class="tocitem" href="particle_filter.html">Differentiable particle filter</a><ul class="internal"><li><a class="tocitem" href="#Setup"><span>Setup</span></a></li><li><a class="tocitem" href="#Model"><span>Model</span></a></li><li><a class="tocitem" href="#Visualization"><span>Visualization</span></a></li><li><a class="tocitem" href="#Bias"><span>Bias</span></a></li><li><a class="tocitem" href="#Benchmark"><span>Benchmark</span></a></li></ul></li><li><a class="tocitem" href="optimizations.html">Stochastic optimizations with discrete randomness</a></li><li><a class="tocitem" href="random_scattering.html">Random scattering (deflection) of a single particle</a></li></ul></li><li><a class="tocitem" href="../public_api.html">Public API</a></li><li><a class="tocitem" href="../devdocs.html">Developer documentation</a></li><li><a class="tocitem" href="../limitations.html">Limitations</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href="particle_filter.html">Differentiable particle filter</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="particle_filter.html">Differentiable particle filter</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/gaurav-arya/StochasticAD.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/gaurav-arya/StochasticAD.jl/blob/main/docs/src/tutorials/particle_filter.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Differentiable-particle-filter"><a class="docs-heading-anchor" href="#Differentiable-particle-filter">Differentiable particle filter</a><a id="Differentiable-particle-filter-1"></a><a class="docs-heading-anchor-permalink" href="#Differentiable-particle-filter" title="Permalink"></a></h1><p>Using a bootstrap particle sampler, we can approximate the posterior distributions of the states given noisy and partial observations of the state of a hidden Markov model by a cloud of <code>K</code> weighted particles with weights <code>W</code>.</p><p>In this tutorial, we are going to:</p><ul><li>implement a differentiable particle filter based on <code>StochasticAD.jl</code>.</li><li>visualize the particle filter in <span>$d = 2$</span> dimensions.</li><li>compare the gradient based on the differentiable particle filter to a biased gradient estimator as well as to the gradient of a differentiable Kalman filter.</li><li>show how to benchmark primal evaluation, forward- and reverse-mode AD of the particle filter.</li></ul><h2 id="Setup"><a class="docs-heading-anchor" href="#Setup">Setup</a><a id="Setup-1"></a><a class="docs-heading-anchor-permalink" href="#Setup" title="Permalink"></a></h2><p>We will make use of several julia packages. For example, we are going to use <code>Distributions</code> and <code>DistributionsAD</code> that implement the reparameterization trick for Gaussian distributions used in the observation and state-transition model, which we specify below. We also import <code>GaussianDistributions.jl</code> to implement the differentiable Kalman filter.</p><h3 id="Package-dependencies"><a class="docs-heading-anchor" href="#Package-dependencies">Package dependencies</a><a id="Package-dependencies-1"></a><a class="docs-heading-anchor-permalink" href="#Package-dependencies" title="Permalink"></a></h3><pre><code class="language-julia hljs"># activate tutorial project file
 
 # load dependencies
 using StochasticAD
@@ -17,7 +17,329 @@ using Measurements
 using UnPack
 using Plots
 using LaTeXStrings
-using BenchmarkTools</code></pre><h3 id="Particle-filter"><a class="docs-heading-anchor" href="#Particle-filter">Particle filter</a><a id="Particle-filter-1"></a><a class="docs-heading-anchor-permalink" href="#Particle-filter" title="Permalink"></a></h3><p>For convenience, we first introduce the new type <code>StochasticModel</code> with the following fields:</p><ul><li><code>T</code>: total number of time steps.</li><li><code>start</code>: starting distribution for the initial state. For example, in the form of a narrow  Gaussian <code>start(θ) = Gaussian(x0, 0.001 * I(d))</code>.</li><li><code>dyn</code>: pointwise differentiable stochastic program in the form of Markov transition densities.  For example, <code>dyn(x, θ) = MvNormal(reshape(θ, d, d) * x, Q(θ))</code>, where <code>Q(θ)</code> denotes the  covariance matrix.</li><li><code>obs</code>: observation model having a smooth conditional probability density depending on  current state <code>x</code> and parameters <code>θ</code>. For example, <code>obs(x, θ) = MvNormal(x, R(θ))</code>,  where <code>R(θ)</code> denotes the covariance matrix.</li></ul><p>For parameters <code>θ</code>,  <code>rand(start(θ))</code> gives a sample from the prior distribution of the starting distribution. For current state <code>x</code> and parameters <code>θ</code>, <code>xnew = rand(dyn(x, θ))</code> samples the new state (i.e. <code>dyn</code> gives for each <code>x, θ</code> a distribution-like object). Finally, <code>y = rand(obs(x, θ))</code> samples an observation.</p><p>We can then define the <code>ParticleFilter</code> type that wraps a stochastic model <code>StochM::StochasticModel</code>, a sampling strategy (with arguments <code>p, K, sump=1</code>) and observational data <code>ys</code>. For simplicity, our implementation assumes a observation-likelihood function being available via <code>pdf(obs(x, θ), y)</code>.</p><pre><code class="language-julia hljs">struct StochasticModel{TType&lt;:Integer,T1,T2,T3}
+using BenchmarkTools</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">WARNING: Method definition gamma(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erf(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erfc(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erfcx(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erfi(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition dawson(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airyai(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airyaiprime(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airybi(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airybiprime(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition besselj0(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition besselj1(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition bessely0(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition bessely1(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition eta(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition zeta(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition digamma(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition logabsgamma(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:317 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:18.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition bessely0(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition besselj1(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition besselj0(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition digamma(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erf(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airyai(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition bessely1(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition eta(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition logabsgamma(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:317 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:18.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition dawson(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airybi(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition gamma(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erfi(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition zeta(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erfc(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airybiprime(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erfcx(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airyaiprime(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition bessely0(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition besselj1(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition besselj0(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition digamma(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erf(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airyai(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition bessely1(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition eta(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition logabsgamma(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:317 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:18.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition dawson(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airybi(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition gamma(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erfi(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition zeta(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erfc(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airybiprime(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erfcx(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airyaiprime(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition bessely0(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition besselj1(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition besselj0(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition digamma(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erf(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airyai(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition bessely1(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition eta(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition logabsgamma(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:317 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:18.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition dawson(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airybi(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition gamma(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erfi(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition zeta(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erfc(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airybiprime(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erfcx(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airyaiprime(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition bessely0(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition besselj1(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition besselj0(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition digamma(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erf(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airyai(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition bessely1(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition eta(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition logabsgamma(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:317 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:18.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition dawson(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airybi(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition gamma(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erfi(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition zeta(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erfc(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airybiprime(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erfcx(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airyaiprime(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition bessely0(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition besselj1(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition besselj0(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition digamma(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erf(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airyai(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition bessely1(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition eta(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition logabsgamma(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:317 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:18.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition dawson(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airybi(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition gamma(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erfi(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition zeta(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erfc(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airybiprime(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition erfcx(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **
+
+WARNING: Method definition airyaiprime(ColorTypes.Color{T, 1} where T) in module ColorVectorSpace at /home/runner/.julia/packages/ColorVectorSpace/QI5vM/src/ColorVectorSpace.jl:315 overwritten in module SpecialFunctionsExt at /home/runner/.julia/packages/ColorVectorSpace/tLy1N/ext/SpecialFunctionsExt.jl:15.
+  ** incremental compilation may be fatally broken for this module **</code></pre><h3 id="Particle-filter"><a class="docs-heading-anchor" href="#Particle-filter">Particle filter</a><a id="Particle-filter-1"></a><a class="docs-heading-anchor-permalink" href="#Particle-filter" title="Permalink"></a></h3><p>For convenience, we first introduce the new type <code>StochasticModel</code> with the following fields:</p><ul><li><code>T</code>: total number of time steps.</li><li><code>start</code>: starting distribution for the initial state. For example, in the form of a narrow  Gaussian <code>start(θ) = Gaussian(x0, 0.001 * I(d))</code>.</li><li><code>dyn</code>: pointwise differentiable stochastic program in the form of Markov transition densities.  For example, <code>dyn(x, θ) = MvNormal(reshape(θ, d, d) * x, Q(θ))</code>, where <code>Q(θ)</code> denotes the  covariance matrix.</li><li><code>obs</code>: observation model having a smooth conditional probability density depending on  current state <code>x</code> and parameters <code>θ</code>. For example, <code>obs(x, θ) = MvNormal(x, R(θ))</code>,  where <code>R(θ)</code> denotes the covariance matrix.</li></ul><p>For parameters <code>θ</code>,  <code>rand(start(θ))</code> gives a sample from the prior distribution of the starting distribution. For current state <code>x</code> and parameters <code>θ</code>, <code>xnew = rand(dyn(x, θ))</code> samples the new state (i.e. <code>dyn</code> gives for each <code>x, θ</code> a distribution-like object). Finally, <code>y = rand(obs(x, θ))</code> samples an observation.</p><p>We can then define the <code>ParticleFilter</code> type that wraps a stochastic model <code>StochM::StochasticModel</code>, a sampling strategy (with arguments <code>p, K, sump=1</code>) and observational data <code>ys</code>. For simplicity, our implementation assumes a observation-likelihood function being available via <code>pdf(obs(x, θ), y)</code>.</p><pre><code class="language-julia hljs">struct StochasticModel{TType&lt;:Integer,T1,T2,T3}
     T::TType # time steps
     start::T1 # prior
     dyn::T2 # dynamical model
@@ -221,4 +543,4 @@ t3 = measurement(mean(results[&quot;scaling&quot;][&quot;backward&quot;].times),
 @show t1 t2 t3
 
 ts = (t1, t2, t3) ./ 10^6 # ms
-@show ts</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(38.6 ± 1.6, 60.8 ± 3.1, 950.0 ± 27.0)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="game_of_life.html">« Stochastic Game of Life</a><a class="docs-footer-nextpage" href="optimizations.html">Stochastic optimizations with discrete randomness »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.28.0-DEV on <span class="colophon-date" title="Thursday 22 June 2023 10:55">Thursday 22 June 2023</span>. Using Julia version 1.9.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+@show ts</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(32.6 ± 1.4, 53.3 ± 3.7, 741.6 ± 3.6)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="game_of_life.html">« Stochastic Game of Life</a><a class="docs-footer-nextpage" href="optimizations.html">Stochastic optimizations with discrete randomness »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.2 on <span class="colophon-date" title="Saturday 4 November 2023 23:12">Saturday 4 November 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

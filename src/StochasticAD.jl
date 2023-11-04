@@ -2,10 +2,13 @@ module StochasticAD
 
 ### Public API
 
-export stochastic_triple, derivative_contribution, perturbations, smooth_triple # For working with stochastic triples
+export stochastic_triple, derivative_contribution, perturbations, smooth_triple, dual_number # For working with stochastic triples
 export derivative_estimate, StochasticModel, stochastic_gradient # Higher level functionality
 export new_weight # Particle resampling
-export PrunedFIsBackend, PrunedFIsAggressiveBackend, DictFIsBackend, SmoothedFIsBackend
+export PrunedFIsBackend,
+    PrunedFIsAggressiveBackend, DictFIsBackend, SmoothedFIsBackend,
+    StrategyWrapperFIsBackend
+export PrunedFIs, PrunedFIsAggressive, DictFIs, SmoothedFIs, StrategyWrapperFIs
 
 ### Imports
 
@@ -31,10 +34,14 @@ include("backends/pruned.jl")
 include("backends/pruned_aggressive.jl")
 include("backends/dict.jl")
 include("backends/smoothed.jl")
+include("backends/abstract_wrapper.jl")
+include("backends/strategy_wrapper.jl")
 using .PrunedFIsModule
 using .PrunedFIsAggressiveModule
 using .DictFIsModule
 using .SmoothedFIsModule
+using .AbstractWrapperFIsModule
+using .StrategyWrapperFIsModule
 
 include("prelude.jl") # Defines global constants
 include("smoothing.jl") # Smoothing rules. Placed before general rules so that new_weight frule is caught by overload generation.

@@ -96,7 +96,7 @@ function define_triple_overload(sig)
                 return frule(args_tangent, f, value(st); kwargs...)
             end
             val, δ0 = run_frule(delta(st))
-            δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
+            δ::typeof(val) = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
             if !iszero(st.Δs)
                 Δs = map(Δ -> f(st.value + Δ; kwargs...) - val, st.Δs;
                     deriv = last ∘ run_frule, out_rep = val)
@@ -117,7 +117,8 @@ function define_triple_overload(sig)
                     return frule(args_tangent, f, value(st), x; kwargs...)
                 end
                 val, δ0 = run_frule(delta(st))
-                δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
+                δ::typeof(val) = (δ0 isa ZeroTangent || δ0 isa NoTangent) ?
+                                 zero(value(st)) : δ0
                 if !iszero(st.Δs)
                     Δs = map(Δ -> f(st.value + Δ, x; kwargs...) - val, st.Δs;
                         deriv = last ∘ run_frule, out_rep = val)
@@ -132,7 +133,8 @@ function define_triple_overload(sig)
                     return frule(args_tangent, f, x, value(st); kwargs...)
                 end
                 val, δ0 = run_frule(delta(st))
-                δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
+                δ::typeof(val) = (δ0 isa ZeroTangent || δ0 isa NoTangent) ?
+                                 zero(value(st)) : δ0
                 if !iszero(st.Δs)
                     Δs = map(Δ -> f(x, st.value + Δ; kwargs...) - val, st.Δs;
                         deriv = last ∘ run_frule, out_rep = val)
@@ -149,7 +151,7 @@ function define_triple_overload(sig)
                 return frule(args_tangent, args...; kwargs...)
             end
             val, δ0 = run_frule(delta.(sts))
-            δ = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
+            δ::typeof(val) = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
 
             Δs_all = map(st -> getfield(st, :Δs), sts)
             if all(iszero.(Δs_all))

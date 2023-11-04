@@ -40,12 +40,6 @@ end
 
 StochasticAD.new_Δs_strategy(::SmoothedFIs) = StochasticAD.TwoSidedStrategy()
 
-### Scale a perturbation
-
-function StochasticAD.scale(Δs::SmoothedFIs{V}, scale::Real) where {V}
-    SmoothedFIs{V}(Δs.δ * scale)
-end
-
 ### Create Δs backend for the first stochastic triple of computation
 
 StochasticAD.create_Δs(::SmoothedFIsBackend, V) = SmoothedFIs{V}(0.0)
@@ -66,7 +60,7 @@ StochasticAD.derivative_contribution(Δs::SmoothedFIs) = Δs.δ
 
 ### Unary propagation
 
-function StochasticAD.map_Δs(f, Δs::SmoothedFIs; deriv, out_rep)
+function StochasticAD.weighted_map_Δs(f, Δs::SmoothedFIs; deriv, out_rep, kwargs...)
     SmoothedFIs{typeof(out_rep)}(deriv(Δs.δ))
 end
 
@@ -74,7 +68,7 @@ StochasticAD.alltrue(f, Δs::SmoothedFIs) = true
 
 ### Coupling
 
-StochasticAD.get_rep(::Type{<:SmoothedFIs}, Δs_all) = first(Δs_all)
+StochasticAD.get_rep(::Type{<:SmoothedFIs}, Δs_all) = StochasticAD.get_any(Δs_all)
 
 function StochasticAD.couple(::Type{<:SmoothedFIs}, Δs_all; rep = nothing, out_rep)
     SmoothedFIs{typeof(out_rep)}(StochasticAD.structural_map(Δs -> Δs.δ, Δs_all))
@@ -94,7 +88,7 @@ end
 
 ### Miscellaneous
 
-StochasticAD.similar_type(::Type{<:SmoothedFIs}, V::Type) = SmoothedFIs{V}
+StochasticAD.similar_type(::Type{<:SmoothedFIs}, V::Type) = SmoothedFIs{V, Float64}
 StochasticAD.valtype(::Type{<:SmoothedFIs{V}}) where {V} = V
 
 function Base.show(io::IO, Δs::SmoothedFIs)

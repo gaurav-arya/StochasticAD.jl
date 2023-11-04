@@ -55,7 +55,7 @@ function simulate_walk_score(probs, steps, n; debug = false)
     dlogP = 0.0
     for i in 1:n
         probs_X = probs(X) # transition probabilities
-        step_index = rand(Categorical(probs_X)) # just a number
+        step_index = convert(Int, ForwardDiff.value(rand(Categorical(probs_X)))) # just a number
         step = steps[step_index] # differentiate through array indexing
         dlogP += partials(log(probs_X[step_index]))[1]
         X += step # take step

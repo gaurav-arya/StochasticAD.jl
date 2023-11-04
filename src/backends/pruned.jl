@@ -83,8 +83,11 @@ StochasticAD.perturbations(Δs::PrunedFIs) = ((pruned_value(Δs), Δs.state.weig
 
 ### Unary propagation
 
-function StochasticAD.map_Δs(f, Δs::PrunedFIs; kwargs...)
-    PrunedFIs(f(Δs.Δ, Δs.state), Δs.state)
+function StochasticAD.weighted_map_Δs(f, Δs::PrunedFIs; kwargs...)
+    Δ_out, weight_out = f(Δs.Δ, Δs.state)
+    # TODO: we could add a direct overload for map_Δs that elides the below line
+    Δs.state.weight *= weight_out
+    PrunedFIs(Δ_out, Δs.state)
 end
 
 StochasticAD.alltrue(f, Δs::PrunedFIs) = f(Δs.Δ)
@@ -93,7 +96,7 @@ StochasticAD.alltrue(f, Δs::PrunedFIs) = f(Δs.Δ)
 
 function StochasticAD.get_rep(::Type{<:PrunedFIs}, Δs_all)
     # The code below is a bit ridiculous, but it's faster than `first` for small structures:)
-    foldl((Δs1, Δs2) -> Δs1, StochasticAD.structural_iterate(Δs_all))
+    return StochasticAD.get_any(Δs_all)
 end
 
 function get_pruned_state(Δs_all)
@@ -106,8 +109,8 @@ function get_pruned_state(Δs_all)
             return (total_weight, new_state)
         end
         w = candidate_state.weight
-        total_weight += w
-        if rand(StochasticAD.RNG) * total_weight < w
+        total_weight += abs(w)
+        if rand(StochasticAD.RNG) * total_weight < abs(w)
             new_state !== nothing && (new_state.valid = false)
             new_state = candidate_state
         else
@@ -118,7 +121,7 @@ function get_pruned_state(Δs_all)
     (_total_weight, _new_state) = foldl(op, StochasticAD.structural_iterate(Δs_all);
         init = (0.0, nothing))
     if _new_state !== nothing
-        _new_state.weight = _total_weight
+        _new_state.weight = _total_weight * sign(_new_state.weight)
     else
         _new_state = PrunedFIsState(false) # TODO: can this be avoided?
     end

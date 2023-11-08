@@ -11,7 +11,7 @@ Pkg.instantiate()
 In this tutorial we implement and differentiate through a single particle scattering process.
 
 In short, when a particle travels through some material with finite depth, at each step, the
-particle has a chance (!) to interact, when it does, it loses energy and randomly change direction
+particle has a chance (!) to interact, when it does, it loses energy and randomly changes direction
 [^1].
 
 ```@example random_scattering

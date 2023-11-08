@@ -82,10 +82,10 @@ StochasticTriple of Int64:
     This function is experimental and subject to change.
 """
 function propagate(f,
-    args...;
-    keep_deltas = Val(false),
-    provided_st_rep = nothing,
-    deriv = nothing)
+        args...;
+        keep_deltas = Val(false),
+        provided_st_rep = nothing,
+        deriv = nothing)
     # TODO: support kwargs to f (or just use kwfunc in macro)
     #= 
     TODO: maybe don't iterate through every scalar of array below, 

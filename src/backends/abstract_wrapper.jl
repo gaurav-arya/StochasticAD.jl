@@ -31,31 +31,31 @@ function StochasticAD.similar_empty(Δs::AbstractWrapperFIs, V)
 end
 
 function StochasticAD.similar_type(WrapperFIs::Type{<:AbstractWrapperFIs{V0, FIs}},
-    V) where {V0, FIs}
+        V) where {V0, FIs}
     return StochasticAD.similar_type(WrapperFIs, V, StochasticAD.similar_type(FIs, V))
 end
 
 StochasticAD.valtype(Δs::AbstractWrapperFIs) = StochasticAD.valtype(Δs.Δs)
 
 function StochasticAD.couple(WrapperFIs::Type{<:AbstractWrapperFIs{V, FIs}},
-    Δs_all;
-    kwargs...) where {V, FIs}
+        Δs_all;
+        kwargs...) where {V, FIs}
     _Δs_all = StochasticAD.structural_map(Δs -> Δs.Δs, Δs_all)
     return reconstruct_wrapper(StochasticAD.get_any(Δs_all),
         StochasticAD.couple(FIs, _Δs_all; kwargs...))
 end
 
 function StochasticAD.combine(WrapperFIs::Type{<:AbstractWrapperFIs{V, FIs}},
-    Δs_all;
-    kwargs...) where {V, FIs}
+        Δs_all;
+        kwargs...) where {V, FIs}
     _Δs_all = StochasticAD.structural_map(Δs -> Δs.Δs, Δs_all)
     return reconstruct_wrapper(StochasticAD.get_any(Δs_all),
         StochasticAD.combine(FIs, _Δs_all; kwargs...))
 end
 
 function StochasticAD.get_rep(WrapperFIs::Type{<:AbstractWrapperFIs{V, FIs}},
-    Δs_all;
-    kwargs...) where {V, FIs}
+        Δs_all;
+        kwargs...) where {V, FIs}
     _Δs_all = StochasticAD.structural_map(Δs -> Δs.Δs, Δs_all)
     return reconstruct_wrapper(StochasticAD.get_any(Δs_all),
         StochasticAD.get_rep(FIs, _Δs_all; kwargs...))

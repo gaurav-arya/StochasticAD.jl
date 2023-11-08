@@ -43,7 +43,7 @@ for (dist, i, field) in [
     (:Categorical, :1, :p),
 ] # i = index of parameter p
     @eval function Base.rand(rng::AbstractRNG,
-        d_dual::$dist{<:ForwardDiff.Dual{T}}) where {T}
+            d_dual::$dist{<:ForwardDiff.Dual{T}}) where {T}
         dual = params(d_dual)[$i]
         # dual could represent an array of duals or a single one; map handles both cases.
         p = map(value, dual)
@@ -57,7 +57,7 @@ for (dist, i, field) in [
         ForwardDiff.Dual{T}(val, partials)
     end
     @eval function ChainRulesCore.frule((_, _, Δd), ::typeof(rand), rng::AbstractRNG,
-        d::$dist)
+            d::$dist)
         val = convert(Signed, rand(rng, d))
         Δval = smoothed_delta(d, val, Δd)
         return (val, Δval)

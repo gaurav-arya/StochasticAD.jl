@@ -208,7 +208,7 @@ end
 
 for op in RNG_TYPEFUNCS_WRAP
     function (::typeof(op))(rng::AbstractRNG,
-        ::Type{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+            ::Type{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
         return StochasticTriple{T, V, FIs}(op(rng, V), zero(V), empty(FIs))
     end
 end
@@ -225,15 +225,15 @@ way. (E.g. by catching the chain rule for isapprox and recursively calling isapp
 on the values.)
 =#
 function Base.isapprox(st1::StochasticTriple, st2::StochasticTriple;
-    atol::Real = 0, rtol::Real = Base.rtoldefault(st1, st2, atol),
-    nans::Bool = false, norm::Function = abs)
+        atol::Real = 0, rtol::Real = Base.rtoldefault(st1, st2, atol),
+        nans::Bool = false, norm::Function = abs)
     (isfinite(st1) && isfinite(st2) &&
      norm(st1 - st2) <= max(atol, rtol * max(norm(st1), norm(st2)))) ||
         (nans && isnan(st1) && isnan(st2))
 end
 function Base.isapprox(st1::StochasticTriple, x::Real;
-    atol::Real = 0, rtol::Real = Base.rtoldefault(st1, x, atol),
-    nans::Bool = false, norm::Function = abs)
+        atol::Real = 0, rtol::Real = Base.rtoldefault(st1, x, atol),
+        nans::Bool = false, norm::Function = abs)
     (isfinite(st1) && isfinite(x) &&
      norm(st1 - x) <= max(atol, rtol * max(norm(st1), norm(x)))) ||
         (nans && isnan(st1) && isnan(x))

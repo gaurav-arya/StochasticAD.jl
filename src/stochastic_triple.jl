@@ -19,7 +19,7 @@ struct StochasticTriple{T, V <: Real, FIs <: AbstractFIs{V}} <: Real
     δ::V # infinitesimal change
     Δs::FIs # finite changes with infinitesimal probabilities # (Δ = 3, p = 1*h)
     function StochasticTriple{T, V, FIs}(value::V, δ::V,
-        Δs::FIs) where {T, V, FIs <: AbstractFIs{V}}
+            Δs::FIs) where {T, V, FIs <: AbstractFIs{V}}
         new{T, V, FIs}(value, δ, Δs)
     end
 end
@@ -111,7 +111,7 @@ function StochasticTriple{T}(value::V, Δs::FIs) where {T, V, FIs <: AbstractFIs
 end
 
 function StochasticTriple{T}(value::A, δ::B,
-    Δs::FIs) where {T, A, B, C, FIs <: AbstractFIs{C}}
+        Δs::FIs) where {T, A, B, C, FIs <: AbstractFIs{C}}
     V = promote_type(A, B, C)
     StochasticTriple{T}(convert(V, value), convert(V, δ), similar_type(FIs, V)(Δs))
 end
@@ -121,7 +121,7 @@ end
 # TODO: is this the right thing to do? Maybe, different from the promote case because there V was guaranteed to be an ancestor. 
 # Also, bad to do when already same type?
 function Base.convert(::Type{StochasticTriple{T1, V, FIs}},
-    x::StochasticTriple{T2}) where {T1, T2, V, FIs}
+        x::StochasticTriple{T2}) where {T1, T2, V, FIs}
     (T1 !== T2) && throw(ArgumentError("Tags of combined stochastic triples do not match."))
     StochasticTriple{T1, V, FIs}(convert(V, x.value), convert(V, x.δ), FIs(x.Δs))
 end
@@ -129,14 +129,14 @@ end
 # TODO: ForwardDiff's promotion rules are a little more complicated, see https://github.com/JuliaDiff/ForwardDiff.jl/issues/322
 # May need to look into why and possibly use them here too.
 function Base.promote_rule(::Type{StochasticTriple{T, V1, FIs}},
-    ::Type{StochasticTriple{T, V2, FIs2}}) where {T, V1, FIs, V2,
-    FIs2}
+        ::Type{StochasticTriple{T, V2, FIs2}}) where {T, V1, FIs, V2,
+        FIs2}
     V = promote_type(V1, V2)
     StochasticTriple{T, V, similar_type(FIs, V)}
 end
 
 function Base.promote_rule(::Type{StochasticTriple{T, V1, FIs}},
-    ::Type{V2}) where {T, V1, FIs, V2 <: Real}
+        ::Type{V2}) where {T, V1, FIs, V2 <: Real}
     V = promote_type(V1, V2)
     StochasticTriple{T, V, similar_type(FIs, V)}
 end
@@ -184,7 +184,7 @@ struct Tag{F, V}
 end
 
 function stochastic_triple_direction(f, p::V, direction;
-    backend = PrunedFIsBackend()) where {V}
+        backend = PrunedFIsBackend()) where {V}
     Δs = create_Δs(backend, Int) # TODO: necessity of hardcoding some type here suggests interface improvements
     sts = structural_map(p, direction) do p_i, direction_i
         StochasticTriple{Tag{typeof(f), V}}(p_i, direction_i,

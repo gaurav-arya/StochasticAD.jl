@@ -19,7 +19,7 @@ using StochasticAD, Statistics, Distributions
 ```
 
 First of all, the interaction probability is controlled by a parameter `par`, think of this as
-material property (~density), which we might be intereted in differentiate against to optimize
+material property (~density), which we might be interested in differentiate against to optimize
 material.
 
 ```@example random_scattering

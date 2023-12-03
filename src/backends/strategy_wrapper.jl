@@ -29,8 +29,8 @@ function StochasticAD.create_Δs(backend::StrategyWrapperFIsBackend, V)
 end
 
 function StochasticAD.similar_type(::Type{<:StrategyWrapperFIs{V0, FIs0, S}},
-    V,
-    FIs) where {V0, FIs0, S}
+        V,
+        FIs) where {V0, FIs0, S}
     return StrategyWrapperFIs{V, FIs, S}
 end
 
@@ -39,9 +39,9 @@ function AbstractWrapperFIsModule.reconstruct_wrapper(wrapper_Δs::StrategyWrapp
 end
 
 function AbstractWrapperFIsModule.reconstruct_wrapper(::Type{
-        <:StrategyWrapperFIs{V, FIs, S},
-    },
-    Δs) where {V, FIs, S}
+            <:StrategyWrapperFIs{V, FIs, S},
+        },
+        Δs) where {V, FIs, S}
     return StrategyWrapperFIs(Δs, S())
 end
 

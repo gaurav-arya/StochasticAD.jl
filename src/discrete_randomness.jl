@@ -163,8 +163,8 @@ end
 
 for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
     @eval function Base.rand(rng::AbstractRNG,
-        d_st::$dist{StochasticTriple{T, V, FIs}};
-        stochastic_ad_map_kwargs = (;)) where {T, V, FIs}
+            d_st::$dist{StochasticTriple{T, V, FIs}};
+            stochastic_ad_map_kwargs = (;)) where {T, V, FIs}
         st = _get_parameter(d_st)
         d = _reconstruct(d_st, st.value)
         val = convert(Signed, rand(rng, d))
@@ -208,9 +208,9 @@ end
 # currently handle Categorical separately since parameter is a vector
 # what if some elements in vector are not stochastic triples... promotion should take care of that?
 function Base.rand(rng::AbstractRNG,
-    d_st::Categorical{<:StochasticTriple{T},
-        <:AbstractVector{<:StochasticTriple{T, V}}}; stochastic_ad_map_kwargs = (;)) where {T,
-    V}
+        d_st::Categorical{<:StochasticTriple{T},
+            <:AbstractVector{<:StochasticTriple{T, V}}}; stochastic_ad_map_kwargs = (;)) where {T,
+        V}
     sts = _get_parameter(d_st) # stochastic triple for each probability
     p = map(st -> st.value, sts) # try to keep the same type. e.g. static array -> static array. TODO: avoid allocations 
     d = _reconstruct(d_st, p)
@@ -274,8 +274,8 @@ struct DiscreteDeltaStochasticTriple{T, V, FIs <: AbstractFIs}
     value::V
     Δs::FIs
     function DiscreteDeltaStochasticTriple{T, V, FIs}(value::V,
-        Δs::FIs) where {T, V,
-        FIs <: AbstractFIs}
+            Δs::FIs) where {T, V,
+            FIs <: AbstractFIs}
         new{T, V, FIs}(value, Δs)
     end
 end
@@ -290,7 +290,7 @@ end
 
 # TODO: Support functions other than `rand` called on a perturbed Binomial.
 function Base.rand(rng::AbstractRNG,
-    d_st::DiscreteDeltaStochasticTriple{T, <:Binomial}) where {T}
+        d_st::DiscreteDeltaStochasticTriple{T, <:Binomial}) where {T}
     d = d_st.value
     val = rand(rng, d)
     function map_func(Δ)

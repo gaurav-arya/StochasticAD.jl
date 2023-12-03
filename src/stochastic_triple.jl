@@ -171,7 +171,7 @@ function Base.summary(::StochasticTriple{T, V}) where {T, V}
 end
 
 function Base.show(io::IO, ::MIME"text/plain", st::StochasticTriple)
-    #    println(io, "$(summary(st)):")
+    println(io, "$(summary(st)):")
     show(io, st)
 end
 

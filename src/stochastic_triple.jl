@@ -70,10 +70,14 @@ derivative_contribution(st::StochasticTriple) = st.δ + derivative_contribution(
 
 """
     tag(st::StochasticTriple)
+    tag(::Type{<:StochasticTriple}))
 
 Get the tag of a stochastic triple.
 """
+tag(::Type{<:StochasticTriple{T}}) where {T} = T
+tag(::Type{<:ForwardDiff.Dual{T}}) where {T} = T
 tag(::StochasticTriple{T}) where {T} = T
+tag(::ForwardDiff.Dual{T}) where {T} = T
 
 """
     valtype(st::StochasticTriple)
@@ -252,7 +256,7 @@ derivative contribution of all discrete random components, so that it behaves li
 Mostly for fun -- this, of course, leads to a useless derivative estimate for discrete random functions!
 """
 function dual_number(f, p; backend = PrunedFIsBackend(), kwargs...)
-    backend = StrategyWrapperBackend(backend, IgnoreDiscreteStrategy())
+    backend = StrategyWrapperFIsBackend(backend, IgnoreDiscreteStrategy())
     stochastic_triple(f, p; backend, kwargs...)
 end
 dual_number(p; kwargs...) = dual_number(identity, p; kwargs...)

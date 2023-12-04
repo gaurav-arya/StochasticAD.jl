@@ -19,6 +19,7 @@ pages = [
         "tutorials/game_of_life.md",
         "tutorials/particle_filter.md",
         "tutorials/optimizations.md",
+        "tutorials/random_scattering.md",
     ],
     "Public API" => "public_api.md",
     "Developer documentation" => "devdocs.md",

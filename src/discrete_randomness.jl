@@ -197,6 +197,9 @@ end
 When no keyword arguments are provided, `randst` behaves identically to `rand(rng, d)` in both ordinary computation
 and for stochastic triple dispatches. However, `randst` also allows the user to provide various keyword arguments
 for customizing the differentiation logic. The set of allowed keyword arguments depends on the type of `d`.
+
+For developers: if you wish to accept custom keyword arguments in a stochastic triple dispatch, you should overload
+`randst`, and redirect `rand` to your `randst` method. If you do not, it suffices to just overload `rand`.
 """
 randst(rng, d::Distributions.Sampleable; kwargs...) = rand(rng, d)
 
@@ -243,7 +246,7 @@ for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
         Δs2 = map(map_func,
             st.Δs;
             enumeration,
-            deriv = δ -> smoothed_delta(d, val, δ),
+            deriv = δ -> smoothed_delta(d, val, δ, coupling),
             out_rep = val,
             perturbation_map_kwargs...)
 
@@ -300,7 +303,7 @@ function Base.rand(rng::AbstractRNG,
     Δs2 = map(map_func,
         Δs_coupled;
         enumeration,
-        deriv = δ -> smoothed_delta(d, val, δ),
+        deriv = δ -> smoothed_delta(d, val, δ, coupling),
         out_rep = val,
         perturbation_map_kwargs...)
 

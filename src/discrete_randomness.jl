@@ -308,7 +308,7 @@ function Distributions.Binomial(n::StochasticTriple{T}, p::Real) where {T}
 end
 
 # TODO: Support functions other than `rand` called on a perturbed Binomial.
-function Base.rand(rng::AbstractRNG,
+function randst(rng::AbstractRNG,
         d_st::DiscreteDeltaStochasticTriple{T, <:Binomial}) where {T}
     d = d_st.value
     val = rand(rng, d)

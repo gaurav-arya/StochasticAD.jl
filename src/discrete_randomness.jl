@@ -202,6 +202,7 @@ For developers: if you wish to accept custom keyword arguments in a stochastic t
 `randst`, and redirect `rand` to your `randst` method. If you do not, it suffices to just overload `rand`.
 """
 randst(rng, d::Distributions.Sampleable; kwargs...) = rand(rng, d)
+randst(d::Distributions.Sampleable; kwargs...) = randst(Random.default_rng(), d; kwargs...)
 
 # Define stochastic triple rules
 

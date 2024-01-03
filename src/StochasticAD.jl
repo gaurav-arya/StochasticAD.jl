@@ -9,6 +9,7 @@ export PrunedFIsBackend,
     PrunedFIsAggressiveBackend, DictFIsBackend, SmoothedFIsBackend,
     StrategyWrapperFIsBackend
 export PrunedFIs, PrunedFIsAggressive, DictFIs, SmoothedFIs, StrategyWrapperFIs
+export randst
 
 ### Imports
 

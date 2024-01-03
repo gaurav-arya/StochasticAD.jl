@@ -159,12 +159,27 @@ function _δtoΔs(d::Categorical, val::V, δs, Δs::AbstractFIs) where {V <: Sig
     return combine((Δs_left, Δs_right); rep = Δs)
 end
 
+# Define randst
+
+"""
+    randst(rng, d::Distributions.Sampleable; kwargs...)
+
+When no keyword arguments are provided, `randst` behaves identically to `rand(rng, d)` in both ordinary computation
+and for stochastic triple dispatches. However, `randst` also allows the user to provide various keyword arguments
+for customizing the differentiation logic. The set of allowed keyword arguments depends on the type of `d`.
+"""
+randst(rng, d::Distributions.Sampleable; kwargs...) = rand(rng, d)
+
 # Define stochastic triple rules
 
 for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
     @eval function Base.rand(rng::AbstractRNG,
+            d_st::$dist{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+        return randst(rng, d_st)
+    end
+    @eval function randst(rng::AbstractRNG,
             d_st::$dist{StochasticTriple{T, V, FIs}};
-            stochastic_ad_map_kwargs = (;)) where {T, V, FIs}
+            perturbation_map_kwargs = (;)) where {T, V, FIs}
         st = _get_parameter(d_st)
         d = _reconstruct(d_st, st.value)
         val = convert(Signed, rand(rng, d))
@@ -199,7 +214,7 @@ for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
             enumeration,
             deriv = δ -> smoothed_delta(d, val, δ),
             out_rep = val,
-            stochastic_ad_map_kwargs...)
+            perturbation_map_kwargs...)
 
         StochasticTriple{T}(val, zero(val), combine((Δs2, Δs1); rep = Δs1)) # ensure that tags are in order in combine, in case backend wishes to exploit this 
     end
@@ -208,8 +223,12 @@ end
 # currently handle Categorical separately since parameter is a vector
 # what if some elements in vector are not stochastic triples... promotion should take care of that?
 function Base.rand(rng::AbstractRNG,
+        d_st::Categorical{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
+    return randst(rng, d_st)
+end
+function Base.rand(rng::AbstractRNG,
         d_st::Categorical{<:StochasticTriple{T},
-            <:AbstractVector{<:StochasticTriple{T, V}}}; stochastic_ad_map_kwargs = (;)) where {T,
+            <:AbstractVector{<:StochasticTriple{T, V}}}; perturbation_map_kwargs = (;)) where {T,
         V}
     sts = _get_parameter(d_st) # stochastic triple for each probability
     p = map(st -> st.value, sts) # try to keep the same type. e.g. static array -> static array. TODO: avoid allocations 
@@ -250,7 +269,7 @@ function Base.rand(rng::AbstractRNG,
         enumeration,
         deriv = δ -> smoothed_delta(d, val, δ),
         out_rep = val,
-        stochastic_ad_map_kwargs...)
+        perturbation_map_kwargs...)
 
     StochasticTriple{T}(val, zero(val), combine((Δs2, Δs1); rep = Δs_rep))
 end

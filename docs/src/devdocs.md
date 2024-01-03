@@ -95,3 +95,9 @@ println("Finite differences: $(mean(samples_fd)) ± $(std(samples_fd) / sqrt(N))
 
 nothing # hide
 ```
+
+## Distribution-specific customization of differentiation algorithm 
+
+```@docs
+StochasticAD.randst
+```

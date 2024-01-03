@@ -261,7 +261,7 @@ function Base.rand(rng::AbstractRNG,
         d_st::Categorical{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
     return randst(rng, d_st)
 end
-function Base.rand(rng::AbstractRNG,
+function randst(rng::AbstractRNG,
         d_st::Categorical{<:StochasticTriple{T},
             <:AbstractVector{<:StochasticTriple{T, V}}};
         perturbation_map_kwargs = (;),

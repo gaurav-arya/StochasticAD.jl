@@ -31,7 +31,12 @@ _get_support(::Bernoulli) = (0, 1)
 # the map below looks a bit silly, but it gives us a collection of the categories with the same structure as probs(d). 
 _get_support(d::Categorical) = map((val, prob) -> val, 1:ncategories(d), probs(d))
 
-## Strategies for forming perturbations
+# Derivative coupling approaches, determining which weighted perturbations to consider
+
+abstract type AbstractDerivativeCoupling end
+struct InversionMethodDerivativeCoupling end
+
+## Strategies for precisely which perturbations to form given a derivative coupling
 
 struct SingleSidedStrategy <: AbstractPerturbationStrategy end
 struct TwoSidedStrategy <: AbstractPerturbationStrategy end
@@ -47,25 +52,30 @@ new_Δs_strategy(Δs) = SingleSidedStrategy()
 Given the parameter `val` of a distribution `d` and an infinitesimal change `δ`,
 return the discrete change in the output, with a similar representation to `Δs`.
 """
-δtoΔs(d, val, δ, Δs) = δtoΔs(d, val, δ, Δs, new_Δs_strategy(Δs))
-δtoΔs(d, val, δ, Δs, ::SingleSidedStrategy) = _δtoΔs(d, val, δ, Δs)
-function δtoΔs(d, val, δ, Δs, ::TwoSidedStrategy)
-    Δs1 = _δtoΔs(d, val, δ, Δs)
-    Δs2 = _δtoΔs(d, val, -δ, Δs)
+δtoΔs(d, val, δ, Δs, coupling) = δtoΔs(d, val, δ, Δs, coupling, new_Δs_strategy(Δs))
+δtoΔs(d, val, δ, Δs, coupling, ::SingleSidedStrategy) = _δtoΔs(d, val, δ, Δs, coupling)
+function δtoΔs(d, val, δ, Δs, coupling, ::TwoSidedStrategy)
+    Δs1 = _δtoΔs(d, val, δ, Δs, coupling)
+    Δs2 = _δtoΔs(d, val, -δ, Δs, coupling)
     return combine((scale(Δs1, 0.5), scale(Δs2, -0.5)))
 end
-# TODO: implement ST for other distributions 
-function δtoΔs(d::Union{Bernoulli, Binomial}, val, δ, Δs, ::StraightThroughStrategy)
+# TODO: implement this ST for other distributions and couplings, if meaningful?
+function δtoΔs(d::Union{Bernoulli, Binomial},
+        val,
+        δ,
+        Δs,
+        coupling::InversionMethodDerivativeCoupling,
+        ::StraightThroughStrategy)
     p = succprob(d)
-    Δs1 = _δtoΔs(d, val, δ, Δs)
-    Δs2 = _δtoΔs(d, val, -δ, Δs)
+    Δs1 = _δtoΔs(d, val, δ, Δs, coupling)
+    Δs2 = _δtoΔs(d, val, -δ, Δs, coupling)
     return combine((scale(Δs1, 1 - p), scale(Δs2, -p)))
 end
-δtoΔs(d, val::V, δ, Δs, ::IgnoreDiscreteStrategy) where {V} = similar_empty(Δs, V)
+δtoΔs(d, val::V, δ, Δs, coupling, ::IgnoreDiscreteStrategy) where {V} = similar_empty(Δs, V)
 
 # Implement straight through strategy, works for all distrs, but does something that is only
 # meaningful for smoothed backends (using one(val))
-function δtoΔs(d, val, δ, Δs, ::SmoothedStraightThroughStrategy)
+function δtoΔs(d, val, δ, Δs, coupling, ::SmoothedStraightThroughStrategy)
     p = _get_parameter(d)
     δout = ForwardDiff.derivative(a -> mean(_reconstruct(d, p + a * δ)), 0.0)
     return similar_new(Δs, one(val), δout)
@@ -73,7 +83,11 @@ end
 
 ## Stochastic derivative rules for discrete distributions
 
-function _δtoΔs(d::Geometric, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
+function _δtoΔs(d::Geometric,
+        val::V,
+        δ::Real,
+        Δs::AbstractFIs,
+        ::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = succprob(d)
     if δ > 0
         return val > 0 ? similar_new(Δs, -one(V), δ * val / p / (1 - p)) :
@@ -85,7 +99,11 @@ function _δtoΔs(d::Geometric, val::V, δ::Real, Δs::AbstractFIs) where {V <: 
     end
 end
 
-function _δtoΔs(d::Bernoulli, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
+function _δtoΔs(d::Bernoulli,
+        val::V,
+        δ::Real,
+        Δs::AbstractFIs,
+        ::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = succprob(d)
     if δ > 0
         return isone(val) ? similar_empty(Δs, V) : similar_new(Δs, one(V), δ / (1 - p))
@@ -96,7 +114,11 @@ function _δtoΔs(d::Bernoulli, val::V, δ::Real, Δs::AbstractFIs) where {V <: 
     end
 end
 
-function _δtoΔs(d::Binomial, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
+function _δtoΔs(d::Binomial,
+        val::V,
+        δ::Real,
+        Δs::AbstractFIs,
+        ::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = succprob(d)
     n = ntrials(d)
     if δ > 0
@@ -109,7 +131,11 @@ function _δtoΔs(d::Binomial, val::V, δ::Real, Δs::AbstractFIs) where {V <: S
     end
 end
 
-function _δtoΔs(d::Poisson, val::V, δ::Real, Δs::AbstractFIs) where {V <: Signed}
+function _δtoΔs(d::Poisson,
+        val::V,
+        δ::Real,
+        Δs::AbstractFIs,
+        ::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = mean(d) # rate
     if δ > 0
         return similar_new(Δs, 1, δ)
@@ -120,7 +146,11 @@ function _δtoΔs(d::Poisson, val::V, δ::Real, Δs::AbstractFIs) where {V <: Si
     end
 end
 
-function _δtoΔs(d::Categorical, val::V, δs, Δs::AbstractFIs) where {V <: Signed}
+function _δtoΔs(d::Categorical,
+        val::V,
+        δs,
+        Δs::AbstractFIs,
+        ::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = params(d)[1]
     left_sum = sum(δs[1:(val - 1)], init = zero(V))
     right_sum = -sum(δs[(val + 1):end], init = zero(V))
@@ -159,7 +189,7 @@ function _δtoΔs(d::Categorical, val::V, δs, Δs::AbstractFIs) where {V <: Sig
     return combine((Δs_left, Δs_right); rep = Δs)
 end
 
-# Define randst
+# Define randst interface
 
 """
     randst(rng, d::Distributions.Sampleable; kwargs...)
@@ -179,11 +209,12 @@ for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
     end
     @eval function randst(rng::AbstractRNG,
             d_st::$dist{StochasticTriple{T, V, FIs}};
-            perturbation_map_kwargs = (;)) where {T, V, FIs}
+            perturbation_map_kwargs = (;),
+            coupling = InversionMethodDerivativeCoupling()) where {T, V, FIs}
         st = _get_parameter(d_st)
         d = _reconstruct(d_st, st.value)
         val = convert(Signed, rand(rng, d))
-        Δs1 = δtoΔs(d, val, st.δ, st.Δs)
+        Δs1 = δtoΔs(d, val, st.δ, st.Δs, coupling)
 
         low = cdf(d, val - 1)
         high = cdf(d, val)
@@ -228,7 +259,9 @@ function Base.rand(rng::AbstractRNG,
 end
 function Base.rand(rng::AbstractRNG,
         d_st::Categorical{<:StochasticTriple{T},
-            <:AbstractVector{<:StochasticTriple{T, V}}}; perturbation_map_kwargs = (;)) where {T,
+            <:AbstractVector{<:StochasticTriple{T, V}}};
+        perturbation_map_kwargs = (;),
+        coupling = InversionMethodDerivativeCoupling()) where {T,
         V}
     sts = _get_parameter(d_st) # stochastic triple for each probability
     p = map(st -> st.value, sts) # try to keep the same type. e.g. static array -> static array. TODO: avoid allocations 
@@ -238,7 +271,7 @@ function Base.rand(rng::AbstractRNG,
     Δs_all = map(st -> st.Δs, sts)
     Δs_rep = get_rep(Δs_all)
 
-    Δs1 = δtoΔs(d, val, map(st -> st.δ, sts), Δs_rep)
+    Δs1 = δtoΔs(d, val, map(st -> st.δ, sts), Δs_rep, coupling)
 
     low = cdf(d, val - 1)
     high = cdf(d, val)

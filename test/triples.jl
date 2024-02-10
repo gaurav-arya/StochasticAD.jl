@@ -479,8 +479,9 @@ end
             #= 
             NB: since the implementation of perturbations can be backend-specific, the
             below property need not hold in general, but does for the current non-smoothed backends.
-            =#
-            @test collect(perturbations(st)) == [(1, 2.0)]
+            =# 
+            p = only(perturbations(st))
+            @test p.Δ == 1 && p.weight == 2.0
             @test derivative_contribution(st) == 3.0
         else
             # Since smoothed algorithm uses the two-sided strategy, we get a different derivative contribution.
@@ -529,7 +530,8 @@ end
                 @test x_st isa StochasticAD.StochasticTriple{0, typeof(x)}
                 @test StochasticAD.value(x_st) == x
                 @test StochasticAD.delta(x_st) ≈ δ
-                @test collect(perturbations(x_st)) == [(Δ, 1.0)]
+                p = only(perturbations(x_st))
+                @test p.Δ == Δ && p.weight == 1.0
             end
         end
 

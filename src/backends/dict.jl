@@ -88,7 +88,7 @@ function StochasticAD.derivative_contribution(Δs::DictFIs{V}) where {V}
     sum((Δ * event.w for (event, Δ) in pairs(Δs.dict)), init = zero(V) * 0.0)
 end
 
-StochasticAD.perturbations(Δs::DictFIs) = [(Δ, event.w) for (event, Δ) in pairs(Δs.dict)]
+StochasticAD.perturbations(Δs::DictFIs) = [(; Δ, weight = event.w, state = event) for (event, Δ) in pairs(Δs.dict)]
 
 ### Unary propagation
 

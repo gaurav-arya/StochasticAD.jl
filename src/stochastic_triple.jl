@@ -34,7 +34,7 @@ value(x::Real, state = nothing) = x
 value(st::StochasticTriple) = st.value
 function value(st::StochasticTriple, state)
     st.value + filter_state(st.Δs, state)
-end
+end 
 #=
 Support ForwardDiff.Dual for internal usage.
 Assumes batch size is 1.

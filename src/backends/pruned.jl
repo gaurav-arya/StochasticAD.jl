@@ -79,7 +79,7 @@ pruned_value(Δs::PrunedFIs{<:Tuple}) = isempty(Δs) ? zero.(Δs.Δ) : Δs.Δ
 pruned_value(Δs::PrunedFIs{<:AbstractArray}) = isempty(Δs) ? zero.(Δs.Δ) : Δs.Δ
 
 StochasticAD.derivative_contribution(Δs::PrunedFIs) = pruned_value(Δs) * Δs.state.weight
-StochasticAD.perturbations(Δs::PrunedFIs) = ((pruned_value(Δs), Δs.state.weight),)
+StochasticAD.perturbations(Δs::PrunedFIs) = ((; Δ = pruned_value(Δs), weight = Δs.state.weight, state = Δs.state),)
 
 ### Unary propagation
 

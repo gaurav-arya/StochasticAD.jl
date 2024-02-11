@@ -63,11 +63,16 @@ perturbations(st::StochasticTriple) = perturbations(st.Δs)
     send_signal(st::StochasticTriple, signal::AbstractPerturbationSignal)
     send_signal(Δs::StochasticAD.AbstractFIs, signal::AbstractPerturbationSignal)
 
-Send a certain signal to a stochastic triple's perturbation collection `st.Δs`, which the backend may process as it wishes.
-Semantically, unbiasedness should not be affected by the sending of a signal.
+Send a certain signal to a stochastic triple's perturbation collection `st.Δs` (or to a `Δs` directly), 
+which the backend may process as it wishes. Semantically, unbiasedness should not be affected by the 
+sending of the signal. The new version of the first argument (`st` or `Δs`) after signal processing is 
+returned.
 """
 send_signal(st::Real, ::AbstractPerturbationSignal) = st
-send_signal(st::StochasticTriple, signal::AbstractPerturbationSignal) = send_signal(st.Δs, signal)
+function send_signal(st::StochasticTriple{T}, signal::AbstractPerturbationSignal) where {T}
+    new_Δs = send_signal(st.Δs, signal)
+    return StochasticTriple{T}(st.value, st.δ, new_Δs)
+end
 
 """
     derivative_contribution(st::StochasticTriple)

@@ -68,10 +68,4 @@ abstract type AbstractPerturbationStrategy end
 
 abstract type AbstractPerturbationSignal end
 
-"""
-    perturbation_signal(Δs::AbstractFIs, signal::AbstractPerturbationSignal)
-
-Send a certain signal to a perturbation collection `Δs`, which the backend may process as it wishes.
-Semantically, unbiasedness is not affected by the sending of a signal.
-"""
-function perturbation_signal end
+function send_signal end

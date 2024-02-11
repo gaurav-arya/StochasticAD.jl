@@ -60,6 +60,16 @@ perturbations(x::Real) = ()
 perturbations(st::StochasticTriple) = perturbations(st.Δs)
 
 """
+    send_signal(st::StochasticTriple, signal::AbstractPerturbationSignal)
+    send_signal(Δs::StochasticAD.AbstractFIs, signal::AbstractPerturbationSignal)
+
+Send a certain signal to a stochastic triple's perturbation collection `st.Δs`, which the backend may process as it wishes.
+Semantically, unbiasedness should not be affected by the sending of a signal.
+"""
+send_signal(st::Real, ::AbstractPerturbationSignal) = st
+send_signal(st::StochasticTriple, signal::AbstractPerturbationSignal) = send_signal(st.Δs, signal)
+
+"""
     derivative_contribution(st::StochasticTriple)
 
 Return the derivative estimate given by combining the dual and triple components of `st`.

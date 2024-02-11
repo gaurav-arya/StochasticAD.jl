@@ -102,6 +102,10 @@ function (::Type{<:AbstractWrapperFIs{V}})(Δs::AbstractWrapperFIs) where {V}
     reconstruct_wrapper(Δs, StochasticAD.similar_type(typeof(Δs.Δs), V)(Δs.Δs))
 end
 
+function StochasticAD.perturbation_signal(Δs::AbstractWrapperFIs, signal::StochasticAD.AbstractPerturbationSignal)
+    reconstruct_wrapper(Δs, perturbation_signal(Δs.Δs, signal))
+end
+
 function Base.show(io::IO, Δs::AbstractWrapperFIs)
     return show(io, Δs.Δs)
 end

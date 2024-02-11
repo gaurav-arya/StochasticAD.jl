@@ -99,7 +99,7 @@ function StochasticAD.weighted_map_Δs(f, Δs::DictFIs; kwargs...)
     mapped_weights = last.(mapped_values_and_weights)
     scaled_events = map((event, a) -> InfinitesimalEvent(event.tag, event.w * a),
         keys(Δs.dict),
-        mapped_weights)
+        mapped_weights) # TODO: should original events (with old tag) also be modified?
     dict = Dictionary(scaled_events, mapped_values)
     DictFIs(dict, Δs.state)
 end
@@ -141,7 +141,8 @@ function StochasticAD.combine(FIs::Type{<:DictFIs}, Δs_all;
 end
 
 function StochasticAD.scalarize(Δs::DictFIs; out_rep = nothing)
-    tupleify(Δ1, Δ2) = StochasticAD.structural_map(tuple, Δ1, Δ2)
+    # TODO: use vcat here?
+    tupleify(Δ1, Δ2) = StochasticAD.structural_map(tuple, Δ1, Δ2) 
     Δ_all_allkeys = foldl(tupleify, values(Δs.dict))
     Δ_all_rep = first(values(Δs.dict))
     _keys = keys(Δs.dict)

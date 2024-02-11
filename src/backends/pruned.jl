@@ -95,7 +95,6 @@ StochasticAD.alltrue(f, Δs::PrunedFIs) = f(Δs.Δ)
 ### Coupling
 
 function StochasticAD.get_rep(::Type{<:PrunedFIs}, Δs_all)
-    # The code below is a bit ridiculous, but it's faster than `first` for small structures:)
     return StochasticAD.get_any(Δs_all)
 end
 

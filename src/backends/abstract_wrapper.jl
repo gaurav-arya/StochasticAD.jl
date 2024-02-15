@@ -103,7 +103,7 @@ function (::Type{<:AbstractWrapperFIs{V}})(Δs::AbstractWrapperFIs) where {V}
 end
 
 function StochasticAD.send_signal(Δs::AbstractWrapperFIs, signal::StochasticAD.AbstractPerturbationSignal)
-    reconstruct_wrapper(Δs, send_signal(Δs.Δs, signal))
+    reconstruct_wrapper(Δs, StochasticAD.send_signal(Δs.Δs, signal))
 end
 
 function Base.show(io::IO, Δs::AbstractWrapperFIs)

@@ -202,8 +202,7 @@ end
 struct Tag{F, V}
 end
 
-function stochastic_triple_direction(f, p::V, direction;
-        backend = PrunedFIsBackend()) where {V}
+function stochastic_triple_direction(f, p::V, direction; backend) where {V}
     Δs = create_Δs(backend, Int) # TODO: necessity of hardcoding some type here suggests interface improvements
     sts = structural_map(p, direction) do p_i, direction_i
         StochasticTriple{Tag{typeof(f), V}}(p_i, direction_i,
@@ -239,9 +238,9 @@ StochasticTriple of Int64:
 0 + 0ε + (1 with probability 2.0ε)
 ```
 """
-function stochastic_triple(f, p; direction = nothing, kwargs...)
+function stochastic_triple(f, p; direction = nothing, backend::AbstractFIsBackend = PrunedFIsBackend())
     if direction !== nothing
-        return stochastic_triple_direction(f, p, direction; kwargs...)
+        return stochastic_triple_direction(f, p, direction; backend)
     end
     counter = begin
         c = 0
@@ -255,7 +254,7 @@ function stochastic_triple(f, p; direction = nothing, kwargs...)
         direction = structural_map(indices, p) do i, p_i
             i == perturbed_index ? one(p_i) : zero(p_i)
         end
-        stochastic_triple_direction(f, p, direction; kwargs...)
+        stochastic_triple_direction(f, p, direction; backend)
     end
     return structural_map(map_func, indices)
 end

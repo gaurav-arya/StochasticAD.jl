@@ -75,7 +75,7 @@ StochasticAD.create_Δs(::DictFIsBackend, V) = DictFIs{V}(DictFIsState())
 
 ### Convert type of a backend
 
-function DictFIs{V}(Δs::DictFIs) where {V}
+function Base.convert(::Type{DictFIs{V}}, Δs::DictFIs) where {V}
     DictFIs{V}(convert(Dictionary{InfinitesimalEvent, V}, Δs.dict), Δs.state)
 end
 

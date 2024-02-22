@@ -142,7 +142,7 @@ end
 function Base.convert(::Type{StochasticTriple{T1, V, FIs}},
         x::StochasticTriple{T2}) where {T1, T2, V, FIs}
     (T1 !== T2) && throw(ArgumentError("Tags of combined stochastic triples do not match."))
-    StochasticTriple{T1, V, FIs}(convert(V, x.value), convert(V, x.δ), FIs(x.Δs))
+    StochasticTriple{T1, V, FIs}(convert(V, x.value), convert(V, x.δ), convert(FIs, x.Δs))
 end
 
 # TODO: ForwardDiff's promotion rules are a little more complicated, see https://github.com/JuliaDiff/ForwardDiff.jl/issues/322

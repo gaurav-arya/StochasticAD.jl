@@ -78,7 +78,7 @@ end
 
 ### Convert type of a backend
 
-function PrunedFIsAggressive{V}(Δs::PrunedFIsAggressive) where {V}
+function Base.convert(::Type{PrunedFIsAggressive{V}}, Δs::PrunedFIsAggressive) where {V}
     PrunedFIsAggressive{V}(convert(V, Δs.Δ), Δs.tag, Δs.state)
 end
 

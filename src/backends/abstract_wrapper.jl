@@ -98,8 +98,8 @@ function StochasticAD.derivative_contribution(Δs::AbstractWrapperFIs)
     StochasticAD.derivative_contribution(Δs.Δs)
 end
 
-function (::Type{<:AbstractWrapperFIs{V}})(Δs::AbstractWrapperFIs) where {V}
-    reconstruct_wrapper(Δs, StochasticAD.similar_type(typeof(Δs.Δs), V)(Δs.Δs))
+function Base.convert(::Type{<:AbstractWrapperFIs{V}}, Δs::AbstractWrapperFIs) where {V}
+    reconstruct_wrapper(Δs, convert(StochasticAD.similar_type(typeof(Δs.Δs), V), Δs.Δs))
 end
 
 function StochasticAD.send_signal(Δs::AbstractWrapperFIs, signal::StochasticAD.AbstractPerturbationSignal)

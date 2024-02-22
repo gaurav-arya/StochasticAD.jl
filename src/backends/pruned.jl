@@ -59,7 +59,7 @@ StochasticAD.create_Δs(::PrunedFIsBackend, V) = PrunedFIs{V}(PrunedFIsState(fal
 
 ### Convert type of a backend
 
-function PrunedFIs{V}(Δs::PrunedFIs) where {V}
+function Base.convert(::Type{PrunedFIs{V}}, Δs::PrunedFIs) where {V}
     PrunedFIs{V}(convert(V, Δs.Δ), Δs.state)
 end
 

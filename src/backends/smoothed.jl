@@ -46,10 +46,9 @@ StochasticAD.create_Δs(::SmoothedFIsBackend, V) = SmoothedFIs{V}(0.0)
 
 ### Convert type of a backend
 
-function (::Type{<:SmoothedFIs{V}})(Δs::SmoothedFIs) where {V}
-    SmoothedFIs{V}(Δs.δ)
+function Base.convert(FIs::Type{<:SmoothedFIs{V}}, Δs::SmoothedFIs) where {V}
+    SmoothedFIs{V}(Δs.δ)::FIs
 end
-(::Type{SmoothedFIs{V}})(Δs::SmoothedFIs) where {V} = SmoothedFIs{V}(Δs.δ)
 
 ### Getting information about perturbations
 

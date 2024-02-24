@@ -213,7 +213,7 @@ for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
     end
     @eval function randst(rng::AbstractRNG,
             d_st::$dist{StochasticTriple{T, V, FIs}};
-            perturbation_map_kwargs = (;),
+            Δ_kwargs = (;),
             derivative_coupling = InversionMethodDerivativeCoupling()) where {T, V, FIs}
         st = _get_parameter(d_st)
         d = _reconstruct(d_st, st.value)
@@ -249,7 +249,7 @@ for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
             enumeration,
             deriv = δ -> smoothed_delta(d, val, δ, derivative_coupling),
             out_rep = val,
-            perturbation_map_kwargs...)
+            Δ_kwargs...)
 
         StochasticTriple{T}(val, zero(val), combine((Δs2, Δs1); rep = Δs1)) # ensure that tags are in order in combine, in case backend wishes to exploit this 
     end
@@ -264,7 +264,7 @@ end
 function randst(rng::AbstractRNG,
         d_st::Categorical{<:StochasticTriple{T},
             <:AbstractVector{<:StochasticTriple{T, V}}};
-        perturbation_map_kwargs = (;),
+        Δ_kwargs = (;),
         derivative_coupling = InversionMethodDerivativeCoupling()) where {T,
         V}
     sts = _get_parameter(d_st) # stochastic triple for each probability
@@ -306,9 +306,11 @@ function randst(rng::AbstractRNG,
         enumeration,
         deriv = δ -> smoothed_delta(d, val, δ, derivative_coupling),
         out_rep = val,
-        perturbation_map_kwargs...)
+        Δ_kwargs...)
 
-    StochasticTriple{T}(val, zero(val), combine((Δs2, Δs1); rep = Δs_rep))
+    Δs = combine((Δs2, Δs1); rep = Δs1, out_rep = val, Δ_kwargs...)
+
+    StochasticTriple{T}(val, zero(val), Δs) 
 end
 
 ## Handling finite perturbation to Binomial number of trials

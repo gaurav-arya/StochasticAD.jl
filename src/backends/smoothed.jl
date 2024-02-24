@@ -69,11 +69,11 @@ StochasticAD.alltrue(f, Δs::SmoothedFIs) = true
 
 StochasticAD.get_rep(::Type{<:SmoothedFIs}, Δs_all) = StochasticAD.get_any(Δs_all)
 
-function StochasticAD.couple(::Type{<:SmoothedFIs}, Δs_all; rep = nothing, out_rep)
+function StochasticAD.couple(::Type{<:SmoothedFIs}, Δs_all; rep = nothing, out_rep, kwargs...)
     SmoothedFIs{typeof(out_rep)}(StochasticAD.structural_map(Δs -> Δs.δ, Δs_all))
 end
 
-function StochasticAD.combine(::Type{<:SmoothedFIs}, Δs_all; rep = nothing)
+function StochasticAD.combine(::Type{<:SmoothedFIs}, Δs_all; rep = nothing, kwargs...)
     V_out = StochasticAD.valtype(first(StochasticAD.structural_iterate(Δs_all)))
     Δ_combined = sum(Δs -> Δs.δ, StochasticAD.structural_iterate(Δs_all))
     SmoothedFIs{V_out}(Δ_combined)

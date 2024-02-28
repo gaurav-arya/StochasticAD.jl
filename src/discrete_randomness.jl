@@ -191,6 +191,45 @@ function _δtoΔs(d::Categorical,
     return combine((Δs_left, Δs_right); rep = Δs)
 end
 
+## Propagation couplings
+
+abstract type AbstractPropagationCoupling end
+
+struct InversionMethodPropagationCoupling <: AbstractPropagationCoupling end
+
+function _map_func(d, val, Δ, ::InversionMethodPropagationCoupling)
+    # construct alternative distribution
+    p = _get_parameter(d)
+    alt_d = _reconstruct(d, p + Δ)
+    # compute bounds on original ω
+    low = cdf(d, val - 1)
+    high = cdf(d, val)
+    # sample alternative value
+    alt_val = quantile(alt_d, rand(RNG) * (high - low) + low)
+    return convert(Signed, alt_val - val)
+end
+
+function _map_enumeration(d, val, Δ, ::InversionMethodPropagationCoupling)
+    # construct alternative distribution
+    p = _get_parameter(d)
+    alt_d = _reconstruct(d, p + Δ)
+    # compute bounds on original ω
+    low = cdf(d, val - 1)
+    high = cdf(d, val)
+    if _has_finite_support(alt_d)
+        map(_get_support(alt_d)) do alt_val
+            # interval intersect of (cdf(alt_d, alt_val - 1), cdf(alt_d, alt_val)) and (low, high)
+            alt_low = cdf(alt_d, alt_val - 1)
+            alt_high = cdf(alt_d, alt_val)
+            prob_alt = max(0.0, min(alt_high, high) - max(alt_low, low)) /
+                        (high - low)
+            return (alt_val - val, prob_alt)
+        end
+    else
+        error("enumeration not supported for distribution $d. Does $d have finite support?")
+    end
+end
+
 ## Overloading of random sampling 
 
 # Define randst interface
@@ -218,39 +257,16 @@ for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
     @eval function randst(rng::AbstractRNG,
             d_st::$dist{StochasticTriple{T, V, FIs}};
             Δ_kwargs = (;),
-            derivative_coupling = InversionMethodDerivativeCoupling()) where {T, V, FIs}
+            derivative_coupling = InversionMethodDerivativeCoupling(),
+            propagation_coupling = InversionMethodPropagationCoupling()) where {T, V, FIs}
         st = _get_parameter(d_st)
         d = _reconstruct(d_st, st.value)
         val = convert(Signed, rand(rng, d))
         Δs1 = δtoΔs(d, val, st.δ, st.Δs, derivative_coupling)
 
-        low = cdf(d, val - 1)
-        high = cdf(d, val)
-
-        get_alt_d(Δ) = _reconstruct(d_st, st.value + Δ)
-        function map_func(Δ)
-            alt_d = get_alt_d(Δ)
-            alt_val = quantile(alt_d, rand(RNG) * (high - low) + low)
-            convert(Signed, alt_val - val)
-        end
-        function enumeration(Δ, _)
-            alt_d = get_alt_d(Δ)
-            if _has_finite_support(alt_d)
-                map(_get_support(alt_d)) do alt_val
-                    # interval intersect of (cdf(alt_d, alt_val - 1), cdf(alt_d, alt_val)) and (low, high)
-                    alt_low = cdf(alt_d, alt_val - 1)
-                    alt_high = cdf(alt_d, alt_val)
-                    prob_alt = max(0.0, min(alt_high, high) - max(alt_low, low)) /
-                               (high - low)
-                    return (alt_val - val, prob_alt)
-                end
-            else
-                error("enumeration not supported for distribution $d. Does $d have finite support?")
-            end
-        end
-        Δs2 = map(map_func,
+        Δs2 = map(Δ -> _map_func(d, val, Δ, propagation_coupling),
             st.Δs;
-            enumeration,
+            enumeration = (Δ, _) -> _map_enumeration(d, val, Δ, propagation_coupling),
             deriv = δ -> smoothed_delta(d, val, δ, derivative_coupling),
             out_rep = val,
             Δ_kwargs...)
@@ -269,8 +285,8 @@ function randst(rng::AbstractRNG,
         d_st::Categorical{<:StochasticTriple{T},
             <:AbstractVector{<:StochasticTriple{T, V}}};
         Δ_kwargs = (;),
-        derivative_coupling = InversionMethodDerivativeCoupling()) where {T,
-        V}
+        derivative_coupling = InversionMethodDerivativeCoupling(),
+        propagation_coupling = InversionMethodPropagationCoupling()) where {T, V}
     sts = _get_parameter(d_st) # stochastic triple for each probability
     p = map(st -> st.value, sts) # try to keep the same type. e.g. static array -> static array. TODO: avoid allocations 
     d = _reconstruct(d_st, p)
@@ -281,33 +297,10 @@ function randst(rng::AbstractRNG,
 
     Δs1 = δtoΔs(d, val, map(st -> st.δ, sts), Δs_rep, derivative_coupling)
 
-    low = cdf(d, val - 1)
-    high = cdf(d, val)
     Δs_coupled = couple(Δs_all; rep = Δs_rep, out_rep = p) # TODO: again, there are possible allocations here
-
-    get_alt_d(Δ) = _reconstruct(d, p .+ Δ)
-    function map_func(Δ)
-        alt_d = get_alt_d(Δ)
-        alt_val = quantile(alt_d, rand(RNG) * (high - low) + low)
-        convert(Signed, alt_val - val)
-    end
-    function enumeration(Δ, _)
-        alt_d = get_alt_d(Δ)
-        if _has_finite_support(alt_d)
-            map(_get_support(alt_d)) do alt_val
-                # interval intersect of (cdf(alt_d, alt_val - 1), cdf(alt_d, alt_val)) and (low, high)
-                alt_low = cdf(alt_d, alt_val - 1)
-                alt_high = cdf(alt_d, alt_val)
-                prob_alt = max(0.0, min(alt_high, high) - max(alt_low, low)) / (high - low)
-                return (alt_val - val, prob_alt)
-            end
-        else
-            error("enumeration not supported for distribution $d. Does $d have finite support?")
-        end
-    end
-    Δs2 = map(map_func,
+    Δs2 = map(Δ -> _map_func(d, val, Δ, propagation_coupling),
         Δs_coupled;
-        enumeration,
+        enumeration = (Δ, _) -> _map_enumeration(d, val, Δ, propagation_coupling),
         deriv = δ -> smoothed_delta(d, val, δ, derivative_coupling),
         out_rep = val,
         Δ_kwargs...)

@@ -31,13 +31,13 @@ _get_support(::Bernoulli) = (0, 1)
 # the map below looks a bit silly, but it gives us a collection of the categories with the same structure as probs(d). 
 _get_support(d::Categorical) = map((val, prob) -> val, 1:ncategories(d), probs(d))
 
-# Derivative coupling approaches, determining which weighted perturbations to consider
+## Derivative couplings
 
+# Derivative coupling approaches, determining which weighted perturbations to consider
 abstract type AbstractDerivativeCoupling end
 struct InversionMethodDerivativeCoupling end
 
-## Strategies for precisely which perturbations to form given a derivative coupling
-
+# Strategies for precisely which perturbations to form given a derivative coupling
 struct SingleSidedStrategy <: AbstractPerturbationStrategy end
 struct TwoSidedStrategy <: AbstractPerturbationStrategy end
 struct SmoothedStraightThroughStrategy <: AbstractPerturbationStrategy end
@@ -45,6 +45,8 @@ struct StraightThroughStrategy <: AbstractPerturbationStrategy end
 struct IgnoreDiscreteStrategy <: AbstractPerturbationStrategy end
 
 new_Δs_strategy(Δs) = SingleSidedStrategy()
+
+# Derivative coupling high-level interface
 
 """
     δtoΔs(d, val, δ, Δs::AbstractFIs)
@@ -81,7 +83,7 @@ function δtoΔs(d, val, δ, Δs, derivative_coupling, ::SmoothedStraightThrough
     return similar_new(Δs, one(val), δout)
 end
 
-## Stochastic derivative rules for discrete distributions
+# Derivative coupling low-level implementations 
 
 function _δtoΔs(d::Geometric,
         val::V,
@@ -188,6 +190,8 @@ function _δtoΔs(d::Categorical,
 
     return combine((Δs_left, Δs_right); rep = Δs)
 end
+
+## Overloading of random sampling 
 
 # Define randst interface
 

@@ -35,6 +35,27 @@ _get_support(d::Categorical) = map((val, prob) -> val, 1:ncategories(d), probs(d
 
 # Derivative coupling approaches, determining which weighted perturbations to consider
 abstract type AbstractDerivativeCoupling end
+
+"""
+    InversionMethodDerivativeCoupling(mode)
+
+Specifies an inversion method coupling for generating perturbations from a univariate distribution.
+Valid choices of mode are `Val(:positive_weight)`, `Val(:always_right)`, and `Val(:always_left)`.
+
+# Example
+```jldoctest
+julia> using StochasticAD, Distributions
+
+julia> function X(p)
+           return randst(Bernoulli(1 - p); derivative_coupling = InversionMethodDerivativeCoupling(Val(:always_right)))
+       end
+X (generic function with 1 method)
+
+julia> stochastic_triple(X, 0.5)
+StochasticTriple of Int64:
+0 + 0ε + (1 with probability -2.0ε)
+```
+"""
 Base.@kwdef struct InversionMethodDerivativeCoupling{M}
     mode::M = Val(:positive_weight)
 end
@@ -212,6 +233,11 @@ end
 
 abstract type AbstractPropagationCoupling end
 
+"""
+    InversionMethodPropagationCoupling 
+
+Specifies an inversion method coupling for propagating perturbations.
+"""
 struct InversionMethodPropagationCoupling <: AbstractPropagationCoupling end
 
 function _map_func(d, val, Δ, ::InversionMethodPropagationCoupling)
@@ -256,7 +282,8 @@ end
 
 When no keyword arguments are provided, `randst` behaves identically to `rand(rng, d)` in both ordinary computation
 and for stochastic triple dispatches. However, `randst` also allows the user to provide various keyword arguments
-for customizing the differentiation logic. The set of allowed keyword arguments depends on the type of `d`.
+for customizing the differentiation logic. The set of allowed keyword arguments depends on the type of `d`: a couple
+common ones are `derivative_coupling` and `propagation_coupling`.
 
 For developers: if you wish to accept custom keyword arguments in a stochastic triple dispatch, you should overload
 `randst`, and redirect `rand` to your `randst` method. If you do not, it suffices to just overload `rand`.

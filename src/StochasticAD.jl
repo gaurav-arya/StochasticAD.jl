@@ -11,6 +11,7 @@ export PrunedFIsBackend,
        StrategyWrapperFIsBackend
 export PrunedFIs, PrunedFIsAggressive, DictFIs, SmoothedFIs, StrategyWrapperFIs
 export randst
+export InversionMethodDerivativeCoupling
 
 ### Imports
 

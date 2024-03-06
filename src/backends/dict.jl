@@ -121,7 +121,8 @@ end
 
 function StochasticAD.couple(FIs::Type{<:DictFIs}, Δs_all;
         rep = StochasticAD.get_rep(FIs, Δs_all),
-        out_rep = nothing)
+        out_rep = nothing,
+        kwargs...)
     all_keys = Iterators.map(StochasticAD.structural_iterate(Δs_all)) do Δs
         keys(Δs.dict)
     end
@@ -136,7 +137,7 @@ function StochasticAD.couple(FIs::Type{<:DictFIs}, Δs_all;
 end
 
 function StochasticAD.combine(FIs::Type{<:DictFIs}, Δs_all;
-        rep = StochasticAD.get_rep(FIs, Δs_all))
+        rep = StochasticAD.get_rep(FIs, Δs_all), kwargs...)
     Δs_dicts = Iterators.map(Δs -> Δs.dict, StochasticAD.structural_iterate(Δs_all))
     Δs_combined_dict = reduce(Δs_dicts) do Δs_dict1, Δs_dict2
         mergewith((x, y) -> StochasticAD.structural_map(+, x, y), Δs_dict1, Δs_dict2)

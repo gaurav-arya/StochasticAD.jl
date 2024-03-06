@@ -122,7 +122,7 @@ end
 # lazily kept around even after (aggressive or lazy) pruning made the perturbation invalid.
 function StochasticAD.couple(FIs::Type{<:PrunedFIsAggressive}, Δs_all;
         rep = StochasticAD.get_rep(FIs, Δs_all),
-        out_rep = nothing)
+        out_rep = nothing, kwargs...)
     state = rep.state
     Δ_coupled = StochasticAD.structural_map(pruned_value, Δs_all) # TODO: perhaps a performance optimization possible here
     PrunedFIsAggressive(Δ_coupled, state.active_tag, state)
@@ -130,7 +130,7 @@ end
 
 # basically couple combined with a sum.
 function StochasticAD.combine(FIs::Type{<:PrunedFIsAggressive}, Δs_all;
-        rep = StochasticAD.get_rep(FIs, Δs_all))
+        rep = StochasticAD.get_rep(FIs, Δs_all), kwargs...)
     state = rep.state
     Δ_combined = sum(pruned_value, StochasticAD.structural_iterate(Δs_all))
     PrunedFIsAggressive(Δ_combined, state.active_tag, state)

@@ -132,7 +132,7 @@ end
 function StochasticTriple{T}(value::A, δ::B,
         Δs::FIs) where {T, A, B, C, FIs <: AbstractFIs{C}}
     V = promote_type(A, B, C)
-    StochasticTriple{T}(convert(V, value), convert(V, δ), similar_type(FIs, V)(Δs))
+    StochasticTriple{T}(convert(V, value), convert(V, δ), convert(similar_type(FIs, V), Δs))
 end
 
 ### Conversion rules

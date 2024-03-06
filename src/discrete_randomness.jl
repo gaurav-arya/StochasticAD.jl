@@ -56,8 +56,11 @@ new_Δs_strategy(Δs) = SingleSidedStrategy()
 Given the parameter `val` of a distribution `d` and an infinitesimal change `δ`,
 return the discrete change in the output, with a similar representation to `Δs`.
 """
-δtoΔs(d, val, δ, Δs, derivative_coupling) = δtoΔs(d, val, δ, Δs, derivative_coupling, new_Δs_strategy(Δs))
-δtoΔs(d, val, δ, Δs, derivative_coupling, ::SingleSidedStrategy) = _δtoΔs(d, val, δ, Δs, derivative_coupling)
+δtoΔs(d, val, δ, Δs, derivative_coupling) = δtoΔs(
+    d, val, δ, Δs, derivative_coupling, new_Δs_strategy(Δs))
+function δtoΔs(d, val, δ, Δs, derivative_coupling, ::SingleSidedStrategy)
+    _δtoΔs(d, val, δ, Δs, derivative_coupling)
+end
 function δtoΔs(d, val, δ, Δs, derivative_coupling, ::TwoSidedStrategy)
     Δs1 = _δtoΔs(d, val, δ, Δs, derivative_coupling)
     Δs2 = _δtoΔs(d, val, -δ, Δs, derivative_coupling)
@@ -75,7 +78,9 @@ function δtoΔs(d::Union{Bernoulli, Binomial},
     Δs2 = _δtoΔs(d, val, -δ, Δs, derivative_coupling)
     return combine((scale(Δs1, 1 - p), scale(Δs2, -p)))
 end
-δtoΔs(d, val::V, δ, Δs, derivative_coupling, ::IgnoreDiscreteStrategy) where {V} = similar_empty(Δs, V)
+function δtoΔs(d, val::V, δ, Δs, derivative_coupling, ::IgnoreDiscreteStrategy) where {V}
+    similar_empty(Δs, V)
+end
 
 # Implement straight through strategy, works for all distrs, but does something that is only
 # meaningful for smoothed backends (using one(val))
@@ -93,10 +98,12 @@ function _δtoΔs(d::Geometric,
         Δs::AbstractFIs,
         derivative_coupling::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = succprob(d)
-    if (derivative_coupling.mode isa Val{:positive_weight} && δ > 0) || (derivative_coupling.mode isa Val{:always_right})
+    if (derivative_coupling.mode isa Val{:positive_weight} && δ > 0) ||
+       (derivative_coupling.mode isa Val{:always_right})
         return val > 0 ? similar_new(Δs, -one(V), δ * val / p / (1 - p)) :
                similar_empty(Δs, V)
-    elseif (derivative_coupling.mode isa Val{:positive_weight} && δ < 0) || (derivative_coupling.mode isa Val{:always_left})
+    elseif (derivative_coupling.mode isa Val{:positive_weight} && δ < 0) ||
+           (derivative_coupling.mode isa Val{:always_left})
         return similar_new(Δs, one(V), -δ * (val + 1) / p)
     else
         return similar_empty(Δs, V)
@@ -109,9 +116,11 @@ function _δtoΔs(d::Bernoulli,
         Δs::AbstractFIs,
         derivative_coupling::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = succprob(d)
-    if (derivative_coupling.mode isa Val{:positive_weight} && δ > 0) || (derivative_coupling.mode isa Val{:always_right})
+    if (derivative_coupling.mode isa Val{:positive_weight} && δ > 0) ||
+       (derivative_coupling.mode isa Val{:always_right})
         return isone(val) ? similar_empty(Δs, V) : similar_new(Δs, one(V), δ / (1 - p))
-    elseif (derivative_coupling.mode isa Val{:positive_weight} && δ < 0) || (derivative_coupling.mode isa Val{:always_left})
+    elseif (derivative_coupling.mode isa Val{:positive_weight} && δ < 0) ||
+           (derivative_coupling.mode isa Val{:always_left})
         return isone(val) ? similar_new(Δs, -one(V), -δ / p) : similar_empty(Δs, V)
     else
         return similar_empty(Δs, V)
@@ -125,10 +134,12 @@ function _δtoΔs(d::Binomial,
         derivative_coupling::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = succprob(d)
     n = ntrials(d)
-    if (derivative_coupling.mode isa Val{:positive_weight} && δ > 0) || (derivative_coupling.mode isa Val{:always_right})
+    if (derivative_coupling.mode isa Val{:positive_weight} && δ > 0) ||
+       (derivative_coupling.mode isa Val{:always_right})
         return val == n ? similar_empty(Δs, V) :
                similar_new(Δs, one(V), δ * (n - val) / (1 - p))
-    elseif (derivative_coupling.mode isa Val{:positive_weight} && δ < 0) || (derivative_coupling.mode isa Val{:always_left})
+    elseif (derivative_coupling.mode isa Val{:positive_weight} && δ < 0) ||
+           (derivative_coupling.mode isa Val{:always_left})
         return !iszero(val) ? similar_new(Δs, -one(V), -δ * val / p) : similar_empty(Δs, V)
     else
         return similar_empty(Δs, V)
@@ -141,9 +152,11 @@ function _δtoΔs(d::Poisson,
         Δs::AbstractFIs,
         derivative_coupling::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = mean(d) # rate
-    if (derivative_coupling.mode isa Val{:positive_weight} && δ > 0) || (derivative_coupling.mode isa Val{:always_right})
+    if (derivative_coupling.mode isa Val{:positive_weight} && δ > 0) ||
+       (derivative_coupling.mode isa Val{:always_right})
         return similar_new(Δs, 1, δ)
-    elseif (derivative_coupling.mode isa Val{:positive_weight} && δ < 0) || (derivative_coupling.mode isa Val{:always_left})
+    elseif (derivative_coupling.mode isa Val{:positive_weight} && δ < 0) ||
+           (derivative_coupling.mode isa Val{:always_left})
         return val > 0 ? similar_new(Δs, -1, -δ * val / p) : similar_empty(Δs, V)
     else
         return similar_empty(Δs, V)
@@ -159,7 +172,8 @@ function _δtoΔs(d::Categorical,
     left_sum = sum(δs[1:(val - 1)], init = zero(eltype(δs)))
     right_sum = -sum(δs[(val + 1):end], init = zero(eltype(δs)))
 
-    if (derivative_coupling.mode isa Val{:positive_weight} && left_sum > 0) || (derivative_coupling.mode isa Val{:always_left} && !iszero(left_sum))
+    if (derivative_coupling.mode isa Val{:positive_weight} && left_sum > 0) ||
+       (derivative_coupling.mode isa Val{:always_left} && !iszero(left_sum))
         stop = rand() * left_sum
         upto = zero(eltype(δs)) # The "upto" logic handles an edge case of probability 0 events that have non-zero derivative.
         # It's a lot of logic to handle an edge case, but hopefully it's optimized away.
@@ -175,7 +189,8 @@ function _δtoΔs(d::Categorical,
         Δs_left = similar_empty(Δs, typeof(val))
     end
 
-    if (derivative_coupling.mode isa Val{:positive_weight} && right_sum < 0) || (derivative_coupling.mode isa Val{:always_right} && !iszero(right_sum))
+    if (derivative_coupling.mode isa Val{:positive_weight} && right_sum < 0) ||
+       (derivative_coupling.mode isa Val{:always_right} && !iszero(right_sum))
         stop = -rand() * right_sum
         upto = zero(eltype(δs))
         local right_nonzero
@@ -224,7 +239,7 @@ function _map_enumeration(d, val, Δ, ::InversionMethodPropagationCoupling)
             alt_low = cdf(alt_d, alt_val - 1)
             alt_high = cdf(alt_d, alt_val)
             prob_alt = max(0.0, min(alt_high, high) - max(alt_low, low)) /
-                        (high - low)
+                       (high - low)
             return (alt_val - val, prob_alt)
         end
     else
@@ -309,7 +324,7 @@ function randst(rng::AbstractRNG,
 
     Δs = combine((Δs2, Δs1); rep = Δs1, out_rep = val, Δ_kwargs...)
 
-    StochasticTriple{T}(val, zero(val), Δs) 
+    StochasticTriple{T}(val, zero(val), Δs)
 end
 
 ## Handling finite perturbation to Binomial number of trials

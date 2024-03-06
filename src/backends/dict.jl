@@ -88,7 +88,9 @@ function StochasticAD.derivative_contribution(Δs::DictFIs{V}) where {V}
     sum((Δ * event.w for (event, Δ) in pairs(Δs.dict)), init = zero(V) * 0.0)
 end
 
-StochasticAD.perturbations(Δs::DictFIs) = [(; Δ, weight = event.w, state = event) for (event, Δ) in pairs(Δs.dict)]
+function StochasticAD.perturbations(Δs::DictFIs)
+    [(; Δ, weight = event.w, state = event) for (event, Δ) in pairs(Δs.dict)]
+end
 
 ### Unary propagation
 
@@ -124,9 +126,11 @@ function StochasticAD.couple(FIs::Type{<:DictFIs}, Δs_all;
         keys(Δs.dict)
     end
     distinct_keys = unique(all_keys |> Iterators.flatten)
-    Δs_coupled_dict = [StochasticAD.structural_map(Δs -> isassigned(Δs.dict, key) ?
-                                                         Δs.dict[key] :
-                                                         zero(eltype(Δs.dict)), Δs_all)
+    Δs_coupled_dict = [StochasticAD.structural_map(
+                           Δs -> isassigned(Δs.dict, key) ?
+                                 Δs.dict[key] :
+                                 zero(eltype(Δs.dict)),
+                           Δs_all)
                        for key in distinct_keys]
     DictFIs(Dictionary(distinct_keys, Δs_coupled_dict), rep.state)
 end
@@ -142,7 +146,7 @@ end
 
 function StochasticAD.scalarize(Δs::DictFIs; out_rep = nothing)
     # TODO: use vcat here?
-    tupleify(Δ1, Δ2) = StochasticAD.structural_map(tuple, Δ1, Δ2) 
+    tupleify(Δ1, Δ2) = StochasticAD.structural_map(tuple, Δ1, Δ2)
     Δ_all_allkeys = foldl(tupleify, values(Δs.dict))
     Δ_all_rep = first(values(Δs.dict))
     _keys = keys(Δs.dict)

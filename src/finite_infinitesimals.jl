@@ -71,6 +71,7 @@ abstract type AbstractPerturbationSignal end
 function send_signal end
 
 # Ignore signals by default since they do not change semantics.
-function StochasticAD.send_signal(Δs::StochasticAD.AbstractFIs, ::StochasticAD.AbstractPerturbationSignal)
+function StochasticAD.send_signal(
+        Δs::StochasticAD.AbstractFIs, ::StochasticAD.AbstractPerturbationSignal)
     return Δs
 end

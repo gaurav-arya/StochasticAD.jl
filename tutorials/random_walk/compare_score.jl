@@ -12,17 +12,18 @@ begin
     stds_score_baseline = Float64[]
     @showprogress for (n, p) in zip(RandomWalkCore.n_range, RandomWalkCore.p_range)
         std_triple = std(derivative_estimate(p -> RandomWalkCore.fX(p, n), p)
-                         for i in 1:(RandomWalkCore.nsamples))
-        std_smoothed = std(derivative(p -> RandomWalkCore.fX(p,
-                n;
-                hardcode_leftright_step = true),
-            p)
-                           for i in 1:(RandomWalkCore.nsamples))
+        for i in 1:(RandomWalkCore.nsamples))
+        std_smoothed = std(derivative(
+                               p -> RandomWalkCore.fX(p,
+                                   n;
+                                   hardcode_leftright_step = true),
+                               p)
+        for i in 1:(RandomWalkCore.nsamples))
         std_score = std(RandomWalkCore.score_fX_deriv(p, n, 0.0)
-                        for i in 1:(RandomWalkCore.nsamples))
+        for i in 1:(RandomWalkCore.nsamples))
         avg = mean(RandomWalkCore.fX(p, n) for i in 1:10000)
         std_score_baseline = std(RandomWalkCore.score_fX_deriv(p, n, avg)
-                                 for i in 1:(RandomWalkCore.nsamples))
+        for i in 1:(RandomWalkCore.nsamples))
         push!(stds_triple, std_triple)
         push!(stds_score, std_score)
         push!(stds_score_baseline, std_score_baseline)

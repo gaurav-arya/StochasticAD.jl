@@ -96,7 +96,9 @@ function StochasticAD.derivative_contribution(Δs::PrunedFIsAggressive)
     pruned_value(Δs) * Δs.state.weight
 end
 
-StochasticAD.perturbations(Δs::PrunedFIsAggressive) = ((; Δ = pruned_value(Δs), weight = Δs.state.weight, state = Δs.state),)
+function StochasticAD.perturbations(Δs::PrunedFIsAggressive)
+    ((; Δ = pruned_value(Δs), weight = Δs.state.weight, state = Δs.state),)
+end
 
 ### Unary propagation
 

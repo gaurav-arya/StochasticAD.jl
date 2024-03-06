@@ -10,7 +10,7 @@ const BINARY_PREDICATES = [
     ==,
     !=,
     <=,
-    >=,
+    >=
 ]
 
 const UNARY_TYPEFUNCS_NOWRAP = [Base.rtoldefault]
@@ -20,7 +20,7 @@ const UNARY_TYPEFUNCS_WRAP = [
     floatmin,
     floatmax,
     zero,
-    one,
+    one
 ]
 const RNG_TYPEFUNCS_WRAP = [rand, randn, randexp]
 

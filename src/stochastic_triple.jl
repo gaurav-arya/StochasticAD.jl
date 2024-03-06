@@ -34,7 +34,7 @@ value(x::Real, state = nothing) = x
 value(st::StochasticTriple) = st.value
 function value(st::StochasticTriple, state)
     st.value + filter_state(st.Δs, state)
-end 
+end
 #=
 Support ForwardDiff.Dual for internal usage.
 Assumes batch size is 1.
@@ -238,7 +238,8 @@ StochasticTriple of Int64:
 0 + 0ε + (1 with probability 2.0ε)
 ```
 """
-function stochastic_triple(f, p; direction = nothing, backend::AbstractFIsBackend = PrunedFIsBackend())
+function stochastic_triple(
+        f, p; direction = nothing, backend::AbstractFIsBackend = PrunedFIsBackend())
     if direction !== nothing
         return stochastic_triple_direction(f, p, direction; backend)
     end

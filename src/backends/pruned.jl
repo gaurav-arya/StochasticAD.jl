@@ -90,7 +90,9 @@ pruned_value(Δs::PrunedFIs{<:AbstractArray}) = isempty(Δs) ? zero.(Δs.Δ) : �
 
 StochasticAD.derivative_contribution(Δs::PrunedFIs) = pruned_value(Δs) * Δs.state.weight
 function StochasticAD.perturbations(Δs::PrunedFIs)
-    return ((; Δ = pruned_value(Δs), weight = Δs.state.valid ? Δs.state.weight : zero(Δs.state.weight), state = Δs.state),)
+    return ((; Δ = pruned_value(Δs),
+        weight = Δs.state.valid ? Δs.state.weight : zero(Δs.state.weight),
+        state = Δs.state),)
 end
 
 ### Unary propagation
@@ -142,7 +144,8 @@ end
 # for pruning, coupling amounts to getting rid of perturbed values that have been
 # lazily kept around even after (aggressive or lazy) pruning made the perturbation invalid.
 # rep is unused.
-function StochasticAD.couple(::Type{<:PrunedFIs}, Δs_all; rep = nothing, out_rep = nothing, kwargs...)
+function StochasticAD.couple(
+        ::Type{<:PrunedFIs}, Δs_all; rep = nothing, out_rep = nothing, kwargs...)
     state = get_pruned_state(Δs_all)
     Δ_coupled = StochasticAD.structural_map(pruned_value, Δs_all) # TODO: perhaps a performance optimization possible here
     PrunedFIs(Δ_coupled, state)

@@ -40,7 +40,7 @@ for (dist, i, field) in [
     (:Bernoulli, :1, :p),
     (:Binomial, :2, :p),
     (:Poisson, :1, :λ),
-    (:Categorical, :1, :p),
+    (:Categorical, :1, :p)
 ] # i = index of parameter p
     # dual overloading 
     @eval function Base.rand(rng::AbstractRNG,
@@ -59,7 +59,8 @@ for (dist, i, field) in [
         d = $dist(params(d_dual)[1:($i - 1)]..., p,
             params(d_dual)[($i + 1):end]...)
         val = convert(Signed, rand(rng, d))
-        partials = ForwardDiff.Partials(map(δ -> smoothed_delta(d, val, δ, derivative_coupling), δs))
+        partials = ForwardDiff.Partials(map(
+            δ -> smoothed_delta(d, val, δ, derivative_coupling), δs))
         ForwardDiff.Dual{T}(val, partials)
     end
     # frule

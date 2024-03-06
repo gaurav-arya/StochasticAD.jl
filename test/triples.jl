@@ -10,12 +10,12 @@ using Zygote
 const backends = [
     PrunedFIsBackend(),
     PrunedFIsAggressiveBackend(),
-    DictFIsBackend(),
+    DictFIsBackend()
 ]
 
 const backends_smoothed = [
     SmoothedFIsBackend(),
-    StrategyWrapperFIsBackend(SmoothedFIsBackend(), StochasticAD.TwoSidedStrategy()),
+    StrategyWrapperFIsBackend(SmoothedFIsBackend(), StochasticAD.TwoSidedStrategy())
 ]
 
 @testset "Distributions w.r.t. continuous parameter" begin
@@ -36,7 +36,7 @@ const backends_smoothed = [
             (p -> Categorical([0, p^2, 0, 0, 1 - p^2])), # check that 0's are skipped over
             (p -> Categorical([1.0, exp(p)] ./ (1.0 + exp(p)))), # test fix for #38 (floating point comparisons in Categorical logic)
             (p -> Binomial(3, p)),
-            (p -> Binomial(20, p)),
+            (p -> Binomial(20, p))
         ]
         p_ranges = [(0.2, 0.8) for _ in 1:8]
         out_ranges = [0:1, 0:MAX, 0:MAX, 1:2, 1:5, 1:2, 0:3, 0:20]
@@ -68,7 +68,8 @@ const backends_smoothed = [
                     if backend == :smoothing_autodiff
                         batched_full_func(p) = mean([full_func(p) for i in 1:nsamples])
                         # The array input used for ForwardDiff below is a trick to test multiple partials
-                        triple_deriv_forward = mean(ForwardDiff.gradient(arr -> batched_full_func(sum(arr)),
+                        triple_deriv_forward = mean(ForwardDiff.gradient(
+                            arr -> batched_full_func(sum(arr)),
                             [2 * p, -p]))
                         triple_deriv_backward = Zygote.gradient(batched_full_func, p)[1]
                         @test isapprox(triple_deriv_forward, exact_deriv, rtol = rtol)
@@ -143,7 +144,7 @@ end
         end
         array_index_mean(p) = sum([p / 2, p / 2, (1 - p)] .* arr)
         triple_array_index_deriv = mean(derivative_estimate(array_index, p; backend)
-                                        for i in 1:50000)
+        for i in 1:50000)
         exact_array_index_deriv = ForwardDiff.derivative(array_index_mean, p)
         @test isapprox(triple_array_index_deriv, exact_array_index_deriv, rtol = 5e-2)
         # Don't run subsequent tests with smoothing backend
@@ -156,7 +157,7 @@ end
         end
         array_index2_mean(p) = sum([p / 2 * p, p / 2 * p, (1 - p) * p] .* arr)
         triple_array_index2_deriv = mean(derivative_estimate(array_index2, p; backend)
-                                         for i in 1:50000)
+        for i in 1:50000)
         exact_array_index2_deriv = ForwardDiff.derivative(array_index2_mean, p)
         @test isapprox(triple_array_index2_deriv, exact_array_index2_deriv, rtol = 5e-2)
         # Test case where triple and alternate array value are coupled
@@ -167,7 +168,7 @@ end
         end
         array_index3_mean(p) = -5 * (1 - p) + 1 * p
         triple_array_index3_deriv = mean(derivative_estimate(array_index3, p; backend)
-                                         for i in 1:50000)
+        for i in 1:50000)
         exact_array_index3_deriv = ForwardDiff.derivative(array_index3_mean, p)
         @test isapprox(triple_array_index3_deriv, exact_array_index3_deriv, rtol = 5e-2)
     end
@@ -181,7 +182,8 @@ end
 
         stochastic_ad_grad = derivative_estimate(f, x; backend)
         stochastic_ad_grad2 = derivative_contribution.(stochastic_triple(f, x; backend))
-        stochastic_ad_grad_firsttwo = derivative_estimate(f, x; direction = [1.0, 1.0, 0.0],
+        stochastic_ad_grad_firsttwo = derivative_estimate(
+            f, x; direction = [1.0, 1.0, 0.0],
             backend)
         fd_grad = ForwardDiff.gradient(f, x)
         @test stochastic_ad_grad ≈ fd_grad
@@ -362,13 +364,15 @@ end
             @test w2_scaled ≈ 2.0 * w2
             # Test map_Δs with filter state
             if !is_smoothed_backend
-                Δs1_plus_Δs0 = StochasticAD.map_Δs((Δ, state) -> Δ +
-                                                                 StochasticAD.filter_state(Δs0,
+                Δs1_plus_Δs0 = StochasticAD.map_Δs(
+                    (Δ, state) -> Δ +
+                                  StochasticAD.filter_state(Δs0,
                         state),
                     Δs1)
                 @test derivative_contribution(Δs1_plus_Δs0) ≈ Δ * 3.0
-                Δs1_plus_mapped = StochasticAD.map_Δs((Δ, state) -> Δ +
-                                                                    StochasticAD.filter_state(Δs1,
+                Δs1_plus_mapped = StochasticAD.map_Δs(
+                    (Δ, state) -> Δ +
+                                  StochasticAD.filter_state(Δs1,
                         state),
                     Δs1_map)
                 @test derivative_contribution(Δs1_plus_mapped) ≈ Δ * 3.0 + Δ^2 * 3.0
@@ -435,9 +439,11 @@ end
                     end
                     # For a simple sum, this should be equivalent to the combine behaviour.
                     if check_combine && !is_smoothed_backend
-                        @test isapprox(mean(derivative_contribution(get_Δs_coupled(;
-                                do_combine = true))
-                                            for i in 1:1000), expected_contribution;
+                        @test isapprox(
+                            mean(derivative_contribution(get_Δs_coupled(;
+                                     do_combine = true))
+                            for i in 1:1000),
+                            expected_contribution;
                             rtol = 5e-2)
                     end
                     # Check scalarize
@@ -479,7 +485,7 @@ end
             #= 
             NB: since the implementation of perturbations can be backend-specific, the
             below property need not hold in general, but does for the current non-smoothed backends.
-            =# 
+            =#
             p = only(perturbations(st))
             @test p.Δ == 1 && p.weight == 2.0
             @test derivative_contribution(st) == 3.0

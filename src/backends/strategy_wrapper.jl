@@ -7,7 +7,7 @@ export StrategyWrapperFIsBackend, StrategyWrapperFIs
 
 struct StrategyWrapperFIsBackend{
     B <: StochasticAD.AbstractFIsBackend,
-    S <: StochasticAD.AbstractPerturbationStrategy,
+    S <: StochasticAD.AbstractPerturbationStrategy
 } <:
        StochasticAD.AbstractFIsBackend
     backend::B
@@ -17,7 +17,7 @@ end
 struct StrategyWrapperFIs{
     V,
     FIs <: StochasticAD.AbstractFIs{V},
-    S <: StochasticAD.AbstractPerturbationStrategy,
+    S <: StochasticAD.AbstractPerturbationStrategy
 } <:
        AbstractWrapperFIs{V, FIs}
     Δs::FIs
@@ -38,7 +38,8 @@ function AbstractWrapperFIsModule.reconstruct_wrapper(wrapper_Δs::StrategyWrapp
     return StrategyWrapperFIs(Δs, wrapper_Δs.strategy)
 end
 
-function AbstractWrapperFIsModule.reconstruct_wrapper(::Type{
+function AbstractWrapperFIsModule.reconstruct_wrapper(
+        ::Type{
             <:StrategyWrapperFIs{V, FIs, S},
         },
         Δs) where {V, FIs, S}

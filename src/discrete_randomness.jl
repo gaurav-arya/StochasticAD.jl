@@ -35,7 +35,9 @@ _get_support(d::Categorical) = map((val, prob) -> val, 1:ncategories(d), probs(d
 
 # Derivative coupling approaches, determining which weighted perturbations to consider
 abstract type AbstractDerivativeCoupling end
-struct InversionMethodDerivativeCoupling end
+@kwdef struct InversionMethodDerivativeCoupling{M}
+    mode::M = Val(:positive_weight)
+end
 
 # Strategies for precisely which perturbations to form given a derivative coupling
 struct SingleSidedStrategy <: AbstractPerturbationStrategy end
@@ -89,12 +91,12 @@ function _δtoΔs(d::Geometric,
         val::V,
         δ::Real,
         Δs::AbstractFIs,
-        ::InversionMethodDerivativeCoupling) where {V <: Signed}
+        derivative_coupling::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = succprob(d)
-    if δ > 0
+    if (derivative_coupling.mode isa Val{:positive_weight} && δ > 0) || (derivative_coupling.mode isa Val{:always_right})
         return val > 0 ? similar_new(Δs, -one(V), δ * val / p / (1 - p)) :
                similar_empty(Δs, V)
-    elseif δ < 0
+    elseif (derivative_coupling.mode isa Val{:positive_weight} && δ < 0) || (derivative_coupling.mode isa Val{:always_left})
         return similar_new(Δs, one(V), -δ * (val + 1) / p)
     else
         return similar_empty(Δs, V)
@@ -105,11 +107,11 @@ function _δtoΔs(d::Bernoulli,
         val::V,
         δ::Real,
         Δs::AbstractFIs,
-        ::InversionMethodDerivativeCoupling) where {V <: Signed}
+        derivative_coupling::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = succprob(d)
-    if δ > 0
+    if (derivative_coupling.mode isa Val{:positive_weight} && δ > 0) || (derivative_coupling.mode isa Val{:always_right})
         return isone(val) ? similar_empty(Δs, V) : similar_new(Δs, one(V), δ / (1 - p))
-    elseif δ < 0
+    elseif (derivative_coupling.mode isa Val{:positive_weight} && δ < 0) || (derivative_coupling.mode isa Val{:always_left})
         return isone(val) ? similar_new(Δs, -one(V), -δ / p) : similar_empty(Δs, V)
     else
         return similar_empty(Δs, V)
@@ -120,13 +122,13 @@ function _δtoΔs(d::Binomial,
         val::V,
         δ::Real,
         Δs::AbstractFIs,
-        ::InversionMethodDerivativeCoupling) where {V <: Signed}
+        derivative_coupling::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = succprob(d)
     n = ntrials(d)
-    if δ > 0
+    if (derivative_coupling.mode isa Val{:positive_weight} && δ > 0) || (derivative_coupling.mode isa Val{:always_right})
         return val == n ? similar_empty(Δs, V) :
                similar_new(Δs, one(V), δ * (n - val) / (1 - p))
-    elseif δ < 0
+    elseif (derivative_coupling.mode isa Val{:positive_weight} && δ < 0) || (derivative_coupling.mode isa Val{:always_left})
         return !iszero(val) ? similar_new(Δs, -one(V), -δ * val / p) : similar_empty(Δs, V)
     else
         return similar_empty(Δs, V)
@@ -137,11 +139,11 @@ function _δtoΔs(d::Poisson,
         val::V,
         δ::Real,
         Δs::AbstractFIs,
-        ::InversionMethodDerivativeCoupling) where {V <: Signed}
+        derivative_coupling::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = mean(d) # rate
-    if δ > 0
+    if (derivative_coupling.mode isa Val{:positive_weight} && δ > 0) || (derivative_coupling.mode isa Val{:always_right})
         return similar_new(Δs, 1, δ)
-    elseif δ < 0
+    elseif (derivative_coupling.mode isa Val{:positive_weight} && δ < 0) || (derivative_coupling.mode isa Val{:always_left})
         return val > 0 ? similar_new(Δs, -1, -δ * val / p) : similar_empty(Δs, V)
     else
         return similar_empty(Δs, V)
@@ -152,12 +154,12 @@ function _δtoΔs(d::Categorical,
         val::V,
         δs,
         Δs::AbstractFIs,
-        ::InversionMethodDerivativeCoupling) where {V <: Signed}
+        derivative_coupling::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = params(d)[1]
     left_sum = sum(δs[1:(val - 1)], init = zero(eltype(δs)))
     right_sum = -sum(δs[(val + 1):end], init = zero(eltype(δs)))
 
-    if left_sum > 0
+    if (derivative_coupling.mode isa Val{:positive_weight} && left_sum > 0) || (derivative_coupling.mode isa Val{:always_left} && !iszero(left_sum))
         stop = rand() * left_sum
         upto = zero(eltype(δs)) # The "upto" logic handles an edge case of probability 0 events that have non-zero derivative.
         # It's a lot of logic to handle an edge case, but hopefully it's optimized away.
@@ -173,7 +175,7 @@ function _δtoΔs(d::Categorical,
         Δs_left = similar_empty(Δs, typeof(val))
     end
 
-    if right_sum < 0
+    if (derivative_coupling.mode isa Val{:positive_weight} && right_sum < 0) || (derivative_coupling.mode isa Val{:always_right} && !iszero(right_sum))
         stop = -rand() * right_sum
         upto = zero(eltype(δs))
         local right_nonzero

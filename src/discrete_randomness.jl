@@ -154,8 +154,8 @@ function _δtoΔs(d::Categorical,
         Δs::AbstractFIs,
         ::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = params(d)[1]
-    left_sum = sum(δs[1:(val - 1)], init = zero(V))
-    right_sum = -sum(δs[(val + 1):end], init = zero(V))
+    left_sum = sum(δs[1:(val - 1)], init = zero(eltype(δs)))
+    right_sum = -sum(δs[(val + 1):end], init = zero(eltype(δs)))
 
     if left_sum > 0
         stop = rand() * left_sum

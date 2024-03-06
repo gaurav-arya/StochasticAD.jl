@@ -18,12 +18,12 @@ State maintained by pruning backend.
 """
 mutable struct PrunedFIsState
     # tag is in place to avoid relying on mutability for uniqueness. 
-    tag::UInt64 
+    tag::Int32
     weight::Float64
     valid::Bool
     function PrunedFIsState(valid = true)
         state = new(0, 0.0, valid)
-        state.tag = UInt64(pointer_from_objref(state)) # TODO: maybe use objectid or hash?
+        state.tag = objectid(state) % typemax(Int32)
         return state
     end
 end
@@ -106,8 +106,8 @@ StochasticAD.alltrue(f, Δs::PrunedFIs) = f(Δs.Δ)
 
 ### Coupling
 
-function StochasticAD.get_rep(::Type{<:PrunedFIs}, Δs_all)
-    return StochasticAD.get_any(Δs_all)
+function StochasticAD.get_rep(FIs::Type{<:PrunedFIs}, Δs_all)
+    return empty(FIs) # StochasticAD.get_any(FIs, Δs_all)
 end
 
 function get_pruned_state(Δs_all)

@@ -35,7 +35,7 @@ _get_support(d::Categorical) = map((val, prob) -> val, 1:ncategories(d), probs(d
 
 # Derivative coupling approaches, determining which weighted perturbations to consider
 abstract type AbstractDerivativeCoupling end
-@kwdef struct InversionMethodDerivativeCoupling{M}
+Base.@kwdef struct InversionMethodDerivativeCoupling{M}
     mode::M = Val(:positive_weight)
 end
 

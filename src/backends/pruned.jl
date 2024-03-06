@@ -107,7 +107,7 @@ StochasticAD.alltrue(f, Δs::PrunedFIs) = f(Δs.Δ)
 ### Coupling
 
 function StochasticAD.get_rep(FIs::Type{<:PrunedFIs}, Δs_all)
-    return empty(FIs) # StochasticAD.get_any(FIs, Δs_all)
+    return empty(FIs)
 end
 
 function get_pruned_state(Δs_all)

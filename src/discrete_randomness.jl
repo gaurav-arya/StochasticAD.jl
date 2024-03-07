@@ -44,7 +44,7 @@ Valid choices of mode are `Val(:positive_weight)`, `Val(:always_right)`, and `Va
 
 # Example
 ```jldoctest
-julia> using StochasticAD, Distributions
+julia> using StochasticAD, Distributions; Random.seed!(4321);
 
 julia> function X(p)
            return randst(Bernoulli(1 - p); derivative_coupling = InversionMethodDerivativeCoupling(Val(:always_right)))

@@ -99,5 +99,6 @@ nothing # hide
 ## Distribution-specific customization of differentiation algorithm 
 
 ```@docs
-StochasticAD.randst
+randst
+InversionMethodDerivativeCoupling
 ```

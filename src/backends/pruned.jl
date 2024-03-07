@@ -17,10 +17,20 @@ struct PrunedFIsBackend <: StochasticAD.AbstractFIsBackend end
 State maintained by pruning backend.
 """
 mutable struct PrunedFIsState
+    # tag is in place to avoid relying on mutability for uniqueness. 
+    tag::Int32
     weight::Float64
     valid::Bool
-    PrunedFIsState(valid = true) = new(0.0, valid)
+    function PrunedFIsState(valid = true)
+        state = new(0, 0.0, valid)
+        state.tag = objectid(state) % typemax(Int32)
+        return state
+    end
 end
+
+Base.:(==)(state1::PrunedFIsState, state2::PrunedFIsState) = state1.tag == state2.tag
+# c.f. https://github.com/JuliaLang/julia/blob/61c3521613767b2af21dfa5cc5a7b8195c5bdcaf/base/hashing.jl#L38C45-L38C51
+Base.hash(state::PrunedFIsState) = state.tag
 
 """
     PrunedFIs{V} <: StochasticAD.AbstractFIs{V}
@@ -59,7 +69,7 @@ StochasticAD.create_Δs(::PrunedFIsBackend, V) = PrunedFIs{V}(PrunedFIsState(fal
 
 ### Convert type of a backend
 
-function PrunedFIs{V}(Δs::PrunedFIs) where {V}
+function Base.convert(::Type{PrunedFIs{V}}, Δs::PrunedFIs) where {V}
     PrunedFIs{V}(convert(V, Δs.Δ), Δs.state)
 end
 
@@ -79,7 +89,11 @@ pruned_value(Δs::PrunedFIs{<:Tuple}) = isempty(Δs) ? zero.(Δs.Δ) : Δs.Δ
 pruned_value(Δs::PrunedFIs{<:AbstractArray}) = isempty(Δs) ? zero.(Δs.Δ) : Δs.Δ
 
 StochasticAD.derivative_contribution(Δs::PrunedFIs) = pruned_value(Δs) * Δs.state.weight
-StochasticAD.perturbations(Δs::PrunedFIs) = ((pruned_value(Δs), Δs.state.weight),)
+function StochasticAD.perturbations(Δs::PrunedFIs)
+    return ((; Δ = pruned_value(Δs),
+        weight = Δs.state.valid ? Δs.state.weight : zero(Δs.state.weight),
+        state = Δs.state),)
+end
 
 ### Unary propagation
 
@@ -94,9 +108,8 @@ StochasticAD.alltrue(f, Δs::PrunedFIs) = f(Δs.Δ)
 
 ### Coupling
 
-function StochasticAD.get_rep(::Type{<:PrunedFIs}, Δs_all)
-    # The code below is a bit ridiculous, but it's faster than `first` for small structures:)
-    return StochasticAD.get_any(Δs_all)
+function StochasticAD.get_rep(FIs::Type{<:PrunedFIs}, Δs_all)
+    return empty(FIs)
 end
 
 function get_pruned_state(Δs_all)
@@ -105,7 +118,7 @@ function get_pruned_state(Δs_all)
         isapproxzero(Δs) && return (total_weight, new_state)
         candidate_state = Δs.state
         if !candidate_state.valid ||
-           ((new_state !== nothing) && (candidate_state === new_state))
+           ((new_state !== nothing) && (candidate_state == new_state))
             return (total_weight, new_state)
         end
         w = candidate_state.weight
@@ -131,14 +144,15 @@ end
 # for pruning, coupling amounts to getting rid of perturbed values that have been
 # lazily kept around even after (aggressive or lazy) pruning made the perturbation invalid.
 # rep is unused.
-function StochasticAD.couple(::Type{<:PrunedFIs}, Δs_all; rep = nothing, out_rep = nothing)
+function StochasticAD.couple(
+        ::Type{<:PrunedFIs}, Δs_all; rep = nothing, out_rep = nothing, kwargs...)
     state = get_pruned_state(Δs_all)
     Δ_coupled = StochasticAD.structural_map(pruned_value, Δs_all) # TODO: perhaps a performance optimization possible here
     PrunedFIs(Δ_coupled, state)
 end
 
 # basically couple combined with a sum.
-function StochasticAD.combine(::Type{<:PrunedFIs}, Δs_all; rep = nothing)
+function StochasticAD.combine(::Type{<:PrunedFIs}, Δs_all; rep = nothing, kwargs...)
     state = get_pruned_state(Δs_all)
     Δ_combined = sum(pruned_value, StochasticAD.structural_iterate(Δs_all))
     PrunedFIs(Δ_combined, state)
@@ -151,7 +165,7 @@ function StochasticAD.scalarize(Δs::PrunedFIs; out_rep = nothing)
 end
 
 function StochasticAD.filter_state(Δs::PrunedFIs{V}, state) where {V}
-    Δs.state === state ? pruned_value(Δs) : zero(V)
+    Δs.state == state ? pruned_value(Δs) : zero(V)
 end
 
 ### Miscellaneous

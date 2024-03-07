@@ -39,18 +39,22 @@ StochasticAD.valtype(Δs::AbstractWrapperFIs) = StochasticAD.valtype(Δs.Δs)
 
 function StochasticAD.couple(WrapperFIs::Type{<:AbstractWrapperFIs{V, FIs}},
         Δs_all;
+        rep = nothing,
         kwargs...) where {V, FIs}
     _Δs_all = StochasticAD.structural_map(Δs -> Δs.Δs, Δs_all)
+    _rep_kwarg = !isnothing(rep) ? (; rep = rep.Δs) : (;)
     return reconstruct_wrapper(StochasticAD.get_any(Δs_all),
-        StochasticAD.couple(FIs, _Δs_all; kwargs...))
+        StochasticAD.couple(FIs, _Δs_all; _rep_kwarg..., kwargs...))
 end
 
 function StochasticAD.combine(WrapperFIs::Type{<:AbstractWrapperFIs{V, FIs}},
         Δs_all;
+        rep = nothing,
         kwargs...) where {V, FIs}
     _Δs_all = StochasticAD.structural_map(Δs -> Δs.Δs, Δs_all)
+    _rep_kwarg = !isnothing(rep) ? (; rep = rep.Δs) : (;)
     return reconstruct_wrapper(StochasticAD.get_any(Δs_all),
-        StochasticAD.combine(FIs, _Δs_all; kwargs...))
+        StochasticAD.combine(FIs, _Δs_all; _rep_kwarg..., kwargs...))
 end
 
 function StochasticAD.get_rep(WrapperFIs::Type{<:AbstractWrapperFIs{V, FIs}},
@@ -61,8 +65,10 @@ function StochasticAD.get_rep(WrapperFIs::Type{<:AbstractWrapperFIs{V, FIs}},
         StochasticAD.get_rep(FIs, _Δs_all; kwargs...))
 end
 
-function StochasticAD.scalarize(Δs::AbstractWrapperFIs; kwargs...)
-    return StochasticAD.structural_map(StochasticAD.scalarize(Δs.Δs; kwargs...)) do _Δs
+function StochasticAD.scalarize(Δs::AbstractWrapperFIs; rep = nothing, kwargs...)
+    _rep_kwarg = !isnothing(rep) ? (; rep = rep.Δs) : (;)
+    return StochasticAD.structural_map(StochasticAD.scalarize(
+        Δs.Δs; _rep_kwarg..., kwargs...)) do _Δs
         reconstruct_wrapper(Δs, _Δs)
     end
 end
@@ -98,8 +104,13 @@ function StochasticAD.derivative_contribution(Δs::AbstractWrapperFIs)
     StochasticAD.derivative_contribution(Δs.Δs)
 end
 
-function (::Type{<:AbstractWrapperFIs{V}})(Δs::AbstractWrapperFIs) where {V}
-    reconstruct_wrapper(Δs, StochasticAD.similar_type(typeof(Δs.Δs), V)(Δs.Δs))
+function Base.convert(::Type{<:AbstractWrapperFIs{V}}, Δs::AbstractWrapperFIs) where {V}
+    reconstruct_wrapper(Δs, convert(StochasticAD.similar_type(typeof(Δs.Δs), V), Δs.Δs))
+end
+
+function StochasticAD.send_signal(
+        Δs::AbstractWrapperFIs, signal::StochasticAD.AbstractPerturbationSignal)
+    reconstruct_wrapper(Δs, StochasticAD.send_signal(Δs.Δs, signal))
 end
 
 function Base.show(io::IO, Δs::AbstractWrapperFIs)

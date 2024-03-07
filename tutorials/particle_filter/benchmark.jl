@@ -13,7 +13,8 @@ secs = 10
 suite = BenchmarkGroup()
 suite["scaling"] = BenchmarkGroup(["grads"])
 
-suite["scaling"]["primal"] = @benchmarkable ParticleFilterCore.log_likelihood(particle_filter,
+suite["scaling"]["primal"] = @benchmarkable ParticleFilterCore.log_likelihood(
+    particle_filter,
     θtrue)
 suite["scaling"]["forward"] = @benchmarkable ParticleFilterCore.forw_grad(θtrue,
     particle_filter)

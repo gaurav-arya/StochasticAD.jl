@@ -16,7 +16,7 @@ Random.seed!(seed)
 T = 3
 d = 2
 A(θ, a = 0.01) = [exp(-a)*cos(θ[]) exp(-a)*sin(θ[])
-    -exp(-a)*sin(θ[]) exp(-a)*cos(θ[])]
+                  -exp(-a)*sin(θ[]) exp(-a)*cos(θ[])]
 obs(x, θ) = MvNormal(x, 0.01 * collect(I(d)))
 dyn(x, θ) = MvNormal(A(θ) * x, 0.02 * collect(I(d)))
 x0 = [2.0, 0.0] # start value of the simulation

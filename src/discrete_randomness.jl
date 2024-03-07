@@ -31,13 +31,37 @@ _get_support(::Bernoulli) = (0, 1)
 # the map below looks a bit silly, but it gives us a collection of the categories with the same structure as probs(d). 
 _get_support(d::Categorical) = map((val, prob) -> val, 1:ncategories(d), probs(d))
 
+## Derivative couplings
+
 # Derivative coupling approaches, determining which weighted perturbations to consider
-
 abstract type AbstractDerivativeCoupling end
-struct InversionMethodDerivativeCoupling end
 
-## Strategies for precisely which perturbations to form given a derivative coupling
+"""
+    InversionMethodDerivativeCoupling(; mode::Val = Val(:positive_weight), handle_zeroprob::Val = Val(true))
 
+Specifies an inversion method coupling for generating perturbations from a univariate distribution.
+Valid choices of `mode` are `Val(:positive_weight)`, `Val(:always_right)`, and `Val(:always_left)`.
+
+# Example
+```jldoctest
+julia> using StochasticAD, Distributions, Random; Random.seed!(4321);
+
+julia> function X(p)
+           return randst(Bernoulli(1 - p); derivative_coupling = InversionMethodDerivativeCoupling(; mode = Val(:always_right)))
+       end
+X (generic function with 1 method)
+
+julia> stochastic_triple(X, 0.5)
+StochasticTriple of Int64:
+0 + 0ε + (1 with probability -2.0ε)
+```
+"""
+Base.@kwdef struct InversionMethodDerivativeCoupling{M, HZP}
+    mode::M = Val(:positive_weight)
+    handle_zeroprob::HZP = Val(true)
+end
+
+# Strategies for precisely which perturbations to form given a derivative coupling
 struct SingleSidedStrategy <: AbstractPerturbationStrategy end
 struct TwoSidedStrategy <: AbstractPerturbationStrategy end
 struct SmoothedStraightThroughStrategy <: AbstractPerturbationStrategy end
@@ -46,17 +70,22 @@ struct IgnoreDiscreteStrategy <: AbstractPerturbationStrategy end
 
 new_Δs_strategy(Δs) = SingleSidedStrategy()
 
+# Derivative coupling high-level interface
+
 """
     δtoΔs(d, val, δ, Δs::AbstractFIs)
 
 Given the parameter `val` of a distribution `d` and an infinitesimal change `δ`,
 return the discrete change in the output, with a similar representation to `Δs`.
 """
-δtoΔs(d, val, δ, Δs, coupling) = δtoΔs(d, val, δ, Δs, coupling, new_Δs_strategy(Δs))
-δtoΔs(d, val, δ, Δs, coupling, ::SingleSidedStrategy) = _δtoΔs(d, val, δ, Δs, coupling)
-function δtoΔs(d, val, δ, Δs, coupling, ::TwoSidedStrategy)
-    Δs1 = _δtoΔs(d, val, δ, Δs, coupling)
-    Δs2 = _δtoΔs(d, val, -δ, Δs, coupling)
+δtoΔs(d, val, δ, Δs, derivative_coupling) = δtoΔs(
+    d, val, δ, Δs, derivative_coupling, new_Δs_strategy(Δs))
+function δtoΔs(d, val, δ, Δs, derivative_coupling, ::SingleSidedStrategy)
+    _δtoΔs(d, val, δ, Δs, derivative_coupling)
+end
+function δtoΔs(d, val, δ, Δs, derivative_coupling, ::TwoSidedStrategy)
+    Δs1 = _δtoΔs(d, val, δ, Δs, derivative_coupling)
+    Δs2 = _δtoΔs(d, val, -δ, Δs, derivative_coupling)
     return combine((scale(Δs1, 0.5), scale(Δs2, -0.5)))
 end
 # TODO: implement this ST for other distributions and couplings, if meaningful?
@@ -64,35 +93,39 @@ function δtoΔs(d::Union{Bernoulli, Binomial},
         val,
         δ,
         Δs,
-        coupling::InversionMethodDerivativeCoupling,
+        derivative_coupling::InversionMethodDerivativeCoupling,
         ::StraightThroughStrategy)
     p = succprob(d)
-    Δs1 = _δtoΔs(d, val, δ, Δs, coupling)
-    Δs2 = _δtoΔs(d, val, -δ, Δs, coupling)
+    Δs1 = _δtoΔs(d, val, δ, Δs, derivative_coupling)
+    Δs2 = _δtoΔs(d, val, -δ, Δs, derivative_coupling)
     return combine((scale(Δs1, 1 - p), scale(Δs2, -p)))
 end
-δtoΔs(d, val::V, δ, Δs, coupling, ::IgnoreDiscreteStrategy) where {V} = similar_empty(Δs, V)
+function δtoΔs(d, val::V, δ, Δs, derivative_coupling, ::IgnoreDiscreteStrategy) where {V}
+    similar_empty(Δs, V)
+end
 
 # Implement straight through strategy, works for all distrs, but does something that is only
 # meaningful for smoothed backends (using one(val))
-function δtoΔs(d, val, δ, Δs, coupling, ::SmoothedStraightThroughStrategy)
+function δtoΔs(d, val, δ, Δs, derivative_coupling, ::SmoothedStraightThroughStrategy)
     p = _get_parameter(d)
     δout = ForwardDiff.derivative(a -> mean(_reconstruct(d, p + a * δ)), 0.0)
     return similar_new(Δs, one(val), δout)
 end
 
-## Stochastic derivative rules for discrete distributions
+# Derivative coupling low-level implementations 
 
 function _δtoΔs(d::Geometric,
         val::V,
         δ::Real,
         Δs::AbstractFIs,
-        ::InversionMethodDerivativeCoupling) where {V <: Signed}
+        derivative_coupling::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = succprob(d)
-    if δ > 0
+    if (derivative_coupling.mode isa Val{:positive_weight} && δ > 0) ||
+       (derivative_coupling.mode isa Val{:always_right})
         return val > 0 ? similar_new(Δs, -one(V), δ * val / p / (1 - p)) :
                similar_empty(Δs, V)
-    elseif δ < 0
+    elseif (derivative_coupling.mode isa Val{:positive_weight} && δ < 0) ||
+           (derivative_coupling.mode isa Val{:always_left})
         return similar_new(Δs, one(V), -δ * (val + 1) / p)
     else
         return similar_empty(Δs, V)
@@ -103,11 +136,13 @@ function _δtoΔs(d::Bernoulli,
         val::V,
         δ::Real,
         Δs::AbstractFIs,
-        ::InversionMethodDerivativeCoupling) where {V <: Signed}
+        derivative_coupling::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = succprob(d)
-    if δ > 0
+    if (derivative_coupling.mode isa Val{:positive_weight} && δ > 0) ||
+       (derivative_coupling.mode isa Val{:always_right})
         return isone(val) ? similar_empty(Δs, V) : similar_new(Δs, one(V), δ / (1 - p))
-    elseif δ < 0
+    elseif (derivative_coupling.mode isa Val{:positive_weight} && δ < 0) ||
+           (derivative_coupling.mode isa Val{:always_left})
         return isone(val) ? similar_new(Δs, -one(V), -δ / p) : similar_empty(Δs, V)
     else
         return similar_empty(Δs, V)
@@ -118,13 +153,15 @@ function _δtoΔs(d::Binomial,
         val::V,
         δ::Real,
         Δs::AbstractFIs,
-        ::InversionMethodDerivativeCoupling) where {V <: Signed}
+        derivative_coupling::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = succprob(d)
     n = ntrials(d)
-    if δ > 0
+    if (derivative_coupling.mode isa Val{:positive_weight} && δ > 0) ||
+       (derivative_coupling.mode isa Val{:always_right})
         return val == n ? similar_empty(Δs, V) :
                similar_new(Δs, one(V), δ * (n - val) / (1 - p))
-    elseif δ < 0
+    elseif (derivative_coupling.mode isa Val{:positive_weight} && δ < 0) ||
+           (derivative_coupling.mode isa Val{:always_left})
         return !iszero(val) ? similar_new(Δs, -one(V), -δ * val / p) : similar_empty(Δs, V)
     else
         return similar_empty(Δs, V)
@@ -135,11 +172,13 @@ function _δtoΔs(d::Poisson,
         val::V,
         δ::Real,
         Δs::AbstractFIs,
-        ::InversionMethodDerivativeCoupling) where {V <: Signed}
+        derivative_coupling::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = mean(d) # rate
-    if δ > 0
+    if (derivative_coupling.mode isa Val{:positive_weight} && δ > 0) ||
+       (derivative_coupling.mode isa Val{:always_right})
         return similar_new(Δs, 1, δ)
-    elseif δ < 0
+    elseif (derivative_coupling.mode isa Val{:positive_weight} && δ < 0) ||
+           (derivative_coupling.mode isa Val{:always_left})
         return val > 0 ? similar_new(Δs, -1, -δ * val / p) : similar_empty(Δs, V)
     else
         return similar_empty(Δs, V)
@@ -150,36 +189,48 @@ function _δtoΔs(d::Categorical,
         val::V,
         δs,
         Δs::AbstractFIs,
-        ::InversionMethodDerivativeCoupling) where {V <: Signed}
+        derivative_coupling::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = params(d)[1]
-    left_sum = sum(δs[1:(val - 1)], init = zero(V))
-    right_sum = -sum(δs[(val + 1):end], init = zero(V))
+    left_sum = sum(δs[1:(val - 1)], init = zero(eltype(δs)))
+    right_sum = -sum(δs[(val + 1):end], init = zero(eltype(δs)))
 
-    if left_sum > 0
-        stop = rand() * left_sum
-        upto = zero(eltype(δs)) # The "upto" logic handles an edge case of probability 0 events that have non-zero derivative.
-        # It's a lot of logic to handle an edge case, but hopefully it's optimized away.
-        local left_nonzero
-        for i in (val - 1):-1:1
-            if !iszero(p[i]) || ((upto += δs[i]) > stop)
-                left_nonzero = i
-                break
+    if (derivative_coupling.mode isa Val{:positive_weight} && left_sum > 0) ||
+       (derivative_coupling.mode isa Val{:always_left} && !iszero(left_sum))
+        # compute left_nonzero
+        if derivative_coupling.handle_zeroprob isa Val{true}
+            stop = rand() * left_sum
+            upto = zero(eltype(δs)) # The "upto" logic handles an edge case of probability 0 events that have non-zero derivative.
+            # It's a lot of logic to handle an edge case, but hopefully it's optimized away.
+            left_nonzero = val
+            for i in (val - 1):-1:1
+                if !iszero(p[i]) || ((upto += δs[i]) > stop)
+                    left_nonzero = i
+                    break
+                end
             end
+        else
+            left_nonzero = val - 1
         end
         Δs_left = similar_new(Δs, left_nonzero - val, left_sum / p[val])
     else
         Δs_left = similar_empty(Δs, typeof(val))
     end
 
-    if right_sum < 0
-        stop = -rand() * right_sum
-        upto = zero(eltype(δs))
-        local right_nonzero
-        for i in (val + 1):length(p)
-            if !iszero(p[i]) || ((upto += δs[i]) > stop)
-                right_nonzero = i
-                break
+    if (derivative_coupling.mode isa Val{:positive_weight} && right_sum < 0) ||
+       (derivative_coupling.mode isa Val{:always_right} && !iszero(right_sum))
+        # compute right_nonzero
+        if derivative_coupling.handle_zeroprob isa Val{true}
+            stop = -rand() * right_sum
+            upto = zero(eltype(δs))
+            right_nonzero = val
+            for i in (val + 1):length(p)
+                if !iszero(p[i]) || ((upto += δs[i]) > stop)
+                    right_nonzero = i
+                    break
+                end
             end
+        else
+            right_nonzero = val + 1
         end
         Δs_right = similar_new(Δs, right_nonzero - val, -right_sum / p[val])
     else
@@ -189,6 +240,52 @@ function _δtoΔs(d::Categorical,
     return combine((Δs_left, Δs_right); rep = Δs)
 end
 
+## Propagation couplings
+
+abstract type AbstractPropagationCoupling end
+
+"""
+    InversionMethodPropagationCoupling 
+
+Specifies an inversion method coupling for propagating perturbations.
+"""
+struct InversionMethodPropagationCoupling <: AbstractPropagationCoupling end
+
+function _map_func(d, val, Δ, ::InversionMethodPropagationCoupling)
+    # construct alternative distribution
+    p = _get_parameter(d)
+    alt_d = _reconstruct(d, p + Δ)
+    # compute bounds on original ω
+    low = cdf(d, val - 1)
+    high = cdf(d, val)
+    # sample alternative value
+    alt_val = quantile(alt_d, rand(RNG) * (high - low) + low)
+    return convert(Signed, alt_val - val)
+end
+
+function _map_enumeration(d, val, Δ, ::InversionMethodPropagationCoupling)
+    # construct alternative distribution
+    p = _get_parameter(d)
+    alt_d = _reconstruct(d, p + Δ)
+    # compute bounds on original ω
+    low = cdf(d, val - 1)
+    high = cdf(d, val)
+    if _has_finite_support(alt_d)
+        map(_get_support(alt_d)) do alt_val
+            # interval intersect of (cdf(alt_d, alt_val - 1), cdf(alt_d, alt_val)) and (low, high)
+            alt_low = cdf(alt_d, alt_val - 1)
+            alt_high = cdf(alt_d, alt_val)
+            prob_alt = max(0.0, min(alt_high, high) - max(alt_low, low)) /
+                       (high - low)
+            return (alt_val - val, prob_alt)
+        end
+    else
+        error("enumeration not supported for distribution $d. Does $d have finite support?")
+    end
+end
+
+## Overloading of random sampling 
+
 # Define randst interface
 
 """
@@ -196,7 +293,8 @@ end
 
 When no keyword arguments are provided, `randst` behaves identically to `rand(rng, d)` in both ordinary computation
 and for stochastic triple dispatches. However, `randst` also allows the user to provide various keyword arguments
-for customizing the differentiation logic. The set of allowed keyword arguments depends on the type of `d`.
+for customizing the differentiation logic. The set of allowed keyword arguments depends on the type of `d`: a couple
+common ones are `derivative_coupling` and `propagation_coupling`.
 
 For developers: if you wish to accept custom keyword arguments in a stochastic triple dispatch, you should overload
 `randst`, and redirect `rand` to your `randst` method. If you do not, it suffices to just overload `rand`.
@@ -213,43 +311,20 @@ for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
     end
     @eval function randst(rng::AbstractRNG,
             d_st::$dist{StochasticTriple{T, V, FIs}};
-            perturbation_map_kwargs = (;),
-            coupling = InversionMethodDerivativeCoupling()) where {T, V, FIs}
+            Δ_kwargs = (;),
+            derivative_coupling = InversionMethodDerivativeCoupling(),
+            propagation_coupling = InversionMethodPropagationCoupling()) where {T, V, FIs}
         st = _get_parameter(d_st)
         d = _reconstruct(d_st, st.value)
         val = convert(Signed, rand(rng, d))
-        Δs1 = δtoΔs(d, val, st.δ, st.Δs, coupling)
+        Δs1 = δtoΔs(d, val, st.δ, st.Δs, derivative_coupling)
 
-        low = cdf(d, val - 1)
-        high = cdf(d, val)
-
-        get_alt_d(Δ) = _reconstruct(d_st, st.value + Δ)
-        function map_func(Δ)
-            alt_d = get_alt_d(Δ)
-            alt_val = quantile(alt_d, rand(RNG) * (high - low) + low)
-            convert(Signed, alt_val - val)
-        end
-        function enumeration(Δ, _)
-            alt_d = get_alt_d(Δ)
-            if _has_finite_support(alt_d)
-                map(_get_support(alt_d)) do alt_val
-                    # interval intersect of (cdf(alt_d, alt_val - 1), cdf(alt_d, alt_val)) and (low, high)
-                    alt_low = cdf(alt_d, alt_val - 1)
-                    alt_high = cdf(alt_d, alt_val)
-                    prob_alt = max(0.0, min(alt_high, high) - max(alt_low, low)) /
-                               (high - low)
-                    return (alt_val - val, prob_alt)
-                end
-            else
-                error("enumeration not supported for distribution $d. Does $d have finite support?")
-            end
-        end
-        Δs2 = map(map_func,
+        Δs2 = map(Δ -> _map_func(d, val, Δ, propagation_coupling),
             st.Δs;
-            enumeration,
-            deriv = δ -> smoothed_delta(d, val, δ, coupling),
+            enumeration = (Δ, _) -> _map_enumeration(d, val, Δ, propagation_coupling),
+            deriv = δ -> smoothed_delta(d, val, δ, derivative_coupling),
             out_rep = val,
-            perturbation_map_kwargs...)
+            Δ_kwargs...)
 
         StochasticTriple{T}(val, zero(val), combine((Δs2, Δs1); rep = Δs1)) # ensure that tags are in order in combine, in case backend wishes to exploit this 
     end
@@ -264,9 +339,9 @@ end
 function randst(rng::AbstractRNG,
         d_st::Categorical{<:StochasticTriple{T},
             <:AbstractVector{<:StochasticTriple{T, V}}};
-        perturbation_map_kwargs = (;),
-        coupling = InversionMethodDerivativeCoupling()) where {T,
-        V}
+        Δ_kwargs = (;),
+        derivative_coupling = InversionMethodDerivativeCoupling(),
+        propagation_coupling = InversionMethodPropagationCoupling()) where {T, V}
     sts = _get_parameter(d_st) # stochastic triple for each probability
     p = map(st -> st.value, sts) # try to keep the same type. e.g. static array -> static array. TODO: avoid allocations 
     d = _reconstruct(d_st, p)
@@ -275,40 +350,19 @@ function randst(rng::AbstractRNG,
     Δs_all = map(st -> st.Δs, sts)
     Δs_rep = get_rep(Δs_all)
 
-    Δs1 = δtoΔs(d, val, map(st -> st.δ, sts), Δs_rep, coupling)
+    Δs1 = δtoΔs(d, val, map(st -> st.δ, sts), Δs_rep, derivative_coupling)
 
-    low = cdf(d, val - 1)
-    high = cdf(d, val)
     Δs_coupled = couple(Δs_all; rep = Δs_rep, out_rep = p) # TODO: again, there are possible allocations here
-
-    get_alt_d(Δ) = _reconstruct(d, p .+ Δ)
-    function map_func(Δ)
-        alt_d = get_alt_d(Δ)
-        alt_val = quantile(alt_d, rand(RNG) * (high - low) + low)
-        convert(Signed, alt_val - val)
-    end
-    function enumeration(Δ, _)
-        alt_d = get_alt_d(Δ)
-        if _has_finite_support(alt_d)
-            map(_get_support(alt_d)) do alt_val
-                # interval intersect of (cdf(alt_d, alt_val - 1), cdf(alt_d, alt_val)) and (low, high)
-                alt_low = cdf(alt_d, alt_val - 1)
-                alt_high = cdf(alt_d, alt_val)
-                prob_alt = max(0.0, min(alt_high, high) - max(alt_low, low)) / (high - low)
-                return (alt_val - val, prob_alt)
-            end
-        else
-            error("enumeration not supported for distribution $d. Does $d have finite support?")
-        end
-    end
-    Δs2 = map(map_func,
+    Δs2 = map(Δ -> _map_func(d, val, Δ, propagation_coupling),
         Δs_coupled;
-        enumeration,
-        deriv = δ -> smoothed_delta(d, val, δ, coupling),
+        enumeration = (Δ, _) -> _map_enumeration(d, val, Δ, propagation_coupling),
+        deriv = δ -> smoothed_delta(d, val, δ, derivative_coupling),
         out_rep = val,
-        perturbation_map_kwargs...)
+        Δ_kwargs...)
 
-    StochasticTriple{T}(val, zero(val), combine((Δs2, Δs1); rep = Δs_rep))
+    Δs = combine((Δs2, Δs1); rep = Δs1, out_rep = val, Δ_kwargs...)
+
+    StochasticTriple{T}(val, zero(val), Δs)
 end
 
 ## Handling finite perturbation to Binomial number of trials

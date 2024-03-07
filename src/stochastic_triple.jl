@@ -60,6 +60,21 @@ perturbations(x::Real) = ()
 perturbations(st::StochasticTriple) = perturbations(st.Δs)
 
 """
+    send_signal(st::StochasticTriple, signal::AbstractPerturbationSignal)
+    send_signal(Δs::StochasticAD.AbstractFIs, signal::AbstractPerturbationSignal)
+
+Send a certain signal to a stochastic triple's perturbation collection `st.Δs` (or to a `Δs` directly), 
+which the backend may process as it wishes. Semantically, unbiasedness should not be affected by the 
+sending of the signal. The new version of the first argument (`st` or `Δs`) after signal processing is 
+returned.
+"""
+send_signal(st::Real, ::AbstractPerturbationSignal) = st
+function send_signal(st::StochasticTriple{T}, signal::AbstractPerturbationSignal) where {T}
+    new_Δs = send_signal(st.Δs, signal)
+    return StochasticTriple{T}(st.value, st.δ, new_Δs)
+end
+
+"""
     derivative_contribution(st::StochasticTriple)
 
 Return the derivative estimate given by combining the dual and triple components of `st`.
@@ -117,7 +132,7 @@ end
 function StochasticTriple{T}(value::A, δ::B,
         Δs::FIs) where {T, A, B, C, FIs <: AbstractFIs{C}}
     V = promote_type(A, B, C)
-    StochasticTriple{T}(convert(V, value), convert(V, δ), similar_type(FIs, V)(Δs))
+    StochasticTriple{T}(convert(V, value), convert(V, δ), convert(similar_type(FIs, V), Δs))
 end
 
 ### Conversion rules
@@ -127,7 +142,7 @@ end
 function Base.convert(::Type{StochasticTriple{T1, V, FIs}},
         x::StochasticTriple{T2}) where {T1, T2, V, FIs}
     (T1 !== T2) && throw(ArgumentError("Tags of combined stochastic triples do not match."))
-    StochasticTriple{T1, V, FIs}(convert(V, x.value), convert(V, x.δ), FIs(x.Δs))
+    StochasticTriple{T1, V, FIs}(convert(V, x.value), convert(V, x.δ), convert(FIs, x.Δs))
 end
 
 # TODO: ForwardDiff's promotion rules are a little more complicated, see https://github.com/JuliaDiff/ForwardDiff.jl/issues/322
@@ -187,8 +202,7 @@ end
 struct Tag{F, V}
 end
 
-function stochastic_triple_direction(f, p::V, direction;
-        backend = PrunedFIsBackend()) where {V}
+function stochastic_triple_direction(f, p::V, direction; backend) where {V}
     Δs = create_Δs(backend, Int) # TODO: necessity of hardcoding some type here suggests interface improvements
     sts = structural_map(p, direction) do p_i, direction_i
         StochasticTriple{Tag{typeof(f), V}}(p_i, direction_i,
@@ -224,9 +238,10 @@ StochasticTriple of Int64:
 0 + 0ε + (1 with probability 2.0ε)
 ```
 """
-function stochastic_triple(f, p; direction = nothing, kwargs...)
+function stochastic_triple(
+        f, p; direction = nothing, backend::AbstractFIsBackend = PrunedFIsBackend())
     if direction !== nothing
-        return stochastic_triple_direction(f, p, direction; kwargs...)
+        return stochastic_triple_direction(f, p, direction; backend)
     end
     counter = begin
         c = 0
@@ -240,7 +255,7 @@ function stochastic_triple(f, p; direction = nothing, kwargs...)
         direction = structural_map(indices, p) do i, p_i
             i == perturbed_index ? one(p_i) : zero(p_i)
         end
-        stochastic_triple_direction(f, p, direction; kwargs...)
+        stochastic_triple_direction(f, p, direction; backend)
     end
     return structural_map(map_func, indices)
 end

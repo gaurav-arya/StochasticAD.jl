@@ -75,7 +75,7 @@ StochasticAD.create_Δs(::DictFIsBackend, V) = DictFIs{V}(DictFIsState())
 
 ### Convert type of a backend
 
-function DictFIs{V}(Δs::DictFIs) where {V}
+function Base.convert(::Type{DictFIs{V}}, Δs::DictFIs) where {V}
     DictFIs{V}(convert(Dictionary{InfinitesimalEvent, V}, Δs.dict), Δs.state)
 end
 
@@ -88,7 +88,9 @@ function StochasticAD.derivative_contribution(Δs::DictFIs{V}) where {V}
     sum((Δ * event.w for (event, Δ) in pairs(Δs.dict)), init = zero(V) * 0.0)
 end
 
-StochasticAD.perturbations(Δs::DictFIs) = [(Δ, event.w) for (event, Δ) in pairs(Δs.dict)]
+function StochasticAD.perturbations(Δs::DictFIs)
+    [(; Δ, weight = event.w, state = event) for (event, Δ) in pairs(Δs.dict)]
+end
 
 ### Unary propagation
 
@@ -99,7 +101,7 @@ function StochasticAD.weighted_map_Δs(f, Δs::DictFIs; kwargs...)
     mapped_weights = last.(mapped_values_and_weights)
     scaled_events = map((event, a) -> InfinitesimalEvent(event.tag, event.w * a),
         keys(Δs.dict),
-        mapped_weights)
+        mapped_weights) # TODO: should original events (with old tag) also be modified?
     dict = Dictionary(scaled_events, mapped_values)
     DictFIs(dict, Δs.state)
 end
@@ -119,20 +121,23 @@ end
 
 function StochasticAD.couple(FIs::Type{<:DictFIs}, Δs_all;
         rep = StochasticAD.get_rep(FIs, Δs_all),
-        out_rep = nothing)
+        out_rep = nothing,
+        kwargs...)
     all_keys = Iterators.map(StochasticAD.structural_iterate(Δs_all)) do Δs
         keys(Δs.dict)
     end
     distinct_keys = unique(all_keys |> Iterators.flatten)
-    Δs_coupled_dict = [StochasticAD.structural_map(Δs -> isassigned(Δs.dict, key) ?
-                                                         Δs.dict[key] :
-                                                         zero(eltype(Δs.dict)), Δs_all)
+    Δs_coupled_dict = [StochasticAD.structural_map(
+                           Δs -> isassigned(Δs.dict, key) ?
+                                 Δs.dict[key] :
+                                 zero(eltype(Δs.dict)),
+                           Δs_all)
                        for key in distinct_keys]
     DictFIs(Dictionary(distinct_keys, Δs_coupled_dict), rep.state)
 end
 
 function StochasticAD.combine(FIs::Type{<:DictFIs}, Δs_all;
-        rep = StochasticAD.get_rep(FIs, Δs_all))
+        rep = StochasticAD.get_rep(FIs, Δs_all), kwargs...)
     Δs_dicts = Iterators.map(Δs -> Δs.dict, StochasticAD.structural_iterate(Δs_all))
     Δs_combined_dict = reduce(Δs_dicts) do Δs_dict1, Δs_dict2
         mergewith((x, y) -> StochasticAD.structural_map(+, x, y), Δs_dict1, Δs_dict2)
@@ -141,6 +146,7 @@ function StochasticAD.combine(FIs::Type{<:DictFIs}, Δs_all;
 end
 
 function StochasticAD.scalarize(Δs::DictFIs; out_rep = nothing)
+    # TODO: use vcat here?
     tupleify(Δ1, Δ2) = StochasticAD.structural_map(tuple, Δ1, Δ2)
     Δ_all_allkeys = foldl(tupleify, values(Δs.dict))
     Δ_all_rep = first(values(Δs.dict))

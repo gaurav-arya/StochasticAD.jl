@@ -2,14 +2,16 @@ module StochasticAD
 
 ### Public API
 
-export stochastic_triple, derivative_contribution, perturbations, smooth_triple, dual_number # For working with stochastic triples
+export stochastic_triple, derivative_contribution, perturbations, smooth_triple,
+       dual_number, StochasticTriple # For working with stochastic triples
 export derivative_estimate, StochasticModel, stochastic_gradient # Higher level functionality
 export new_weight # Particle resampling
 export PrunedFIsBackend,
-    PrunedFIsAggressiveBackend, DictFIsBackend, SmoothedFIsBackend,
-    StrategyWrapperFIsBackend
+       PrunedFIsAggressiveBackend, DictFIsBackend, SmoothedFIsBackend,
+       StrategyWrapperFIsBackend
 export PrunedFIs, PrunedFIsAggressive, DictFIs, SmoothedFIs, StrategyWrapperFIs
 export randst
+export InversionMethodDerivativeCoupling
 
 ### Imports
 

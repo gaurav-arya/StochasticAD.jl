@@ -78,7 +78,7 @@ end
 
 ### Convert type of a backend
 
-function PrunedFIsAggressive{V}(Δs::PrunedFIsAggressive) where {V}
+function Base.convert(::Type{PrunedFIsAggressive{V}}, Δs::PrunedFIsAggressive) where {V}
     PrunedFIsAggressive{V}(convert(V, Δs.Δ), Δs.tag, Δs.state)
 end
 
@@ -96,7 +96,9 @@ function StochasticAD.derivative_contribution(Δs::PrunedFIsAggressive)
     pruned_value(Δs) * Δs.state.weight
 end
 
-StochasticAD.perturbations(Δs::PrunedFIsAggressive) = ((pruned_value(Δs), Δs.state.weight),)
+function StochasticAD.perturbations(Δs::PrunedFIsAggressive)
+    ((; Δ = pruned_value(Δs), weight = Δs.state.weight, state = Δs.state),)
+end
 
 ### Unary propagation
 
@@ -120,7 +122,7 @@ end
 # lazily kept around even after (aggressive or lazy) pruning made the perturbation invalid.
 function StochasticAD.couple(FIs::Type{<:PrunedFIsAggressive}, Δs_all;
         rep = StochasticAD.get_rep(FIs, Δs_all),
-        out_rep = nothing)
+        out_rep = nothing, kwargs...)
     state = rep.state
     Δ_coupled = StochasticAD.structural_map(pruned_value, Δs_all) # TODO: perhaps a performance optimization possible here
     PrunedFIsAggressive(Δ_coupled, state.active_tag, state)
@@ -128,7 +130,7 @@ end
 
 # basically couple combined with a sum.
 function StochasticAD.combine(FIs::Type{<:PrunedFIsAggressive}, Δs_all;
-        rep = StochasticAD.get_rep(FIs, Δs_all))
+        rep = StochasticAD.get_rep(FIs, Δs_all), kwargs...)
     state = rep.state
     Δ_combined = sum(pruned_value, StochasticAD.structural_iterate(Δs_all))
     PrunedFIsAggressive(Δ_combined, state.active_tag, state)

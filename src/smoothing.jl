@@ -30,9 +30,9 @@ end
 
 # Smoothed rules for univariate single-parameter distributions. 
 
-function smoothed_delta(d, val, δ, coupling)
+function smoothed_delta(d, val, δ, derivative_coupling)
     Δs_empty = SmoothedFIs{typeof(val)}(0.0)
-    return derivative_contribution(δtoΔs(d, val, δ, Δs_empty, coupling))
+    return derivative_contribution(δtoΔs(d, val, δ, Δs_empty, derivative_coupling))
 end
 
 for (dist, i, field) in [
@@ -40,7 +40,7 @@ for (dist, i, field) in [
     (:Bernoulli, :1, :p),
     (:Binomial, :2, :p),
     (:Poisson, :1, :λ),
-    (:Categorical, :1, :p),
+    (:Categorical, :1, :p)
 ] # i = index of parameter p
     # dual overloading 
     @eval function Base.rand(rng::AbstractRNG,
@@ -49,7 +49,7 @@ for (dist, i, field) in [
     end
     @eval function randst(rng::AbstractRNG,
             d_dual::$dist{<:ForwardDiff.Dual{T}};
-            coupling = InversionMethodDerivativeCoupling()) where {T}
+            derivative_coupling = InversionMethodDerivativeCoupling()) where {T}
         dual = params(d_dual)[$i]
         # dual could represent an array of duals or a single one; map handles both cases.
         p = map(value, dual)
@@ -59,7 +59,8 @@ for (dist, i, field) in [
         d = $dist(params(d_dual)[1:($i - 1)]..., p,
             params(d_dual)[($i + 1):end]...)
         val = convert(Signed, rand(rng, d))
-        partials = ForwardDiff.Partials(map(δ -> smoothed_delta(d, val, δ, coupling), δs))
+        partials = ForwardDiff.Partials(map(
+            δ -> smoothed_delta(d, val, δ, derivative_coupling), δs))
         ForwardDiff.Dual{T}(val, partials)
     end
     # frule
@@ -68,9 +69,9 @@ for (dist, i, field) in [
         return frule(Δargs, randst, rng, d)
     end
     @eval function ChainRulesCore.frule((_, _, Δd), ::typeof(randst), rng::AbstractRNG,
-            d::$dist; coupling = InversionMethodDerivativeCoupling())
+            d::$dist; derivative_coupling = InversionMethodDerivativeCoupling())
         val = convert(Signed, rand(rng, d))
-        Δval = smoothed_delta(d, val, Δd, coupling)
+        Δval = smoothed_delta(d, val, Δd, derivative_coupling)
         return (val, Δval)
     end
     # rrule
@@ -80,18 +81,18 @@ for (dist, i, field) in [
     @eval function ChainRulesCore.rrule(::typeof(randst),
             rng::AbstractRNG,
             d::$dist;
-            coupling = InversionMethodDerivativeCoupling())
+            derivative_coupling = InversionMethodDerivativeCoupling())
         val = convert(Signed, rand(rng, d))
         function rand_pullback(∇out)
             p = params(d)[$i]
             if p isa Real
-                Δp = smoothed_delta(d, val, one(val), coupling)
+                Δp = smoothed_delta(d, val, one(val), derivative_coupling)
             else
                 # TODO: this rule is O(length(p)^2), whereas we should be able to do O(length(p)) by reversing through δtoΔs.
                 I = eachindex(p)
                 V = eltype(p)
                 onehot(i) = map(j -> j == i ? one(V) : zero(V), I)
-                Δp = map(i -> smoothed_delta(d, val, onehot(i), coupling), I)
+                Δp = map(i -> smoothed_delta(d, val, onehot(i), derivative_coupling), I)
             end
             # rrule_via_ad approach below not used because slow.
             # Δp = rrule_via_ad(config, smoothed_delta, d, val, map(one, p))[2](∇out)[4]

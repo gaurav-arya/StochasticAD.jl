@@ -43,7 +43,8 @@ for (setname, set) in (("tups", tups), ("SAs", SAs))
                 # seems to lead to slow benchmarks.
                 FIs_suite["couple_same"] = @benchmarkable StochasticAD.couple(typeof($Δs),
                     $Δs_all)
-                FIs_suite["combine_same"] = @benchmarkable StochasticAD.combine(typeof($Δs),
+                FIs_suite["combine_same"] = @benchmarkable StochasticAD.combine(
+                    typeof($Δs),
                     $Δs_all)
             end
         end

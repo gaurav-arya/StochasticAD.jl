@@ -195,16 +195,17 @@ function _δtoΔs(d::Categorical,
 
     if (derivative_coupling.mode isa Val{:positive_weight} && left_sum > 0) ||
        (derivative_coupling.mode isa Val{:always_left} && !iszero(left_sum))
-        stop = rand() * left_sum
-        upto = zero(eltype(δs)) # The "upto" logic handles an edge case of probability 0 events that have non-zero derivative.
+        # stop = rand() * left_sum
+        # upto = zero(eltype(δs)) # The "upto" logic handles an edge case of probability 0 events that have non-zero derivative.
         # It's a lot of logic to handle an edge case, but hopefully it's optimized away.
-        local left_nonzero
-        for i in (val - 1):-1:1
-            if !iszero(p[i]) || ((upto += δs[i]) > stop)
-                left_nonzero = i
-                break
-            end
-        end
+        # local left_nonzero
+        # for i in (val - 1):-1:1
+        #     if !iszero(p[i]) || ((upto += δs[i]) > stop)
+        #         left_nonzero = i
+        #         break
+        #     end
+        # end
+        left_nonzero = val - 1
         Δs_left = similar_new(Δs, left_nonzero - val, left_sum / p[val])
     else
         Δs_left = similar_empty(Δs, typeof(val))
@@ -212,15 +213,16 @@ function _δtoΔs(d::Categorical,
 
     if (derivative_coupling.mode isa Val{:positive_weight} && right_sum < 0) ||
        (derivative_coupling.mode isa Val{:always_right} && !iszero(right_sum))
-        stop = -rand() * right_sum
-        upto = zero(eltype(δs))
-        local right_nonzero
-        for i in (val + 1):length(p)
-            if !iszero(p[i]) || ((upto += δs[i]) > stop)
-                right_nonzero = i
-                break
-            end
-        end
+        # stop = -rand() * right_sum
+        # upto = zero(eltype(δs))
+        # local right_nonzero
+        # for i in (val + 1):length(p)
+        #     if !iszero(p[i]) || ((upto += δs[i]) > stop)
+        #         right_nonzero = i
+        #         break
+        #     end
+        # end
+        right_nonzero = val + 1
         Δs_right = similar_new(Δs, right_nonzero - val, -right_sum / p[val])
     else
         Δs_right = similar_empty(Δs, typeof(val))

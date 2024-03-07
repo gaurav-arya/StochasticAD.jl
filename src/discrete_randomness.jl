@@ -37,7 +37,7 @@ _get_support(d::Categorical) = map((val, prob) -> val, 1:ncategories(d), probs(d
 abstract type AbstractDerivativeCoupling end
 
 """
-    InversionMethodDerivativeCoupling(mode::Vaa)
+    InversionMethodDerivativeCoupling(mode::Val)
 
 Specifies an inversion method coupling for generating perturbations from a univariate distribution.
 Valid choices of mode are `Val(:positive_weight)`, `Val(:always_right)`, and `Val(:always_left)`.

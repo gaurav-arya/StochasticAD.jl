@@ -37,14 +37,14 @@ _get_support(d::Categorical) = map((val, prob) -> val, 1:ncategories(d), probs(d
 abstract type AbstractDerivativeCoupling end
 
 """
-    InversionMethodDerivativeCoupling(mode::Val)
+    InversionMethodDerivativeCoupling(mode::Vaa)
 
 Specifies an inversion method coupling for generating perturbations from a univariate distribution.
 Valid choices of mode are `Val(:positive_weight)`, `Val(:always_right)`, and `Val(:always_left)`.
 
 # Example
 ```jldoctest
-julia> using StochasticAD, Distributions; Random.seed!(4321);
+julia> using StochasticAD, Distributions, Random; Random.seed!(4321);
 
 julia> function X(p)
            return randst(Bernoulli(1 - p); derivative_coupling = InversionMethodDerivativeCoupling(Val(:always_right)))

@@ -17,7 +17,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 [compat]
 ChainRulesCore = "1.15"
 ChainRulesOverloadGeneration = "0.1"
-Dictionaries = "0.3"
+Dictionaries = "0.3, 0.4"
 Distributions = "0.25"
 DistributionsAD = "0.6"
 ExprTools = "0.1"

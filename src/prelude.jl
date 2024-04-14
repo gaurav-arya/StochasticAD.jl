@@ -31,7 +31,6 @@ Internal helper function for iterating through the scalar values of a functor,
 where AbstractFIs are also counted as scalars.
 """
 function structural_iterate(args)
-    # error("difficult case! with args::$(typeof(args))")
     make_iterator(x) = x isa AbstractArray ? x : (x,)
     exclude(x) = Functors.isleaf(x) || (x isa AbstractFIs)
     iter = fmap(make_iterator, args; walk = Functors.IterateWalk(), cache = nothing,

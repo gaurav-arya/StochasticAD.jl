@@ -253,7 +253,6 @@ A simple prototype rule for array indexing. Assumes that underlying type of `st`
 # TODO: support multiple indices, cartesian indices, non abstract array indexables, other use cases...
 # Example to fix: A[:, :, st]
 function Base.getindex(C::AbstractArray, st::StochasticTriple{T, V, FIs}) where {T, V, FIs}
-    error("who's calling getindex?")
     val = C[st.value]
     do_map = (Δ, state) -> begin
         return value(C[st.value + Δ], state) - value(val, state)

@@ -96,17 +96,21 @@ tag(::ForwardDiff.Dual{T}) where {T} = T
 
 """
     valtype(st::StochasticTriple)
+    valtype(st::Type{<:StochasticTriple})
 
 Get the underlying type of the value tracked by a stochastic triple.
 """
-valtype(::StochasticTriple{T, V}) where {T, V} = V
+valtype(st::StochasticTriple) = valtype(typeof(st))
+valtype(::Type{<:StochasticTriple{T, V}}) where {T, V} = V
 
 """
     backendtype(st::StochasticTriple)
+    backendtype(st::Type{<:StochasticTriple})
 
 Get the backend type of a stochastic triple.
 """
-backendtype(::StochasticTriple{T, V, FIs}) where {T, V, FIs} = FIs
+backendtype(st::StochasticTriple) = backendtype(typeof(st))
+backendtype(::Type{<:StochasticTriple{T, V, FIs}}) where {T, V, FIs} = FIs
 
 """
     smooth_triple(st::StochasticTriple)

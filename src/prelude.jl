@@ -40,7 +40,7 @@ function structural_iterate(args)
 end
 structural_iterate(args::NTuple{N,Union{Real, AbstractFIs}}) where {N} = args
 structural_iterate(args::AbstractArray{T}) where {T<:Union{Real,AbstractFIs}} = args
-structural_iterate(args::T) where {T<:Real} = args
+structural_iterate(args::T) where {T<:Real} = (args,)
 
 """
     structural_map(f, args)

@@ -32,7 +32,8 @@ function strip_Δs(arg; use_dual = Val(true))
             if use_dual isa Val{true}
                 return ForwardDiff.Dual{tag(arg)}(value(arg), delta(arg))
             else
-                return StochasticAD.StochasticTriple{tag(arg)}(value(arg), delta(arg), empty(arg.Δs))
+                return StochasticAD.StochasticTriple{tag(arg)}(
+                    value(arg), delta(arg), empty(arg.Δs))
             end
         end
     else

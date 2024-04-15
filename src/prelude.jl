@@ -37,9 +37,9 @@ function structural_iterate(args)
         exclude)
     return iter
 end
-structural_iterate(args::NTuple{N,Union{Real, AbstractFIs}}) where {N} = args
-structural_iterate(args::AbstractArray{T}) where {T<:Union{Real,AbstractFIs}} = args
-structural_iterate(args::T) where {T<:Real} = (args,)
+structural_iterate(args::NTuple{N, Union{Real, AbstractFIs}}) where {N} = args
+structural_iterate(args::AbstractArray{T}) where {T <: Union{Real, AbstractFIs}} = args
+structural_iterate(args::T) where {T <: Real} = (args,)
 
 """
     structural_map(f, args)
@@ -53,7 +53,7 @@ function structural_map(f, args...; only_vals = nothing)
     walk = if only_vals isa Val{true}
         Functors.StructuralWalk()
     elseif (only_vals isa Val{false}) || isnothing(only_vals)
-            Functors.DefaultWalk()
+        Functors.DefaultWalk()
     else
         error("Unsupported argument only_vals = $only_vals")
     end

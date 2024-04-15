@@ -23,13 +23,18 @@ function get_Δs(arg, FIs)
     end
 end
 
-function strip_Δs(arg)
+function strip_Δs(arg; use_dual = Val(true))
     if arg isa StochasticTriple
         # TODO: replace check below with a more robust notion of discreteness.
         if valtype(arg) <: Integer
             return value(arg)
         else
-            return ForwardDiff.Dual{tag(arg)}(value(arg), delta(arg))
+            if use_dual isa Val{true}
+                return ForwardDiff.Dual{tag(arg)}(value(arg), delta(arg))
+            else
+                return StochasticAD.StochasticTriple{tag(arg)}(
+                    value(arg), delta(arg), empty(arg.Δs))
+            end
         end
     else
         return arg
@@ -122,6 +127,7 @@ function propagate(f,
     =#
     out = f(input_args...)
     val = structural_map(value, out)
+    # TODO: what does the only_vals do in the below and why?
     Δs_all = structural_map(Base.Fix2(get_Δs, backendtype(st_rep)), args;
         only_vals = Val{true}())
     # TODO: Coupling approach below needs to handle non-perturbable objects.

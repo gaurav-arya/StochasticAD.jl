@@ -37,6 +37,9 @@ function structural_iterate(args)
         exclude)
     return iter
 end
+structural_iterate(args::NTuple{N, Union{Real, AbstractFIs}}) where {N} = args
+structural_iterate(args::AbstractArray{T}) where {T <: Union{Real, AbstractFIs}} = args
+structural_iterate(args::T) where {T <: Real} = (args,)
 
 """
     structural_map(f, args)
@@ -46,9 +49,15 @@ often to be used on a function's input/output arguments.
 Currently uses [fmap](https://fluxml.ai/Functors.jl/stable/api/#Functors.fmap) 
 from Functors.jl as a backend.
 """
-function structural_map(f, args...; only_vals = Val{false}())
+function structural_map(f, args...; only_vals = nothing)
+    walk = if only_vals isa Val{true}
+        Functors.StructuralWalk()
+    elseif (only_vals isa Val{false}) || isnothing(only_vals)
+        Functors.DefaultWalk()
+    else
+        error("Unsupported argument only_vals = $only_vals")
+    end
     fmap((args...) -> args[1] isa AbstractArray ? f.(args...) : f(args...), args...;
         cache = nothing,
-        walk = (only_vals isa Val{true} ? Functors.StructuralWalk() :
-                Functors.DefaultWalk()))
+        walk)
 end

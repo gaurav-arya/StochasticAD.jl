@@ -29,6 +29,14 @@ The `backend` argument controls the algorithm used by the third component of the
 !!! warning
     For the reverse-mode algorithm to yield correct results, the employed `backend` cannot use input-dependent pruning  
     strategies. A suggested reverse-mode compatible backend is `PrunedFIsBackend(Val(:wins))`.
+    
+    Additionally, this algorithm relies on the ability of `Enzyme.jl` to differentiate the forward stochastic triple run.
+    It is recommended to check that the primal function `X` is type stable for its input `p` using a tool such as
+    [JET.jl](https://github.com/aviatesk/JET.jl), with all code executed in a function with no global state. 
+    In addition, sometimes `X` may be type stable but stochastic triples introduce additional type stabilities.
+    This can be debugged by checking type stability of Enzyme's target, which is
+    `Base.get_extension(StochasticADExtra, :StochasticADExtraEnzymeExt).enzyme_target(u, X, p, backend)`,
+    where `u` is a test direction.
 """
 struct EnzymeReverseAlgorithm{B <: StochasticAD.AbstractFIsBackend}
     backend::B

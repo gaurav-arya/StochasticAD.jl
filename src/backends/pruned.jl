@@ -11,12 +11,12 @@ A backend algorithm that prunes between perturbations as soon as they clash (e.g
 Currently chooses uniformly between all perturbations.
 """
 struct PrunedFIsBackend{M<:Val} <: StochasticAD.AbstractFIsBackend 
-    mode::M
-    function PrunedFIsBackend(mode::M = Val(:weights)) where {M}
-        if mode isa Val{:weights} || mode isa Val{:wins}
-            return new{M}(mode)
+    pruning_mode::M
+    function PrunedFIsBackend(pruning_mode::M = Val(:weights)) where {M}
+        if pruning_mode isa Val{:weights} || pruning_mode isa Val{:wins}
+            return new{M}(pruning_mode)
         else
-            error("Unsupported mode $mode for `PrunedFIsBackend.")
+            error("Unsupported pruning_mode $pruning_mode for `PrunedFIsBackend.")
         end
     end
 end
@@ -31,9 +31,9 @@ mutable struct PrunedFIsState{M, W}
     weight::Float64
     valid::Bool
     wins::W
-    mode::M
-    function PrunedFIsState(mode::M, valid = true) where {M <: Val}
-        wins = mode isa Val{:wins} ? (valid ? 1 : 0) : nothing
+    pruning_mode::M
+    function PrunedFIsState(pruning_mode::M, valid = true) where {M <: Val}
+        wins = pruning_mode isa Val{:wins} ? (valid ? 1 : 0) : nothing
         state::PrunedFIsState = new{M, typeof(wins)}(0, 0.0, valid, wins)
         state.tag = objectid(state) % typemax(Int32)
         return state
@@ -59,7 +59,7 @@ end
 PrunedFIs{V}(Δ::V, state::S) where {V, S <: PrunedFIsState} = PrunedFIs{V, S}(Δ, state)
 PrunedFIs{V}(state::PrunedFIsState) where {V} = PrunedFIs{V}(zero(V), state)
 # TODO: avoid allocations here
-StochasticAD.similar_empty(Δs::PrunedFIs, V::Type) = PrunedFIs{V}(PrunedFIsState(Δs.state.mode, false))
+StochasticAD.similar_empty(Δs::PrunedFIs, V::Type) = PrunedFIs{V}(PrunedFIsState(Δs.state.pruning_mode, false))
 Base.empty(Δs::PrunedFIs{V}) where {V} = StochasticAD.similar_empty(Δs::PrunedFIs, V::Type)
 # we truly have no clue what the state is here, so use an invalidated state
 function Base.empty(::Type{<:PrunedFIs{V, S}}) where {V, M, S <: PrunedFIsState{M}}
@@ -72,7 +72,7 @@ function StochasticAD.similar_new(Δs::PrunedFIs, Δ::V, w::Real) where {V}
     if iszero(w)
         return StochasticAD.similar_empty(Δs, V)
     end
-    state = PrunedFIsState(Δs.state.mode)
+    state = PrunedFIsState(Δs.state.pruning_mode)
     state.weight += w
     Δs = PrunedFIs{V}(Δ, state)
     return Δs
@@ -80,7 +80,7 @@ end
 
 ### Create Δs backend for the first stochastic triple of computation
 
-StochasticAD.create_Δs(backend::PrunedFIsBackend, V) = PrunedFIs{V}(PrunedFIsState(backend.mode, false))
+StochasticAD.create_Δs(backend::PrunedFIsBackend, V) = PrunedFIs{V}(PrunedFIsState(backend.pruning_mode, false))
 
 ### Convert type of a backend
 
@@ -152,8 +152,8 @@ function get_pruned_state(Δs_all; Δ_func = nothing, rep, out_rep = nothing)
             candidate_Δ_func = 1.0 
             cur_Δ_func = 1.0 
         end
-        candidate_intrinsic_strength = Δs.state.mode isa Val{:wins} ? candidate_state.wins : abs(candidate_state.weight)
-        cur_intrinsic_strength = Δs.state.mode isa Val{:wins} ? cur_state.wins : abs(cur_state.weight)
+        candidate_intrinsic_strength = Δs.state.pruning_mode isa Val{:wins} ? candidate_state.wins : abs(candidate_state.weight)
+        cur_intrinsic_strength = Δs.state.pruning_mode isa Val{:wins} ? cur_state.wins : abs(cur_state.weight)
         candidate_strength = candidate_intrinsic_strength * candidate_Δ_func
         cur_strength = cur_intrinsic_strength * cur_Δ_func
 
@@ -179,7 +179,7 @@ function get_pruned_state(Δs_all; Δ_func = nothing, rep, out_rep = nothing)
             return cur_state
         end
     end
-    dummy_state = PrunedFIsState(rep.state.mode, false) # For type stability, as well as retval if no better state found. TODO: can this be avoided?
+    dummy_state = PrunedFIsState(rep.state.pruning_mode, false) # For type stability, as well as retval if no better state found. TODO: can this be avoided?
     _new_state = foldl(op, StochasticAD.structural_iterate(Δs_all); init = dummy_state)
     return _new_state::PrunedFIsState
 end

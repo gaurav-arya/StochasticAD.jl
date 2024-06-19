@@ -30,6 +30,8 @@ mutable struct PrunedFIsState{M, W}
     tag::Int32
     weight::Float64
     valid::Bool
+    # TODO: generalize (wins, pruning_mode) into a general interface for accumulating state
+    # that informs future pruning decisions.
     wins::W
     pruning_mode::M
     function PrunedFIsState(pruning_mode::M, valid = true) where {M <: Val}

@@ -41,6 +41,13 @@ If `forward_u` is not provided, it is randomly generated.
     This can be debugged by checking type stability of Enzyme's target, which is
     `Base.get_extension(StochasticAD, :StochasticADEnzymeExt).enzyme_target(u, X, p, backend)`,
     where `u` is a test direction.
+    
+!!! note
+        For more details on the reverse-mode approach, see the following papers and talks:
+        
+        * ["You Only Linearize Once: Tangents Transpose to Gradients"](https://arxiv.org/abs/2204.10923), Radul et al. 2022.
+        * ["Reverse mode ADEV via YOLO: tangent estimators transpose to gradient estimators"](https://www.youtube.com/watch?v=pnPmk-leSsE)), Becker et al. 2024
+        * ["Probabilistic Programming with Programmable Variational Inference"](https://pldi24.sigplan.org/details/pldi-2024-papers/87/Probabilistic-Programming-with-Programmable-Variational-Inference), Becker et al. 2024
 """
 struct EnzymeReverseAlgorithm{B <: StochasticAD.AbstractFIsBackend}
     backend::B

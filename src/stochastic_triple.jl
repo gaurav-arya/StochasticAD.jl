@@ -280,41 +280,6 @@ function dual_number(f, p; backend = PrunedFIsBackend(), kwargs...)
 end
 dual_number(p; kwargs...) = dual_number(identity, p; kwargs...)
 
-@doc raw"""
-    derivative_estimate(X, p; backend=PrunedFIsBackend(), direction=nothing)
-
-Compute an unbiased estimate of ``\frac{\mathrm{d}\mathbb{E}[X(p)]}{\mathrm{d}p}``, 
-the derivative of the expectation of the random function `X(p)` with respect to its input `p`. 
-
-Both `p` and `X(p)` can be any object supported by [`Functors.jl`](https://fluxml.ai/Functors.jl/stable/),
-e.g. scalars or abstract arrays. 
-The output of `derivative_estimate` has the same outer structure as `p`, but with each
-scalar in `p` replaced by a derivative estimate of `X(p)` with respect to that entry.
-
-For example, if `X(p) <: AbstractMatrix` and `p <: Real`, then the output would be a matrix.
-The `backend` keyword argument describes the algorithm used by the third component
-of the stochastic triple, see [technical details](devdocs.md) for more details.
-
-When `direction` is provided, the output is only differentiated with respect to a perturbation
-of `p` in that direction.
-
-!!! note 
-    Since `derivative_estimate` performs forward-mode AD, the required computation time scales
-    linearly with the number of parameters in `p` (but is unaffected by the number of parameters in `X(p)`).
-# Example
-```jldoctest
-julia> using Distributions, Random, StochasticAD; Random.seed!(4321);
-
-julia> derivative_estimate(rand ∘ Bernoulli, 0.5) # A random quantity that averages to the true derivative.
-2.0
-
-julia> derivative_estimate(x -> [rand(Bernoulli(x * i/4)) for i in 1:3], 0.5)
-3-element Vector{Float64}:
- 0.2857142857142857
- 0.6666666666666666
- 0.0
-```
-"""
 function derivative_estimate(f, p; kwargs...)
     StochasticAD.structural_map(derivative_contribution, stochastic_triple(f, p; kwargs...))
 end

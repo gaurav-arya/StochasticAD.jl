@@ -38,7 +38,7 @@ If `forward_u` is not provided, it is randomly generated.
     Additionally, this algorithm relies on the ability of `Enzyme.jl` to differentiate the forward stochastic triple run.
     It is recommended to check that the primal function `X` is type stable for its input `p` using a tool such as
     [JET.jl](https://github.com/aviatesk/JET.jl), with all code executed in a function with no global state. 
-    In addition, sometimes `X` may be type stable but stochastic triples introduce additional type stabilities.
+    In addition, sometimes `X` may be type stable but stochastic triples introduce additional type instabilities.
     This can be debugged by checking type stability of Enzyme's target, which is
     `Base.get_extension(StochasticAD, :StochasticADEnzymeExt).enzyme_target(u, X, p, backend)`,
     where `u` is a test direction.

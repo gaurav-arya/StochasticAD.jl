@@ -10,7 +10,7 @@ export PrunedFIsBackend, PrunedFIs
 A backend algorithm that prunes between perturbations as soon as they clash (e.g. added together).
 Currently chooses uniformly between all perturbations.
 """
-struct PrunedFIsBackend{M<:Val} <: StochasticAD.AbstractFIsBackend 
+struct PrunedFIsBackend{M <: Val} <: StochasticAD.AbstractFIsBackend
     pruning_mode::M
     function PrunedFIsBackend(pruning_mode::M = Val(:weights)) where {M}
         if pruning_mode isa Val{:weights} || pruning_mode isa Val{:wins}
@@ -51,7 +51,7 @@ Base.hash(state::PrunedFIsState) = state.tag
 
 The implementing backend structure for PrunedFIsBackend.
 """
-struct PrunedFIs{V,S<:PrunedFIsState} <: StochasticAD.AbstractFIs{V}
+struct PrunedFIs{V, S <: PrunedFIsState} <: StochasticAD.AbstractFIs{V}
     Δ::V
     state::S
 end
@@ -61,7 +61,9 @@ end
 PrunedFIs{V}(Δ::V, state::S) where {V, S <: PrunedFIsState} = PrunedFIs{V, S}(Δ, state)
 PrunedFIs{V}(state::PrunedFIsState) where {V} = PrunedFIs{V}(zero(V), state)
 # TODO: avoid allocations here
-StochasticAD.similar_empty(Δs::PrunedFIs, V::Type) = PrunedFIs{V}(PrunedFIsState(Δs.state.pruning_mode, false))
+function StochasticAD.similar_empty(Δs::PrunedFIs, V::Type)
+    PrunedFIs{V}(PrunedFIsState(Δs.state.pruning_mode, false))
+end
 Base.empty(Δs::PrunedFIs{V}) where {V} = StochasticAD.similar_empty(Δs::PrunedFIs, V::Type)
 # we truly have no clue what the state is here, so use an invalidated state
 function Base.empty(::Type{<:PrunedFIs{V, S}}) where {V, M, S <: PrunedFIsState{M}}
@@ -82,7 +84,9 @@ end
 
 ### Create Δs backend for the first stochastic triple of computation
 
-StochasticAD.create_Δs(backend::PrunedFIsBackend, V) = PrunedFIs{V}(PrunedFIsState(backend.pruning_mode, false))
+function StochasticAD.create_Δs(backend::PrunedFIsBackend, V)
+    PrunedFIs{V}(PrunedFIsState(backend.pruning_mode, false))
+end
 
 ### Convert type of a backend
 
@@ -95,19 +99,25 @@ end
 # "empty" here means no perturbation or a perturbation that has been pruned away
 Base.isempty(Δs::PrunedFIs) = !Δs.state.valid
 Base.length(Δs::PrunedFIs) = isempty(Δs) ? 0 : 1
-Base.iszero(Δs::PrunedFIs) = isempty(Δs) || all(iszero, StochasticAD.structural_iterate(Δs.Δ))
-Base.iszero(Δs::PrunedFIs{<:Real}) = isempty(Δs) || iszero(Δs.Δ) 
+function Base.iszero(Δs::PrunedFIs)
+    isempty(Δs) || all(iszero, StochasticAD.structural_iterate(Δs.Δ))
+end
+Base.iszero(Δs::PrunedFIs{<:Real}) = isempty(Δs) || iszero(Δs.Δ)
 Base.iszero(Δs::PrunedFIs{<:Tuple}) = isempty(Δs) || all(iszero.(Δs.Δ))
 isapproxzero(Δs::PrunedFIs) = isempty(Δs) || isapprox(Δs.Δ, zero(Δs.Δ))
 
 # we lazily prune, so check if empty first
-pruned_value(Δs::PrunedFIs{V}) where {V} = isempty(Δs) ? StochasticAD.structural_map(zero, Δs.Δ) : Δs.Δ
+function pruned_value(Δs::PrunedFIs{V}) where {V}
+    isempty(Δs) ? StochasticAD.structural_map(zero, Δs.Δ) : Δs.Δ
+end
 pruned_value(Δs::PrunedFIs{<:Real}) = isempty(Δs) ? zero(Δs.Δ) : Δs.Δ
 pruned_value(Δs::PrunedFIs{<:Tuple}) = isempty(Δs) ? zero.(Δs.Δ) : Δs.Δ
 pruned_value(Δs::PrunedFIs{<:AbstractArray}) = isempty(Δs) ? zero.(Δs.Δ) : Δs.Δ
 
 StochasticAD.derivative_contribution(Δs::PrunedFIs) = pruned_value(Δs) * Δs.state.weight
-StochasticAD.perturbations(Δs::PrunedFIs) = ((; Δ = pruned_value(Δs), weight = Δs.state.weight, state = Δs.state),)
+function StochasticAD.perturbations(Δs::PrunedFIs)
+    ((; Δ = pruned_value(Δs), weight = Δs.state.weight, state = Δs.state),)
+end
 
 ### Unary propagation
 
@@ -127,13 +137,13 @@ function StochasticAD.get_rep(FIs::Type{<:PrunedFIs}, Δs_all)
 end
 
 function get_pruned_state(Δs_all; Δ_func = nothing, rep, out_rep = nothing)
-    if !isnothing(Δ_func)  && isnothing(out_rep)
+    if !isnothing(Δ_func) && isnothing(out_rep)
         error("Specifying Δ_func requires out_rep to be specified.")
     end
     function op(cur_state, Δs)
         # lazy pruning optimization temporarily disabled with custom Δ_func 
         # (because custom Δ_func's may prefer not to lazily prune)
-        (isnothing(Δ_func) && isapproxzero(Δs)) && return cur_state 
+        (isnothing(Δ_func) && isapproxzero(Δs)) && return cur_state
         candidate_state = Δs.state
         if !candidate_state.valid ||
            (candidate_state == cur_state)
@@ -146,21 +156,25 @@ function get_pruned_state(Δs_all; Δ_func = nothing, rep, out_rep = nothing)
         # Compute "strength" of each perturbation for pruning proposal
         if !isnothing(Δ_func)
             # TODO: structural_map for each state can take asymptotically more time than necessary when combining many distinct states
-            candidate_Δ = StochasticAD.structural_map(Base.Fix2(StochasticAD.filter_state, candidate_state), Δs_all)
+            candidate_Δ = StochasticAD.structural_map(
+                Base.Fix2(StochasticAD.filter_state, candidate_state), Δs_all)
             candidate_Δ_func::Float64 = Δ_func(candidate_Δ, candidate_state, out_rep)
-            cur_Δ = StochasticAD.structural_map(Base.Fix2(StochasticAD.filter_state, cur_state), Δs_all)
+            cur_Δ = StochasticAD.structural_map(
+                Base.Fix2(StochasticAD.filter_state, cur_state), Δs_all)
             cur_Δ_func::Float64 = Δ_func(cur_Δ, cur_state, out_rep)
         else
-            candidate_Δ_func = 1.0 
-            cur_Δ_func = 1.0 
+            candidate_Δ_func = 1.0
+            cur_Δ_func = 1.0
         end
-        candidate_intrinsic_strength = Δs.state.pruning_mode isa Val{:wins} ? candidate_state.wins : abs(candidate_state.weight)
-        cur_intrinsic_strength = Δs.state.pruning_mode isa Val{:wins} ? cur_state.wins : abs(cur_state.weight)
+        candidate_intrinsic_strength = Δs.state.pruning_mode isa Val{:wins} ?
+                                       candidate_state.wins : abs(candidate_state.weight)
+        cur_intrinsic_strength = Δs.state.pruning_mode isa Val{:wins} ? cur_state.wins :
+                                 abs(cur_state.weight)
         candidate_strength = candidate_intrinsic_strength * candidate_Δ_func
         cur_strength = cur_intrinsic_strength * cur_Δ_func
 
         both_states_bad = iszero(candidate_strength) && iszero(cur_strength)
-        if both_states_bad 
+        if both_states_bad
             cur_state.valid = false
             candidate_state.valid = false
             return cur_state
@@ -170,11 +184,11 @@ function get_pruned_state(Δs_all; Δ_func = nothing, rep, out_rep = nothing)
         total_strength = cur_strength + candidate_strength
         p = candidate_strength / total_strength
         if isone(p) || (rand(StochasticAD.RNG) < p)
-            cur_state.valid = false 
+            cur_state.valid = false
             if Δs.state.pruning_mode isa Val{:wins}
                 candidate_state.wins += 1
             end
-            candidate_state.weight *= 1/p
+            candidate_state.weight *= 1 / p
             return candidate_state
         else
             candidate_state.valid = false
@@ -192,15 +206,23 @@ end
 
 # for pruning, coupling amounts to getting rid of perturbed values that have been
 # lazily kept around even after (aggressive or lazy) pruning made the perturbation invalid.
-function StochasticAD.couple(FIs::Type{<:PrunedFIs}, Δs_all; rep = StochasticAD.get_rep(FIs, Δs_all), out_rep = nothing, Δ_func = nothing, kwargs...)
+function StochasticAD.couple(
+        FIs::Type{<:PrunedFIs}, Δs_all; rep = StochasticAD.get_rep(FIs, Δs_all),
+        out_rep = nothing, Δ_func = nothing, kwargs...)
     state = get_pruned_state(Δs_all; rep, Δ_func)
     Δ_coupled = StochasticAD.structural_map(pruned_value, Δs_all) # TODO: perhaps a performance optimization possible here
     PrunedFIs(Δ_coupled, state)
 end
 
 # basically couple combined with a sum.
-function StochasticAD.combine(FIs::Type{<:PrunedFIs}, Δs_all; rep = StochasticAD.get_rep(FIs, Δs_all), Δ_func = nothing, out_rep = nothing, kwargs...)
-    state = get_pruned_state(Δs_all; rep, out_rep, Δ_func = !isnothing(Δ_func) ? (Δ, state, val) -> Δ_func(sum(Δ), state, val) : Δ_func)
+function StochasticAD.combine(
+        FIs::Type{<:PrunedFIs}, Δs_all; rep = StochasticAD.get_rep(FIs, Δs_all),
+        Δ_func = nothing, out_rep = nothing, kwargs...)
+    state = get_pruned_state(Δs_all;
+        rep,
+        out_rep,
+        Δ_func = !isnothing(Δ_func) ? (Δ, state, val) -> Δ_func(sum(Δ), state, val) :
+                 Δ_func)
     Δ_combined = sum(pruned_value, StochasticAD.structural_iterate(Δs_all))
     PrunedFIs(Δ_combined, state)
 end
@@ -217,7 +239,9 @@ end
 
 ### Miscellaneous
 
-StochasticAD.similar_type(::Type{<:PrunedFIs{V0, M}}, V::Type) where {V0, M} = PrunedFIs{V, M}
+function StochasticAD.similar_type(::Type{<:PrunedFIs{V0, M}}, V::Type) where {V0, M}
+    PrunedFIs{V, M}
+end
 StochasticAD.valtype(::Type{<:PrunedFIs{V}}) where {V} = V
 
 function Base.show(io::IO, Δs::PrunedFIs{V}) where {V}

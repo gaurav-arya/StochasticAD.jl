@@ -11,7 +11,8 @@ The `backend` argument controls the algorithm used by the third component of the
     The required computation time for forward-mode AD scales linearly with the number of 
     parameters in `p` (but is unaffected by the number of parameters in `X(p)`).
 """
-struct ForwardAlgorithm{B <: StochasticAD.AbstractFIsBackend} <: AbstractStochasticADAlgorithm
+struct ForwardAlgorithm{B <: StochasticAD.AbstractFIsBackend} <:
+       AbstractStochasticADAlgorithm
     backend::B
 end
 
@@ -53,7 +54,8 @@ struct EnzymeReverseAlgorithm{B <: StochasticAD.AbstractFIsBackend}
     backend::B
 end
 
-function derivative_estimate(X, p, alg::ForwardAlgorithm; direction = nothing, alg_data::NamedTuple = (;))
+function derivative_estimate(
+        X, p, alg::ForwardAlgorithm; direction = nothing, alg_data::NamedTuple = (;))
     return derivative_estimate(X, p; backend = alg.backend, direction)
 end
 

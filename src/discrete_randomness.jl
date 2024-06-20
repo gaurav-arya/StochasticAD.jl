@@ -191,8 +191,11 @@ function _δtoΔs(d::Categorical,
         Δs::AbstractFIs,
         derivative_coupling::InversionMethodDerivativeCoupling) where {V <: Signed}
     p = params(d)[1]
+    # NB: Although we might expect sum(δs) = 0, it is useful to handle things more generally, viewing δs
+    # as perturbing the Categorical distribution locally along some direction in the space of general measures.
+    # The below formulation gets things right in this case too. 
     left_sum = sum(δs[1:(val - 1)], init = zero(eltype(δs)))
-    right_sum = -sum(δs[(val + 1):end], init = zero(eltype(δs)))
+    right_sum = sum(δs[1:val], init = zero(eltype(δs)))
 
     if (derivative_coupling.mode isa Val{:positive_weight} && left_sum > 0) ||
        (derivative_coupling.mode isa Val{:always_left} && !iszero(left_sum))

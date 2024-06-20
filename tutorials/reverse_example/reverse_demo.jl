@@ -9,7 +9,7 @@ using Enzyme
 using LinearAlgebra
 
 ##cell
-#text Let us define our target function
+#text Let us define our target function.
 
 # Define a toy `StochasticAD`-differentiable function for computing an integer value from a string.
 string_value(strings, index) = Int(sum(codepoint, strings[index]))
@@ -17,8 +17,8 @@ string_value(strings, index::StochasticTriple) = StochasticAD.propagate(index ->
 
 function f(θ; derivative_coupling = StochasticAD.InversionMethodDerivativeCoupling())
     strings = ["cat", "dog", "meow", "woofs"]
-    index = randst(Categorical(θ / sum(θ)); derivative_coupling)
-    return string_value(strings, index) * sum(θ)
+    index = randst(Categorical(θ); derivative_coupling)
+    return string_value(strings, index)
 end
 
 θ = [0.1, 0.5, 0.3, 0.1]
@@ -28,16 +28,16 @@ nothing
 ##cell
 # First, let's compute the sensitivity of `f` in a particular direction via forward-mode Stochastic AD.
 u = [1.0, 2.0, 4.0, -7.0]
-@assert iszero(sum(u))
 @show derivative_estimate(f, θ, StochasticAD.ForwardAlgorithm(PrunedFIsBackend()); direction = u)
 nothing
 
 ##cell
-#text Uniform pruning with original func.
+#text Now, let's do the same with reverse-mode.  
 
 @show derivative_estimate(f, θ, StochasticAD.EnzymeReverseAlgorithm(PrunedFIsBackend(Val(:wins))))
 
 ##cell
+##text Let's verify that our reverse-mode gradient is consistent with our forward-mode directional derivative.
 
 forward() = derivative_estimate(f, θ, StochasticAD.ForwardAlgorithm(PrunedFIsBackend()); direction = u)
 reverse() = derivative_estimate(f, θ, StochasticAD.EnzymeReverseAlgorithm(PrunedFIsBackend(Val(:wins))))

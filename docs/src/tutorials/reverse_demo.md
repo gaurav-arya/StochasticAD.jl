@@ -10,10 +10,6 @@ Pkg.activate("../../../tutorials")
 Pkg.develop(path="../../..")
 Pkg.instantiate()
 
-````@example reverse_demo
-#
-````
-
 import Random
 Random.seed!(1234)
 ```

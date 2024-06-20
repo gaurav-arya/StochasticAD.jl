@@ -40,8 +40,7 @@ makedocs(sitename = "StochasticAD.jl",
     modules = [StochasticAD],
     format = format,
     pages = pages,
-    warnonly = [:missing_docs, :cross_references],
-    draft = true)
+    warnonly = [:missing_docs])
 
 try
     deploydocs(repo = "github.com/gaurav-arya/StochasticAD.jl",

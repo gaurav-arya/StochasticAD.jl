@@ -1,6 +1,9 @@
 using Pkg
 
-using Documenter, StochasticAD, DocThemeIndigo
+using Documenter
+using StochasticAD
+using DocThemeIndigo
+using Literate
 
 ### Formatting
 
@@ -18,12 +21,17 @@ pages = [
         "tutorials/random_walk.md",
         "tutorials/game_of_life.md",
         "tutorials/particle_filter.md",
-        "tutorials/optimizations.md"
+        "tutorials/optimizations.md",
+        "tutorials/reverse_demo.md"
     ],
     "Public API" => "public_api.md",
     "Developer documentation" => "devdocs.md",
     "Limitations" => "limitations.md"
 ]
+
+### Prepare literate tutorials
+
+# TODO (for now they are manually built into docs/src/tutorials and checked into repo)
 
 ### Make docs
 
@@ -32,7 +40,8 @@ makedocs(sitename = "StochasticAD.jl",
     modules = [StochasticAD],
     format = format,
     pages = pages,
-    warnonly = [:missing_docs])
+    warnonly = [:missing_docs, :cross_references],
+    draft = true)
 
 try
     deploydocs(repo = "github.com/gaurav-arya/StochasticAD.jl",

@@ -1,5 +1,12 @@
 #text # Simple reverse mode example 
 
+#text ```@setup random_walk
+#text import Pkg
+#text Pkg.activate("../../../tutorials")
+#text Pkg.develop(path="../../..")
+#text Pkg.instantiate()
+#text ```
+
 ##cell
 #text Load our packages
 
@@ -26,7 +33,7 @@ end
 nothing
 
 ##cell
-# First, let's compute the sensitivity of `f` in a particular direction via forward-mode Stochastic AD.
+#text First, let's compute the sensitivity of `f` in a particular direction via forward-mode Stochastic AD.
 u = [1.0, 2.0, 4.0, -7.0]
 @show derivative_estimate(f, θ, StochasticAD.ForwardAlgorithm(PrunedFIsBackend()); direction = u)
 nothing
@@ -37,7 +44,7 @@ nothing
 @show derivative_estimate(f, θ, StochasticAD.EnzymeReverseAlgorithm(PrunedFIsBackend(Val(:wins))))
 
 ##cell
-##text Let's verify that our reverse-mode gradient is consistent with our forward-mode directional derivative.
+#text Let's verify that our reverse-mode gradient is consistent with our forward-mode directional derivative.
 
 forward() = derivative_estimate(f, θ, StochasticAD.ForwardAlgorithm(PrunedFIsBackend()); direction = u)
 reverse() = derivative_estimate(f, θ, StochasticAD.EnzymeReverseAlgorithm(PrunedFIsBackend(Val(:wins))))
@@ -53,6 +60,7 @@ nothing
 ##cell
 #! format: off #src
 using Literate #src
+do_documenter = true #src
 
 function preprocess(content) #src
     new_lines = map(split(content, "\n")) do line #src
@@ -74,5 +82,10 @@ function preprocess(content) #src
 end #src
 
 withenv("JULIA_DEBUG" => "Literate") do #src
-    @time Literate.markdown(@__FILE__, joinpath(pwd(), "TODO"); execute = true, flavor = Literate.CommonMarkFlavor(), preprocess = preprocess) #src
+    dir = joinpath(dirname(dirname(pathof(StochasticAD))), "docs", "src", "tutorials") #src
+    if do_documenter #src
+        @time Literate.markdown(@__FILE__, dir; execute = false, flavor = Literate.DocumenterFlavor(), preprocess = preprocess, documenter = true) #src
+    else #src
+        @time Literate.markdown(@__FILE__, dir; execute = true, flavor = Literate.CommonMark(), preprocess = preprocess) #src
+    end #src
 end #src

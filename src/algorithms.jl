@@ -84,5 +84,4 @@ julia> derivative_estimate(x -> [rand(Bernoulli(x * i/4)) for i in 1:3], 0.5)
  0.0
 ```
 """
-
 derivative_estimate

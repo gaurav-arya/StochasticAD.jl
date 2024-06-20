@@ -12,17 +12,17 @@ function enzyme_target(u, X, p, backend)
     return derivative_contribution(st)
 end
 
-function StochasticAD.derivative_estimate(X, p, alg::StochasticAD.EnzymeReverseAlgorithm; direction = nothing)
+function StochasticAD.derivative_estimate(X, p, alg::StochasticAD.EnzymeReverseAlgorithm; direction = nothing, alg_data = (;forward_u = nothing))
     if !isnothing(direction)
         error("EnzymeReverseAlgorithm does not support keyword argument `direction`")
     end
     if p isa AbstractVector
         Δu = zeros(float(eltype(p)), length(p))
-        u = rand(StochasticAD.RNG, float(eltype(p)), length(p))
+        u = isnothing(alg_data.forward_u) ? rand(StochasticAD.RNG, float(eltype(p)), length(p)) : alg_data.forward_u
         autodiff(Enzyme.Reverse, enzyme_target, Active, Duplicated(u, Δu), Const(X), Const(p), Const(alg.backend))
         return Δu
     elseif p isa Real
-        u = rand(StochasticAD.RNG, float(typeof(p)))
+        u = isnothing(alg_data.forward_u) ? rand(StochasticAD.RNG, float(typeof(p))) : forward_u
         ((du, _, _, _),) = autodiff(Enzyme.Reverse, enzyme_target, Active, Active(u), Const(X), Const(p), Const(alg.backend))
         return du
     else

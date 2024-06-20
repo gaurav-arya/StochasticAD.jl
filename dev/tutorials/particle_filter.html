@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Differentiable particle filter · StochasticAD.jl</title><meta name="title" content="Differentiable particle filter · StochasticAD.jl"/><meta property="og:title" content="Differentiable particle filter · StochasticAD.jl"/><meta property="twitter:title" content="Differentiable particle filter · StochasticAD.jl"/><meta name="description" content="Documentation for StochasticAD.jl."/><meta property="og:description" content="Documentation for StochasticAD.jl."/><meta property="twitter:description" content="Documentation for StochasticAD.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script><link href="../assets/indigo.css" rel="stylesheet" type="text/css"/><link href="../assets/extra_styles.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../index.html">StochasticAD.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../index.html">Overview</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="random_walk.html">Random walk</a></li><li><a class="tocitem" href="game_of_life.html">Stochastic Game of Life</a></li><li class="is-active"><a class="tocitem" href="particle_filter.html">Differentiable particle filter</a><ul class="internal"><li><a class="tocitem" href="#Setup"><span>Setup</span></a></li><li><a class="tocitem" href="#Model"><span>Model</span></a></li><li><a class="tocitem" href="#Visualization"><span>Visualization</span></a></li><li><a class="tocitem" href="#Bias"><span>Bias</span></a></li><li><a class="tocitem" href="#Benchmark"><span>Benchmark</span></a></li></ul></li><li><a class="tocitem" href="optimizations.html">Stochastic optimizations with discrete randomness</a></li></ul></li><li><a class="tocitem" href="../public_api.html">Public API</a></li><li><a class="tocitem" href="../devdocs.html">Developer documentation</a></li><li><a class="tocitem" href="../limitations.html">Limitations</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href="particle_filter.html">Differentiable particle filter</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="particle_filter.html">Differentiable particle filter</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/gaurav-arya/StochasticAD.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/gaurav-arya/StochasticAD.jl/blob/main/docs/src/tutorials/particle_filter.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Differentiable-particle-filter"><a class="docs-heading-anchor" href="#Differentiable-particle-filter">Differentiable particle filter</a><a id="Differentiable-particle-filter-1"></a><a class="docs-heading-anchor-permalink" href="#Differentiable-particle-filter" title="Permalink"></a></h1><p>Using a bootstrap particle sampler, we can approximate the posterior distributions of the states given noisy and partial observations of the state of a hidden Markov model by a cloud of <code>K</code> weighted particles with weights <code>W</code>.</p><p>In this tutorial, we are going to:</p><ul><li>implement a differentiable particle filter based on <code>StochasticAD.jl</code>.</li><li>visualize the particle filter in <span>$d = 2$</span> dimensions.</li><li>compare the gradient based on the differentiable particle filter to a biased gradient estimator as well as to the gradient of a differentiable Kalman filter.</li><li>show how to benchmark primal evaluation, forward- and reverse-mode AD of the particle filter.</li></ul><h2 id="Setup"><a class="docs-heading-anchor" href="#Setup">Setup</a><a id="Setup-1"></a><a class="docs-heading-anchor-permalink" href="#Setup" title="Permalink"></a></h2><p>We will make use of several julia packages. For example, we are going to use <code>Distributions</code> and <code>DistributionsAD</code> that implement the reparameterization trick for Gaussian distributions used in the observation and state-transition model, which we specify below. We also import <code>GaussianDistributions.jl</code> to implement the differentiable Kalman filter.</p><h3 id="Package-dependencies"><a class="docs-heading-anchor" href="#Package-dependencies">Package dependencies</a><a id="Package-dependencies-1"></a><a class="docs-heading-anchor-permalink" href="#Package-dependencies" title="Permalink"></a></h3><pre><code class="language-julia hljs"># activate tutorial project file
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Differentiable particle filter · StochasticAD.jl</title><meta name="title" content="Differentiable particle filter · StochasticAD.jl"/><meta property="og:title" content="Differentiable particle filter · StochasticAD.jl"/><meta property="twitter:title" content="Differentiable particle filter · StochasticAD.jl"/><meta name="description" content="Documentation for StochasticAD.jl."/><meta property="og:description" content="Documentation for StochasticAD.jl."/><meta property="twitter:description" content="Documentation for StochasticAD.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script><link href="../assets/indigo.css" rel="stylesheet" type="text/css"/><link href="../assets/extra_styles.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../index.html">StochasticAD.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../index.html">Overview</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="random_walk.html">Random walk</a></li><li><a class="tocitem" href="game_of_life.html">Stochastic Game of Life</a></li><li class="is-active"><a class="tocitem" href="particle_filter.html">Differentiable particle filter</a><ul class="internal"><li><a class="tocitem" href="#Setup"><span>Setup</span></a></li><li><a class="tocitem" href="#Model"><span>Model</span></a></li><li><a class="tocitem" href="#Visualization"><span>Visualization</span></a></li><li><a class="tocitem" href="#Bias"><span>Bias</span></a></li><li><a class="tocitem" href="#Benchmark"><span>Benchmark</span></a></li></ul></li><li><a class="tocitem" href="optimizations.html">Stochastic optimizations with discrete randomness</a></li><li><a class="tocitem" href="reverse_demo.html">Simple reverse mode example</a></li></ul></li><li><a class="tocitem" href="../public_api.html">Public API</a></li><li><a class="tocitem" href="../devdocs.html">Developer documentation</a></li><li><a class="tocitem" href="../limitations.html">Limitations</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href="particle_filter.html">Differentiable particle filter</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="particle_filter.html">Differentiable particle filter</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/gaurav-arya/StochasticAD.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/gaurav-arya/StochasticAD.jl/blob/main/docs/src/tutorials/particle_filter.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Differentiable-particle-filter"><a class="docs-heading-anchor" href="#Differentiable-particle-filter">Differentiable particle filter</a><a id="Differentiable-particle-filter-1"></a><a class="docs-heading-anchor-permalink" href="#Differentiable-particle-filter" title="Permalink"></a></h1><p>Using a bootstrap particle sampler, we can approximate the posterior distributions of the states given noisy and partial observations of the state of a hidden Markov model by a cloud of <code>K</code> weighted particles with weights <code>W</code>.</p><p>In this tutorial, we are going to:</p><ul><li>implement a differentiable particle filter based on <code>StochasticAD.jl</code>.</li><li>visualize the particle filter in <span>$d = 2$</span> dimensions.</li><li>compare the gradient based on the differentiable particle filter to a biased gradient estimator as well as to the gradient of a differentiable Kalman filter.</li><li>show how to benchmark primal evaluation, forward- and reverse-mode AD of the particle filter.</li></ul><h2 id="Setup"><a class="docs-heading-anchor" href="#Setup">Setup</a><a id="Setup-1"></a><a class="docs-heading-anchor-permalink" href="#Setup" title="Permalink"></a></h2><p>We will make use of several julia packages. For example, we are going to use <code>Distributions</code> and <code>DistributionsAD</code> that implement the reparameterization trick for Gaussian distributions used in the observation and state-transition model, which we specify below. We also import <code>GaussianDistributions.jl</code> to implement the differentiable Kalman filter.</p><h3 id="Package-dependencies"><a class="docs-heading-anchor" href="#Package-dependencies">Package dependencies</a><a id="Package-dependencies-1"></a><a class="docs-heading-anchor-permalink" href="#Package-dependencies" title="Permalink"></a></h3><pre><code class="language-julia hljs"># activate tutorial project file
 
 # load dependencies
 using StochasticAD
@@ -17,7 +17,198 @@ using Measurements
 using UnPack
 using Plots
 using LaTeXStrings
-using BenchmarkTools</code></pre><h3 id="Particle-filter"><a class="docs-heading-anchor" href="#Particle-filter">Particle filter</a><a id="Particle-filter-1"></a><a class="docs-heading-anchor-permalink" href="#Particle-filter" title="Permalink"></a></h3><p>For convenience, we first introduce the new type <code>StochasticModel</code> with the following fields:</p><ul><li><code>T</code>: total number of time steps.</li><li><code>start</code>: starting distribution for the initial state. For example, in the form of a narrow  Gaussian <code>start(θ) = Gaussian(x0, 0.001 * I(d))</code>.</li><li><code>dyn</code>: pointwise differentiable stochastic program in the form of Markov transition densities.  For example, <code>dyn(x, θ) = MvNormal(reshape(θ, d, d) * x, Q(θ))</code>, where <code>Q(θ)</code> denotes the  covariance matrix.</li><li><code>obs</code>: observation model having a smooth conditional probability density depending on  current state <code>x</code> and parameters <code>θ</code>. For example, <code>obs(x, θ) = MvNormal(x, R(θ))</code>,  where <code>R(θ)</code> denotes the covariance matrix.</li></ul><p>For parameters <code>θ</code>,  <code>rand(start(θ))</code> gives a sample from the prior distribution of the starting distribution. For current state <code>x</code> and parameters <code>θ</code>, <code>xnew = rand(dyn(x, θ))</code> samples the new state (i.e. <code>dyn</code> gives for each <code>x, θ</code> a distribution-like object). Finally, <code>y = rand(obs(x, θ))</code> samples an observation.</p><p>We can then define the <code>ParticleFilter</code> type that wraps a stochastic model <code>StochM::StochasticModel</code>, a sampling strategy (with arguments <code>p, K, sump=1</code>) and observational data <code>ys</code>. For simplicity, our implementation assumes a observation-likelihood function being available via <code>pdf(obs(x, θ), y)</code>.</p><pre><code class="language-julia hljs">struct StochasticModel{TType&lt;:Integer,T1,T2,T3}
+using BenchmarkTools</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌ Error: Error during loading of extension IntervalSetsRecipesBaseExt of IntervalSets, use `Base.retry_load_extensions()` to retry.
+│   exception =
+│    1-element ExceptionStack:
+│    ArgumentError: Package IntervalSetsRecipesBaseExt [37015e66-589a-58b1-bfae-83565f1dedb3] is required but does not seem to be installed:
+│     - Run `Pkg.instantiate()` to install all recorded dependencies.
+│
+│    Stacktrace:
+│      [1] _require(pkg::Base.PkgId, env::Nothing)
+│        @ Base ./loading.jl:1926
+│      [2] __require_prelocked(uuidkey::Base.PkgId, env::Nothing)
+│        @ Base ./loading.jl:1812
+│      [3] #invoke_in_world#3
+│        @ ./essentials.jl:926 [inlined]
+│      [4] invoke_in_world
+│        @ ./essentials.jl:923 [inlined]
+│      [5] _require_prelocked
+│        @ ./loading.jl:1803 [inlined]
+│      [6] _require_prelocked
+│        @ ./loading.jl:1802 [inlined]
+│      [7] run_extension_callbacks(extid::Base.ExtensionId)
+│        @ Base ./loading.jl:1295
+│      [8] run_extension_callbacks(pkgid::Base.PkgId)
+│        @ Base ./loading.jl:1330
+│      [9] run_package_callbacks(modkey::Base.PkgId)
+│        @ Base ./loading.jl:1164
+│     [10] _tryrequire_from_serialized(modkey::Base.PkgId, build_id::UInt128)
+│        @ Base ./loading.jl:1451
+│     [11] _tryrequire_from_serialized(pkg::Base.PkgId, path::String, ocachepath::String)
+│        @ Base ./loading.jl:1524
+│     [12] _require(pkg::Base.PkgId, env::String)
+│        @ Base ./loading.jl:1990
+│     [13] __require_prelocked(uuidkey::Base.PkgId, env::String)
+│        @ Base ./loading.jl:1812
+│     [14] #invoke_in_world#3
+│        @ ./essentials.jl:926 [inlined]
+│     [15] invoke_in_world
+│        @ ./essentials.jl:923 [inlined]
+│     [16] _require_prelocked(uuidkey::Base.PkgId, env::String)
+│        @ Base ./loading.jl:1803
+│     [17] macro expansion
+│        @ ./loading.jl:1790 [inlined]
+│     [18] macro expansion
+│        @ ./lock.jl:267 [inlined]
+│     [19] __require(into::Module, mod::Symbol)
+│        @ Base ./loading.jl:1753
+│     [20] #invoke_in_world#3
+│        @ ./essentials.jl:926 [inlined]
+│     [21] invoke_in_world
+│        @ ./essentials.jl:923 [inlined]
+│     [22] require(into::Module, mod::Symbol)
+│        @ Base ./loading.jl:1746
+│     [23] eval
+│        @ ./boot.jl:385 [inlined]
+│     [24] #58
+│        @ ~/.julia/packages/Documenter/CJeWX/src/expander_pipeline.jl:754 [inlined]
+│     [25] cd(f::Documenter.var&quot;#58#60&quot;{Module, Expr}, dir::String)
+│        @ Base.Filesystem ./file.jl:112
+│     [26] (::Documenter.var&quot;#57#59&quot;{Documenter.Page, Module, Expr})()
+│        @ Documenter ~/.julia/packages/Documenter/CJeWX/src/expander_pipeline.jl:753
+│     [27] (::IOCapture.var&quot;#5#9&quot;{DataType, Documenter.var&quot;#57#59&quot;{Documenter.Page, Module, Expr}, IOContext{Base.PipeEndpoint}, IOContext{Base.PipeEndpoint}, Base.PipeEndpoint, Base.PipeEndpoint})()
+│        @ IOCapture ~/.julia/packages/IOCapture/Y5rEA/src/IOCapture.jl:170
+│     [28] with_logstate(f::Function, logstate::Any)
+│        @ Base.CoreLogging ./logging.jl:515
+│     [29] with_logger
+│        @ ./logging.jl:627 [inlined]
+│     [30] capture(f::Documenter.var&quot;#57#59&quot;{Documenter.Page, Module, Expr}; rethrow::Type, color::Bool, passthrough::Bool, capture_buffer::IOBuffer, io_context::Vector{Any})
+│        @ IOCapture ~/.julia/packages/IOCapture/Y5rEA/src/IOCapture.jl:167
+│     [31] runner(::Type{Documenter.Expanders.ExampleBlocks}, node::MarkdownAST.Node{Nothing}, page::Documenter.Page, doc::Documenter.Document)
+│        @ Documenter ~/.julia/packages/Documenter/CJeWX/src/expander_pipeline.jl:752
+│     [32] dispatch(::Type{Documenter.Expanders.ExpanderPipeline}, ::MarkdownAST.Node{Nothing}, ::Vararg{Any})
+│        @ Documenter.Selectors ~/.julia/packages/Documenter/CJeWX/src/utilities/Selectors.jl:170
+│     [33] expand(doc::Documenter.Document)
+│        @ Documenter ~/.julia/packages/Documenter/CJeWX/src/expander_pipeline.jl:22
+│     [34] runner(::Type{Documenter.Builder.ExpandTemplates}, doc::Documenter.Document)
+│        @ Documenter ~/.julia/packages/Documenter/CJeWX/src/builder_pipeline.jl:222
+│     [35] dispatch(::Type{Documenter.Builder.DocumentPipeline}, x::Documenter.Document)
+│        @ Documenter.Selectors ~/.julia/packages/Documenter/CJeWX/src/utilities/Selectors.jl:170
+│     [36] #86
+│        @ ~/.julia/packages/Documenter/CJeWX/src/makedocs.jl:248 [inlined]
+│     [37] withenv(::Documenter.var&quot;#86#88&quot;{Documenter.Document}, ::Pair{String, Nothing}, ::Vararg{Pair{String, Nothing}})
+│        @ Base ./env.jl:257
+│     [38] #85
+│        @ ~/.julia/packages/Documenter/CJeWX/src/makedocs.jl:247 [inlined]
+│     [39] cd(f::Documenter.var&quot;#85#87&quot;{Documenter.Document}, dir::String)
+│        @ Base.Filesystem ./file.jl:112
+│     [40] #makedocs#84
+│        @ ~/.julia/packages/Documenter/CJeWX/src/makedocs.jl:247 [inlined]
+│     [41] top-level scope
+│        @ ~/work/StochasticAD.jl/StochasticAD.jl/docs/make.jl:38
+│     [42] include(mod::Module, _path::String)
+│        @ Base ./Base.jl:495
+│     [43] exec_options(opts::Base.JLOptions)
+│        @ Base ./client.jl:318
+│     [44] _start()
+│        @ Base ./client.jl:552
+└ @ Base loading.jl:1301
+┌ Error: Error during loading of extension IntervalArithmeticRecipesBaseExt of IntervalArithmetic, use `Base.retry_load_extensions()` to retry.
+│   exception =
+│    1-element ExceptionStack:
+│    ArgumentError: Package IntervalArithmeticRecipesBaseExt [e3b91bd4-2888-5303-85ed-4cf5ebb38ff1] is required but does not seem to be installed:
+│     - Run `Pkg.instantiate()` to install all recorded dependencies.
+│
+│    Stacktrace:
+│      [1] _require(pkg::Base.PkgId, env::Nothing)
+│        @ Base ./loading.jl:1926
+│      [2] __require_prelocked(uuidkey::Base.PkgId, env::Nothing)
+│        @ Base ./loading.jl:1812
+│      [3] #invoke_in_world#3
+│        @ ./essentials.jl:926 [inlined]
+│      [4] invoke_in_world
+│        @ ./essentials.jl:923 [inlined]
+│      [5] _require_prelocked
+│        @ ./loading.jl:1803 [inlined]
+│      [6] _require_prelocked
+│        @ ./loading.jl:1802 [inlined]
+│      [7] run_extension_callbacks(extid::Base.ExtensionId)
+│        @ Base ./loading.jl:1295
+│      [8] run_extension_callbacks(pkgid::Base.PkgId)
+│        @ Base ./loading.jl:1330
+│      [9] run_package_callbacks(modkey::Base.PkgId)
+│        @ Base ./loading.jl:1164
+│     [10] _tryrequire_from_serialized(modkey::Base.PkgId, build_id::UInt128)
+│        @ Base ./loading.jl:1451
+│     [11] _tryrequire_from_serialized(pkg::Base.PkgId, path::String, ocachepath::String)
+│        @ Base ./loading.jl:1524
+│     [12] _require(pkg::Base.PkgId, env::String)
+│        @ Base ./loading.jl:1990
+│     [13] __require_prelocked(uuidkey::Base.PkgId, env::String)
+│        @ Base ./loading.jl:1812
+│     [14] #invoke_in_world#3
+│        @ ./essentials.jl:926 [inlined]
+│     [15] invoke_in_world
+│        @ ./essentials.jl:923 [inlined]
+│     [16] _require_prelocked(uuidkey::Base.PkgId, env::String)
+│        @ Base ./loading.jl:1803
+│     [17] macro expansion
+│        @ ./loading.jl:1790 [inlined]
+│     [18] macro expansion
+│        @ ./lock.jl:267 [inlined]
+│     [19] __require(into::Module, mod::Symbol)
+│        @ Base ./loading.jl:1753
+│     [20] #invoke_in_world#3
+│        @ ./essentials.jl:926 [inlined]
+│     [21] invoke_in_world
+│        @ ./essentials.jl:923 [inlined]
+│     [22] require(into::Module, mod::Symbol)
+│        @ Base ./loading.jl:1746
+│     [23] eval
+│        @ ./boot.jl:385 [inlined]
+│     [24] #58
+│        @ ~/.julia/packages/Documenter/CJeWX/src/expander_pipeline.jl:754 [inlined]
+│     [25] cd(f::Documenter.var&quot;#58#60&quot;{Module, Expr}, dir::String)
+│        @ Base.Filesystem ./file.jl:112
+│     [26] (::Documenter.var&quot;#57#59&quot;{Documenter.Page, Module, Expr})()
+│        @ Documenter ~/.julia/packages/Documenter/CJeWX/src/expander_pipeline.jl:753
+│     [27] (::IOCapture.var&quot;#5#9&quot;{DataType, Documenter.var&quot;#57#59&quot;{Documenter.Page, Module, Expr}, IOContext{Base.PipeEndpoint}, IOContext{Base.PipeEndpoint}, Base.PipeEndpoint, Base.PipeEndpoint})()
+│        @ IOCapture ~/.julia/packages/IOCapture/Y5rEA/src/IOCapture.jl:170
+│     [28] with_logstate(f::Function, logstate::Any)
+│        @ Base.CoreLogging ./logging.jl:515
+│     [29] with_logger
+│        @ ./logging.jl:627 [inlined]
+│     [30] capture(f::Documenter.var&quot;#57#59&quot;{Documenter.Page, Module, Expr}; rethrow::Type, color::Bool, passthrough::Bool, capture_buffer::IOBuffer, io_context::Vector{Any})
+│        @ IOCapture ~/.julia/packages/IOCapture/Y5rEA/src/IOCapture.jl:167
+│     [31] runner(::Type{Documenter.Expanders.ExampleBlocks}, node::MarkdownAST.Node{Nothing}, page::Documenter.Page, doc::Documenter.Document)
+│        @ Documenter ~/.julia/packages/Documenter/CJeWX/src/expander_pipeline.jl:752
+│     [32] dispatch(::Type{Documenter.Expanders.ExpanderPipeline}, ::MarkdownAST.Node{Nothing}, ::Vararg{Any})
+│        @ Documenter.Selectors ~/.julia/packages/Documenter/CJeWX/src/utilities/Selectors.jl:170
+│     [33] expand(doc::Documenter.Document)
+│        @ Documenter ~/.julia/packages/Documenter/CJeWX/src/expander_pipeline.jl:22
+│     [34] runner(::Type{Documenter.Builder.ExpandTemplates}, doc::Documenter.Document)
+│        @ Documenter ~/.julia/packages/Documenter/CJeWX/src/builder_pipeline.jl:222
+│     [35] dispatch(::Type{Documenter.Builder.DocumentPipeline}, x::Documenter.Document)
+│        @ Documenter.Selectors ~/.julia/packages/Documenter/CJeWX/src/utilities/Selectors.jl:170
+│     [36] #86
+│        @ ~/.julia/packages/Documenter/CJeWX/src/makedocs.jl:248 [inlined]
+│     [37] withenv(::Documenter.var&quot;#86#88&quot;{Documenter.Document}, ::Pair{String, Nothing}, ::Vararg{Pair{String, Nothing}})
+│        @ Base ./env.jl:257
+│     [38] #85
+│        @ ~/.julia/packages/Documenter/CJeWX/src/makedocs.jl:247 [inlined]
+│     [39] cd(f::Documenter.var&quot;#85#87&quot;{Documenter.Document}, dir::String)
+│        @ Base.Filesystem ./file.jl:112
+│     [40] #makedocs#84
+│        @ ~/.julia/packages/Documenter/CJeWX/src/makedocs.jl:247 [inlined]
+│     [41] top-level scope
+│        @ ~/work/StochasticAD.jl/StochasticAD.jl/docs/make.jl:38
+│     [42] include(mod::Module, _path::String)
+│        @ Base ./Base.jl:495
+│     [43] exec_options(opts::Base.JLOptions)
+│        @ Base ./client.jl:318
+│     [44] _start()
+│        @ Base ./client.jl:552
+└ @ Base loading.jl:1301</code></pre><h3 id="Particle-filter"><a class="docs-heading-anchor" href="#Particle-filter">Particle filter</a><a id="Particle-filter-1"></a><a class="docs-heading-anchor-permalink" href="#Particle-filter" title="Permalink"></a></h3><p>For convenience, we first introduce the new type <code>StochasticModel</code> with the following fields:</p><ul><li><code>T</code>: total number of time steps.</li><li><code>start</code>: starting distribution for the initial state. For example, in the form of a narrow  Gaussian <code>start(θ) = Gaussian(x0, 0.001 * I(d))</code>.</li><li><code>dyn</code>: pointwise differentiable stochastic program in the form of Markov transition densities.  For example, <code>dyn(x, θ) = MvNormal(reshape(θ, d, d) * x, Q(θ))</code>, where <code>Q(θ)</code> denotes the  covariance matrix.</li><li><code>obs</code>: observation model having a smooth conditional probability density depending on  current state <code>x</code> and parameters <code>θ</code>. For example, <code>obs(x, θ) = MvNormal(x, R(θ))</code>,  where <code>R(θ)</code> denotes the covariance matrix.</li></ul><p>For parameters <code>θ</code>,  <code>rand(start(θ))</code> gives a sample from the prior distribution of the starting distribution. For current state <code>x</code> and parameters <code>θ</code>, <code>xnew = rand(dyn(x, θ))</code> samples the new state (i.e. <code>dyn</code> gives for each <code>x, θ</code> a distribution-like object). Finally, <code>y = rand(obs(x, θ))</code> samples an observation.</p><p>We can then define the <code>ParticleFilter</code> type that wraps a stochastic model <code>StochM::StochasticModel</code>, a sampling strategy (with arguments <code>p, K, sump=1</code>) and observational data <code>ys</code>. For simplicity, our implementation assumes a observation-likelihood function being available via <code>pdf(obs(x, θ), y)</code>.</p><pre><code class="language-julia hljs">struct StochasticModel{TType&lt;:Integer,T1,T2,T3}
     T::TType # time steps
     start::T1 # prior
     dyn::T2 # dynamical model
@@ -221,4 +412,4 @@ t3 = measurement(mean(results[&quot;scaling&quot;][&quot;backward&quot;].times),
 @show t1 t2 t3
 
 ts = (t1, t2, t3) ./ 10^6 # ms
-@show ts</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(30.16 ± 0.68, 43.1 ± 1.8, 1715.648436 ± NaN)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="game_of_life.html">« Stochastic Game of Life</a><a class="docs-footer-nextpage" href="optimizations.html">Stochastic optimizations with discrete randomness »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.4.0 on <span class="colophon-date" title="Monday 15 April 2024 01:33">Monday 15 April 2024</span>. Using Julia version 1.10.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+@show ts</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(33.5 ± 0.32, 45.59 ± 0.57, 1303.601226 ± NaN)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="game_of_life.html">« Stochastic Game of Life</a><a class="docs-footer-nextpage" href="optimizations.html">Stochastic optimizations with discrete randomness »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.4.1 on <span class="colophon-date" title="Thursday 20 June 2024 04:38">Thursday 20 June 2024</span>. Using Julia version 1.10.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

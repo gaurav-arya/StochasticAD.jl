@@ -45,7 +45,7 @@ u = [1.0, 2.0, 4.0, -7.0]
 nothing
 
 ##cell
-#text Now, let's do the same with reverse-mode.  
+#text Now, let's do the same with reverse-mode, via [`EnzymeReverseAlgorithm`](@ref).
 
 @show derivative_estimate(f, θ, StochasticAD.EnzymeReverseAlgorithm(PrunedFIsBackend(Val(:wins))))
 

@@ -5,7 +5,13 @@
 #text Pkg.activate("../../../tutorials")
 #text Pkg.develop(path="../../..")
 #text Pkg.instantiate()
+#
+#text import Random 
+#text Random.seed!(1234)
 #text ```
+
+import Random #src
+Random.seed!(1234) #src
 
 ##cell
 #text Load our packages
@@ -49,11 +55,13 @@ nothing
 forward() = derivative_estimate(f, θ, StochasticAD.ForwardAlgorithm(PrunedFIsBackend()); direction = u)
 reverse() = derivative_estimate(f, θ, StochasticAD.EnzymeReverseAlgorithm(PrunedFIsBackend(Val(:wins))))
 
-directional_derivs_fwd = [forward() for i in 1:10000]
-derivs_bwd = [reverse() for i in 1:10000]
+N = 40000
+directional_derivs_fwd = [forward() for i in 1:N]
+derivs_bwd = [reverse() for i in 1:N]
 directional_derivs_bwd = [dot(u, δ) for δ in derivs_bwd]
-println("Forward mode: $(mean(directional_derivs_fwd)) ± $(std(directional_derivs_fwd) / 100)")
-println("Reverse mode: $(mean(directional_derivs_bwd)) ± $(std(directional_derivs_bwd) / 100)")
+println("Forward mode: $(mean(directional_derivs_fwd)) ± $(std(directional_derivs_fwd) / sqrt(N))")
+println("Reverse mode: $(mean(directional_derivs_bwd)) ± $(std(directional_derivs_bwd) / sqrt(N))")
+@assert isapprox(mean(directional_derivs_fwd), mean(directional_derivs_bwd), rtol = 3e-2)
 
 nothing
 

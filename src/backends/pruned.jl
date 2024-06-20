@@ -171,12 +171,16 @@ function get_pruned_state(Δs_all; Δ_func = nothing, rep, out_rep = nothing)
         p = candidate_strength / total_strength
         if isone(p) || (rand(StochasticAD.RNG) < p)
             cur_state.valid = false 
-            candidate_state.wins += 1
+            if Δs.state.pruning_mode isa Val{:wins}
+                candidate_state.wins += 1
+            end
             candidate_state.weight *= 1/p
             return candidate_state
         else
             candidate_state.valid = false
-            cur_state.wins += 1
+            if Δs.state.pruning_mode isa Val{:wins}
+                cur_state.wins += 1
+            end
             cur_state.weight *= 1 / (1 - p)
             return cur_state
         end

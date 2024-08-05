@@ -92,8 +92,8 @@ StochasticTriple of Int64:
 """
 function propagate(f,
         args...;
-        keep_deltas = Val(false),
-        keep_triples = Val(false),
+        keep_deltas::Val = Val(false),
+        keep_triples::Val = Val(false),
         provided_st_rep = nothing,
         deriv = nothing)
     # TODO: support kwargs to f (or just use kwfunc in macro)

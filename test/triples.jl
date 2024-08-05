@@ -529,7 +529,7 @@ end
                 out_δ_expected = StochasticAD.structural_map(zero, out)
             end
             input_sts = StochasticAD.structural_map(_form_triple, primals, δs, Δs)
-            out_st = StochasticAD.propagate(f, input_sts...; keep_deltas = Val{test_deltas})
+            out_st = StochasticAD.propagate(f, input_sts...; keep_deltas = Val(test_deltas))
             # Test type
             StochasticAD.structural_map(out_st, out, out_δ_expected,
                 out_Δ_expected) do x_st, x, δ, Δ

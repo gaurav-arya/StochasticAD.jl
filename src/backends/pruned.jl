@@ -43,8 +43,7 @@ mutable struct PrunedFIsState{M, W}
 end
 
 Base.:(==)(state1::PrunedFIsState, state2::PrunedFIsState) = state1.tag == state2.tag
-# c.f. https://github.com/JuliaLang/julia/blob/61c3521613767b2af21dfa5cc5a7b8195c5bdcaf/base/hashing.jl#L38C45-L38C51
-Base.hash(state::PrunedFIsState) = state.tag
+Base.hash(state::PrunedFIsState, h::UInt) = hash(state.tag, h)
 
 """
     PrunedFIs{V} <: StochasticAD.AbstractFIs{V}

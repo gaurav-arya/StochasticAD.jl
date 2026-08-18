@@ -284,6 +284,27 @@ end
     @test length(dict) == 1
 end
 
+@testset "PrunedFIs cached empty state" begin
+    for backend in (PrunedFIsBackend(), PrunedFIsBackend(Val(:wins)))
+        Δs = StochasticAD.create_Δs(backend, Float64)
+        Δs_similar = StochasticAD.similar_empty(Δs, Int)
+        Δs_type = empty(typeof(Δs))
+
+        @test isempty(Δs)
+        @test_nowarn hash(Δs.state)
+        @test_nowarn hash(Δs.state, UInt(5))
+        @test hash(Δs.state, UInt(5)) == hash(Δs.state.tag, UInt(5))
+        @test Δs.state === Δs_similar.state
+        @test Δs.state === Δs_type.state
+
+        mapped_Δs = StochasticAD.weighted_map_Δs(
+            (_Δ, _state) -> (2.0, 3.0), Δs)
+        @test isempty(mapped_Δs)
+        @test mapped_Δs.state === Δs.state
+        @test Δs.state.weight == 0.0
+    end
+end
+
 @testset "DictFIs empty values" begin
     Δs = StochasticAD.create_Δs(DictFIsBackend(), Float64)
     @test isempty(Δs)

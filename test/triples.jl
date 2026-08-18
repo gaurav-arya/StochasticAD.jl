@@ -273,6 +273,44 @@ end
     Δs = StochasticAD.similar_new(StochasticAD.create_Δs(PrunedFIsBackend(), Int), 1.0, 1.0)
     st = StochasticAD.StochasticTriple{0}(1.0, 0, Δs)
     @test_throws ErrorException d[rand(Bernoulli(st))]
+
+    event1 = StochasticAD.DictFIsModule.InfinitesimalEvent(1, 1.0)
+    event2 = StochasticAD.DictFIsModule.InfinitesimalEvent(1, 2.0)
+    @test event1 == event2
+    @test isequal(event1, event2)
+    @test hash(event1) == hash(event2)
+    dict = Dict(event1 => 1)
+    dict[event2] = 2
+    @test length(dict) == 1
+end
+
+@testset "DictFIs empty values" begin
+    Δs = StochasticAD.create_Δs(DictFIsBackend(), Float64)
+    @test isempty(Δs)
+    @test_throws ErrorException StochasticAD.scalarize(Δs)
+
+    mapped_Δs = StochasticAD.weighted_map_Δs(
+        (_Δ, _state) -> error("the mapping function should not be called"),
+        Δs;
+        out_rep = [0.0, 0.0])
+    @test mapped_Δs isa DictFIs{Vector{Float64}}
+    @test isempty(mapped_Δs)
+
+    scalarized_Δs = StochasticAD.scalarize(Δs; out_rep = [0.0, 0.0])
+    @test length(scalarized_Δs) == 2
+    @test all(isempty, scalarized_Δs)
+end
+
+@testset "DictFIs vector-valued scalarize" begin
+    Δs0 = StochasticAD.create_Δs(DictFIsBackend(), Vector{Float64})
+    Δs1 = StochasticAD.similar_new(Δs0, [1.0, 2.0], 1.0)
+    Δs2 = StochasticAD.similar_new(Δs0, [3.0, 4.0], 2.0)
+    Δs = StochasticAD.combine((Δs1, Δs2))
+
+    scalarized_Δs = StochasticAD.scalarize(Δs)
+    @test length(scalarized_Δs) == 2
+    @test all(Δ -> Δ isa DictFIs{Float64}, scalarized_Δs)
+    @test derivative_contribution.(scalarized_Δs) == [7.0, 10.0]
 end
 
 @testset "Coupled comparison" begin

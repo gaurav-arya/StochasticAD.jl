@@ -33,6 +33,10 @@ Base.:<(event1::InfinitesimalEvent, event2::InfinitesimalEvent) = event1.tag < e
 function Base.:(==)(event1::InfinitesimalEvent, event2::InfinitesimalEvent)
     event1.tag == event2.tag
 end
+function Base.isequal(event1::InfinitesimalEvent, event2::InfinitesimalEvent)
+    isequal(event1.tag, event2.tag)
+end
+Base.hash(event::InfinitesimalEvent, hsh::UInt) = hash(event.tag, hsh)
 Base.:isless(event1::InfinitesimalEvent, event2::InfinitesimalEvent) = event1 < event2
 
 """
@@ -95,6 +99,12 @@ end
 ### Unary propagation
 
 function StochasticAD.weighted_map_Δs(f, Δs::DictFIs; kwargs...)
+    if isempty(Δs)
+        out_rep = get(kwargs, :out_rep, nothing)
+        V = (isnothing(out_rep) || out_rep isa StochasticAD.AbstractFIs) ?
+            StochasticAD.valtype(Δs) : typeof(out_rep)
+        return StochasticAD.similar_empty(Δs, V)
+    end
     # Pass key as state in map
     mapped_values_and_weights = map(f, collect(Δs.dict), keys(Δs.dict))
     mapped_values = first.(mapped_values_and_weights)
@@ -146,6 +156,23 @@ function StochasticAD.combine(FIs::Type{<:DictFIs}, Δs_all;
 end
 
 function StochasticAD.scalarize(Δs::DictFIs; out_rep = nothing)
+    if isempty(Δs)
+        isnothing(out_rep) && error("Cannot scalarize empty DictFIs without out_rep")
+        return StochasticAD.structural_map(
+            x -> StochasticAD.similar_empty(Δs, typeof(x)), out_rep)
+    end
+
+    first_value = first(values(Δs.dict))
+    first_value isa Real && return Δs
+    if first_value isa AbstractVector
+        events = collect(keys(Δs.dict))
+        event_values = collect(values(Δs.dict))
+        return map(eachindex(first_value)) do index
+            coordinate_values = [value[index] for value in event_values]
+            DictFIs(Dictionary(events, coordinate_values), Δs.state)
+        end
+    end
+
     # TODO: use vcat here?
     tupleify(Δ1, Δ2) = StochasticAD.structural_map(tuple, Δ1, Δ2)
     Δ_all_allkeys = foldl(tupleify, values(Δs.dict))

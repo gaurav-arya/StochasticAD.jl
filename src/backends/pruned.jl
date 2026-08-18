@@ -130,10 +130,26 @@ end
 
 ### Unary propagation
 
+_zero_pruned_value(value::Real) = zero(value)
+_zero_pruned_value(value) = StochasticAD.structural_map(zero, value)
+
 function StochasticAD.weighted_map_Δs(f, Δs::PrunedFIs; kwargs...)
+    if isempty(Δs)
+        out_rep = get(kwargs, :out_rep, nothing)
+        if !isnothing(out_rep)
+            if out_rep isa StochasticAD.AbstractFIs
+                V = StochasticAD.valtype(out_rep)
+                hasmethod(zero, (Type{V},)) &&
+                    return StochasticAD.similar_empty(Δs, V)
+            else
+                return PrunedFIs(_zero_pruned_value(out_rep), Δs.state)
+            end
+        end
+        Δ_out, _ = f(pruned_value(Δs), Δs.state)
+        return PrunedFIs(_zero_pruned_value(Δ_out), Δs.state)
+    end
     Δ_out, weight_out = f(pruned_value(Δs), Δs.state)
-    # TODO: we could add a direct overload for map_Δs that elides the below line
-    !isempty(Δs) && (Δs.state.weight *= weight_out)
+    Δs.state.weight *= weight_out
     PrunedFIs(Δ_out, Δs.state)
 end
 

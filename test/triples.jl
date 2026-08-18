@@ -302,6 +302,21 @@ end
         @test isempty(mapped_Δs)
         @test mapped_Δs.state === Δs.state
         @test Δs.state.weight == 0.0
+        @test StochasticAD.perturbations(mapped_Δs)[1].Δ == 0.0
+
+        mapped_Δs_with_rep = StochasticAD.weighted_map_Δs(
+            (_Δ, _state) -> error("the mapping function should not be called"), Δs;
+            out_rep = 1.0)
+        @test isempty(mapped_Δs_with_rep)
+        @test StochasticAD.valtype(mapped_Δs_with_rep) === Float64
+        @test mapped_Δs_with_rep.state === Δs.state
+
+        mapped_vec = StochasticAD.weighted_map_Δs(
+            (_Δ, _state) -> error("the mapping function should not be called"), Δs;
+            out_rep = zeros(4))
+        @test isempty(mapped_vec)
+        @test StochasticAD.valtype(mapped_vec) === Vector{Float64}
+        @test all(iszero, StochasticAD.perturbations(mapped_vec)[1].Δ)
     end
 end
 

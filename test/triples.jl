@@ -349,6 +349,34 @@ end
     @test derivative_contribution.(scalarized_Δs) == [7.0, 10.0]
 end
 
+@testset "DictFIs active alternatives" begin
+    Δs0 = StochasticAD.create_Δs(DictFIsBackend(), Float64)
+    Δs1 = StochasticAD.similar_new(Δs0, 1.0, 1.0)
+    Δs2 = StochasticAD.similar_new(Δs0, 2.0, 1.0)
+    Δs_dead = StochasticAD.weighted_map_Δs((Δ, _) -> (zero(Δ), 1.0),
+        StochasticAD.combine((Δs1, Δs2)))
+
+    # Dead values are retained in the dictionary payload, but are not active.
+    @test length(Δs_dead.dict) == 2
+    @test isempty(Δs_dead.active)
+    @test length(StochasticAD.perturbations(Δs_dead)) == 2
+
+    calls = Ref(0)
+    StochasticAD.weighted_map_Δs((Δ, _) -> (calls[] += 1; (Δ, 1.0)), Δs_dead)
+    @test calls[] == 0
+
+    Δs_alive = StochasticAD.similar_new(Δs0, 3.0, 1.0)
+    @test length(StochasticAD.combine((Δs_dead, Δs_alive))) == 1
+    @test length(StochasticAD.couple((Δs_dead, Δs_alive))) == 1
+
+    Δs_vector_base = StochasticAD.create_Δs(DictFIsBackend(), Vector{Float64})
+    Δs_vector = StochasticAD.combine((
+        StochasticAD.similar_new(Δs_vector_base, [1.0, 0.0], 1.0),
+        StochasticAD.similar_new(Δs_vector_base, [0.0, 2.0], 1.0)))
+    scalarized_Δs = StochasticAD.scalarize(Δs_vector)
+    @test length.(scalarized_Δs) == [1, 1]
+end
+
 @testset "Coupled comparison" begin
     Δs_1 = StochasticAD.similar_new(StochasticAD.create_Δs(PrunedFIsBackend(), Int), 1.0,
         1.0)

@@ -23,7 +23,7 @@ StochasticADEnzymeExt = "Enzyme"
 [compat]
 ChainRulesCore = "1.15"
 ChainRulesOverloadGeneration = "0.1"
-Dictionaries = "0.3"
+Dictionaries = "0.3, 0.4"
 Distributions = "0.25"
 DistributionsAD = "0.6"
 ExprTools = "0.1"

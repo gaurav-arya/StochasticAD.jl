@@ -78,9 +78,15 @@ Let's consider a toy variational program: we find a [Poisson distribution](https
 ```
 The following program produces an unbiased estimate of the objective:
 ```@example optimizations
+# `logpdf` on `NegativeBinomial` internally branches on `iszero`, which cannot be
+# decided by a stochastic triple, so we propagate the whole function call instead
+# of relying on operator overloading inside it.
+nbinom_logpdf(k) = logpdf(NegativeBinomial(10, 0.25), k)
+nbinom_logpdf(k::StochasticTriple) = StochasticAD.propagate(nbinom_logpdf, k)
+
 function X(p)
     i = rand(Poisson(p))
-    return logpdf(Poisson(p), i) - logpdf(NegativeBinomial(10, 0.25), i)
+    return logpdf(Poisson(p), i) - nbinom_logpdf(i)
 end
 ```
 We can now optimize the KL-divergence via stochastic gradient descent!

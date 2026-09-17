@@ -1,14 +1,13 @@
 using SafeTestsets
-using Test, Pkg
+using Test
 import Random
 
 Random.seed!(1234)
 
 const GROUP = get(ENV, "GROUP", "All")
-const is_APPVEYOR = Sys.iswindows() && haskey(ENV, "APPVEYOR")
 
 @time begin
-    if GROUP == "All"
+    if GROUP in ("All", "Core")
         @time @safetestset "Triples" begin
             include("triples.jl")
         end

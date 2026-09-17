@@ -1,22 +1,22 @@
-
 name: Benchmarks
 
 on:
   pull_request:
   push:
     branches:
-      - main 
+      - main
     tags: '*'
 
 jobs:
   benchmark:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: julia-actions/setup-julia@latest
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
         with:
-          version: 1
+          version: '1'
+      - uses: julia-actions/cache@v3
       - name: Install dependencies
         run: julia -e 'using Pkg; Pkg.activate("tutorials"); Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate();'
       - name: Run benchmarks
-        run: julia --project=tutorials --color=yes benchmark/runbenchmarks.jl 
+        run: julia --project=tutorials --color=yes benchmark/runbenchmarks.jl

@@ -17,7 +17,7 @@ export InversionMethodDerivativeCoupling
 
 using Random
 using Distributions
-using DistributionsAD
+using ChainRules
 using ChainRulesCore
 using ChainRulesOverloadGeneration
 using ExprTools

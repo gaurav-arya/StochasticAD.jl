@@ -8,6 +8,7 @@ using Statistics
 using StatsBase
 using LinearAlgebra
 using Zygote
+using ChainRulesCore: ignore_derivatives
 using StochasticAD
 using ForwardDiff
 using GaussianDistributions
@@ -167,7 +168,7 @@ and weights `W_new` of resampled particles.
    differentiable resampling step.
 """
 function resample(m, X, W, ω, sample_strategy, use_new_weight = true)
-    js = Zygote.ignore(() -> sample_strategy(W, m, ω))
+    js = ignore_derivatives(() -> sample_strategy(W, m, ω))
     # elementwise indexing avoids a Zygote 0.7 / ChainRules `∇getindex!` error on thunked cotangents
     X_new = map(j -> X[j], js)
     if use_new_weight
@@ -218,7 +219,7 @@ function (F::ParticleFilter)(θ; store_path = false, use_new_weight = true, s = 
         # update particle states
         if t < T
             X = map(x -> rand(dyn(x, θ)), X)
-            store_path && Zygote.ignore(() -> push!(Xs, X))
+            store_path && ignore_derivatives(() -> push!(Xs, X))
         end
     end
     (store_path ? Xs : X), W

@@ -307,6 +307,9 @@ For developers: if you wish to accept custom keyword arguments in a stochastic t
 randst(rng, d::Distributions.Sampleable; kwargs...) = rand(rng, d)
 randst(d::Distributions.Sampleable; kwargs...) = randst(Random.default_rng(), d; kwargs...)
 
+# Indirection so the Enzyme extension can attach a rule that caches the draw
+_sample(rng, d) = rand(rng, d)
+
 # Define stochastic triple rules
 
 for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
@@ -321,7 +324,7 @@ for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
             propagation_coupling = InversionMethodPropagationCoupling()) where {T, V, FIs}
         st = _get_parameter(d_st)
         d = _reconstruct(d_st, st.value)
-        val = convert(Signed, rand(rng, d))
+        val = convert(Signed, _sample(rng, d))
         Δs1 = δtoΔs(d, val, st.δ, st.Δs, derivative_coupling)
 
         Δs2 = map(Δ -> _map_func(d, val, Δ, propagation_coupling),
@@ -337,6 +340,15 @@ end
 
 # currently handle Categorical separately since parameter is a vector
 # what if some elements in vector are not stochastic triples... promotion should take care of that?
+# The default constructor copies `p` via `p[sortperm(support)]`, which Enzyme cannot differentiate
+function Distributions.Categorical(p::AbstractVector{P};
+        check_args::Bool = true) where {P <: StochasticTriple}
+    if check_args && !Distributions.isprobvec(value.(p))
+        throw(DomainError(p, "Categorical: vector p is not a probability vector"))
+    end
+    return Categorical{P, typeof(p)}(Base.OneTo(length(p)), p; check_args = false)
+end
+
 function Base.rand(rng::AbstractRNG,
         d_st::Categorical{StochasticTriple{T, V, FIs}}) where {T, V, FIs}
     return randst(rng, d_st)
@@ -350,7 +362,7 @@ function randst(rng::AbstractRNG,
     sts = _get_parameter(d_st) # stochastic triple for each probability
     p = map(st -> st.value, sts) # try to keep the same type. e.g. static array -> static array. TODO: avoid allocations
     d = _reconstruct(d_st, p)
-    val = convert(Signed, rand(rng, d))
+    val = convert(Signed, _sample(rng, d))
 
     Δs_all = map(st -> st.Δs, sts)
     Δs_rep = get_rep(Δs_all)
@@ -411,7 +423,7 @@ end
 function randst(rng::AbstractRNG,
         d_st::DiscreteDeltaStochasticTriple{T, <:Binomial}) where {T}
     d = d_st.value
-    val = rand(rng, d)
+    val = _sample(rng, d)
     function map_func(Δ)
         if Δ >= 0
             return rand(StochasticAD.RNG, Binomial(Δ, value(succprob(d))))

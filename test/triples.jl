@@ -18,6 +18,25 @@ const backends_smoothed = [
     StrategyWrapperFIsBackend(SmoothedFIsBackend(), StochasticAD.TwoSidedStrategy())
 ]
 
+#=
+A binary operation whose `frule` returns a `ZeroTangent`. `define_triple_overload` skips
+operations whose rule statically returns a `NoTangent`, so this is the shape that reaches the
+generated two-argument overloads carrying a zero tangent.
+
+The generator is invoked directly rather than via `refresh_rules`, since it is the unit under
+test. Note that `hasmethod` cannot be used to check the result: `StochasticTriple <: Real`, so
+the `(Real, Real)` primal below matches stochastic triples too. A generated method is instead
+identified by its defining module, which is `StochasticAD` rather than this test module.
+
+Defined at top level rather than inside a testset so that the generated overloads are visible
+to the world age of the testsets below.
+=#
+zerotangent_op(x::Real, y::Real) = x + y
+function ChainRulesCore.frule((_, _, _), ::typeof(zerotangent_op), x::Real, y::Real)
+    return (zerotangent_op(x, y), ZeroTangent())
+end
+StochasticAD.define_triple_overload(Tuple{typeof(zerotangent_op), Real, Real})
+
 @testset "Distributions w.r.t. continuous parameter" begin
     for backend in vcat(backends,
         backends_smoothed,
@@ -223,6 +242,27 @@ end
     @test StochasticAD.value(out_st) ≈ 0
     @test StochasticAD.delta(out_st) ≈ 0
     @test isempty(out_st.Δs)
+end
+
+@testset "Binary frule returning ZeroTangent" begin
+    st = stochastic_triple(0.5)
+
+    # Verify that the rule indeed gives a ZeroTangent rather than a NoTangent
+    @test frule((NoTangent(), 1.0, 1.0), zerotangent_op, 0.5, 0.5)[2] isa ZeroTangent
+    # Confirm the generated overloads, not the `(Real, Real)` primal, win dispatch.
+    for types in (Tuple{typeof(st), Float64}, Tuple{Float64, typeof(st)},
+        Tuple{typeof(st), typeof(st)})
+        @test Base.which(zerotangent_op, types).module === StochasticAD
+    end
+    # Test that stochastic triples flow through this rule, in each of the argument
+    # arrangements that the overload generator emits. The triple/triple case is the one
+    # that previously threw UndefVarError.
+    outs = (zerotangent_op(st, 0.5), zerotangent_op(0.5, st), zerotangent_op(st, st))
+    for out_st in outs
+        @test StochasticAD.value(out_st) ≈ 1.0
+        @test StochasticAD.delta(out_st) ≈ 0
+        @test isempty(out_st.Δs)
+    end
 end
 
 @testset "Unary functions converting type to fixed instance" begin
@@ -647,4 +687,12 @@ end
     f(p) = rand(Bernoulli(p))^2
     st = stochastic_triple(f, 0.5)
     @test StochasticAD.valtype(st) == typeof(convert(Signed, f(0.5)))
+end
+
+@testset "Algorithm types" begin
+    @test StochasticAD.ForwardAlgorithm(PrunedFIsBackend()) isa
+          StochasticAD.AbstractStochasticADAlgorithm
+    # Documented as an AbstractStochasticADAlgorithm, and constructible without Enzyme.
+    @test StochasticAD.EnzymeReverseAlgorithm(PrunedFIsBackend(Val(:wins))) isa
+          StochasticAD.AbstractStochasticADAlgorithm
 end

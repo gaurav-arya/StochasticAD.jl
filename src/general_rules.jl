@@ -151,7 +151,7 @@ function define_triple_overload(sig)
                 return frule(args_tangent, args...; kwargs...)
             end
             val, δ0 = run_frule(delta.(sts))
-            δ::typeof(val) = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(value(st)) : δ0
+            δ::typeof(val) = (δ0 isa ZeroTangent || δ0 isa NoTangent) ? zero(val) : δ0
 
             Δs_all = map(st -> getfield(st, :Δs), sts)
             if all(iszero.(Δs_all))

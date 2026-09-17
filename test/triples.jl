@@ -47,7 +47,7 @@ const backends_smoothed = [
             # Only test dictionary backend on Bernoulli to speed things up. Should still cover interface.
             test_cases = test_cases[1:1]
         elseif backend == :smoothing_autodiff || backend in backends_smoothed
-            # Only test smoothing backend on each unique distribution once to seed tests up. 
+            # Only test smoothing backend on each unique distribution once to seed tests up.
             test_cases = vcat(test_cases[1:4], test_cases[7])
             # Only test unbiasedness of smoothing for linear function
             test_funcs = test_funcs[1:1]
@@ -321,7 +321,7 @@ end
         V1 = Float64
         #=
         All four of the below approaches should create an empty backend,
-        although the backend's internal state management may differ. 
+        although the backend's internal state management may differ.
         =#
         Δs0 = StochasticAD.create_Δs(backend, V0) # used to create first triple in computation
         FIs = typeof(Δs0)
@@ -385,11 +385,11 @@ end
                 Δs0 = StochasticAD.create_Δs(backend, Int)
                 Δs1 = StochasticAD.similar_new(Δs0, 1, 3.0) # perturbation 1
                 Δs2 = StochasticAD.similar_new(Δs0, 1, 2.0) # perturbation 2
-                # A group of perturbations that all stem from perturbation 1. 
+                # A group of perturbations that all stem from perturbation 1.
                 Δs_all1 = StochasticAD.structural_map(Δ_coupled) do Δ
                     Base.map(_Δ -> Δ, Δs1; deriv = identity, out_rep = Δ)
                 end
-                # A group of perturbations that all stem from perturbation 2. 
+                # A group of perturbations that all stem from perturbation 2.
                 Δs_all2 = StochasticAD.structural_map(Δ_coupled) do Δ
                     Base.map(_Δ -> 2 * Δ, Δs2; deriv = (δ -> 2δ), out_rep = Δ)
                 end
@@ -420,7 +420,7 @@ end
                 @test StochasticAD.valtype(Δs_coupled) == typeof((Δ_coupled, Δ_coupled))
                 for (mapfunc, check_combine) in ((mapfunc, false),
                     (Δ_coupled -> sum(StochasticAD.structural_iterate(Δ_coupled)),
-                        true))
+                    true))
                     function get_contribution()
                         Δs_coupled = get_Δs_coupled(; use_get_rep)
                         Δs_coupled_mapped = map(mapfunc, Δs_coupled; deriv = (δ -> 1.0),
@@ -482,7 +482,7 @@ end
         @test StochasticAD.delta(dual) == 1.0
 
         if !(backend in backends_smoothed)
-            #= 
+            #=
             NB: since the implementation of perturbations can be backend-specific, the
             below property need not hold in general, but does for the current non-smoothed backends.
             =#
@@ -542,7 +542,7 @@ end
         end
 
         #=
-        Test propagation through some simple functions. 
+        Test propagation through some simple functions.
             f1: a simple if statement.
             f2: involves array-containing-fucntor input and output.
             f3: involves array-containing-functor input, but real output.

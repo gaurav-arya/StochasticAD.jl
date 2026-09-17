@@ -1,4 +1,4 @@
-## Helper functions for discrete distributions 
+## Helper functions for discrete distributions
 
 # index of the parameter p
 _param_index(::Geometric) = 1
@@ -28,7 +28,7 @@ _get_support(d::Union{Bernoulli, Binomial, Categorical}) = minimum(d):maximum(d)
 # manual overloads to ensure that static-ness is preserved for Bernoulli's and Categoricals with static arrays.
 # since mapping over the range above could result in allocating vectors.
 _get_support(::Bernoulli) = (0, 1)
-# the map below looks a bit silly, but it gives us a collection of the categories with the same structure as probs(d). 
+# the map below looks a bit silly, but it gives us a collection of the categories with the same structure as probs(d).
 _get_support(d::Categorical) = map((val, prob) -> val, 1:ncategories(d), probs(d))
 
 ## Derivative couplings
@@ -78,8 +78,10 @@ new_Δs_strategy(Δs) = SingleSidedStrategy()
 Given the parameter `val` of a distribution `d` and an infinitesimal change `δ`,
 return the discrete change in the output, with a similar representation to `Δs`.
 """
-δtoΔs(d, val, δ, Δs, derivative_coupling) = δtoΔs(
-    d, val, δ, Δs, derivative_coupling, new_Δs_strategy(Δs))
+function δtoΔs(d, val, δ, Δs, derivative_coupling)
+    δtoΔs(
+        d, val, δ, Δs, derivative_coupling, new_Δs_strategy(Δs))
+end
 function δtoΔs(d, val, δ, Δs, derivative_coupling, ::SingleSidedStrategy)
     _δtoΔs(d, val, δ, Δs, derivative_coupling)
 end
@@ -112,7 +114,7 @@ function δtoΔs(d, val, δ, Δs, derivative_coupling, ::SmoothedStraightThrough
     return similar_new(Δs, one(val), δout)
 end
 
-# Derivative coupling low-level implementations 
+# Derivative coupling low-level implementations
 
 function _δtoΔs(d::Geometric,
         val::V,
@@ -193,7 +195,7 @@ function _δtoΔs(d::Categorical,
     p = params(d)[1]
     # NB: Although we might expect sum(δs) = 0, it is useful to handle things more generally, viewing δs
     # as perturbing the Categorical distribution locally along some direction in the space of general measures.
-    # The below formulation gets things right in this case too. 
+    # The below formulation gets things right in this case too.
     left_sum = sum(δs[1:(val - 1)], init = zero(eltype(δs)))
     right_sum = sum(δs[1:val], init = zero(eltype(δs)))
 
@@ -248,7 +250,7 @@ end
 abstract type AbstractPropagationCoupling end
 
 """
-    InversionMethodPropagationCoupling 
+    InversionMethodPropagationCoupling
 
 Specifies an inversion method coupling for propagating perturbations.
 """
@@ -287,7 +289,7 @@ function _map_enumeration(d, val, Δ, ::InversionMethodPropagationCoupling)
     end
 end
 
-## Overloading of random sampling 
+## Overloading of random sampling
 
 # Define randst interface
 
@@ -329,7 +331,7 @@ for dist in [:Geometric, :Bernoulli, :Binomial, :Poisson]
             out_rep = val,
             Δ_kwargs...)
 
-        StochasticTriple{T}(val, zero(val), combine((Δs2, Δs1); rep = Δs1)) # ensure that tags are in order in combine, in case backend wishes to exploit this 
+        StochasticTriple{T}(val, zero(val), combine((Δs2, Δs1); rep = Δs1)) # ensure that tags are in order in combine, in case backend wishes to exploit this
     end
 end
 
@@ -346,7 +348,7 @@ function randst(rng::AbstractRNG,
         derivative_coupling = InversionMethodDerivativeCoupling(),
         propagation_coupling = InversionMethodPropagationCoupling()) where {T, V}
     sts = _get_parameter(d_st) # stochastic triple for each probability
-    p = map(st -> st.value, sts) # try to keep the same type. e.g. static array -> static array. TODO: avoid allocations 
+    p = map(st -> st.value, sts) # try to keep the same type. e.g. static array -> static array. TODO: avoid allocations
     d = _reconstruct(d_st, p)
     val = convert(Signed, rand(rng, d))
 
@@ -374,7 +376,7 @@ end
     DiscreteDeltaStochasticTriple{T, V, FIs <: AbstractFIs}
 
 An experimental discrete stochastic triple type used internally for representing perturbations
-to non-real quantities. Currently only used to represent a finite perturbation to the Binomial 
+to non-real quantities. Currently only used to represent a finite perturbation to the Binomial
 parameter n.
 
 ## Constructor

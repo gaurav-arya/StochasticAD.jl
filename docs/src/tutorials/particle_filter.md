@@ -186,10 +186,10 @@ and weights `W_new` of the resampled particles.
 ```@example particle_filter
 function resample(m, X, W, ω, sample_strategy, use_new_weight=true)
     js = Zygote.ignore(() -> sample_strategy(W, m, ω))
-    X_new = X[js]
+    X_new = map(j -> X[j], js)
     if use_new_weight
         # differentiable resampling
-        W_chosen = W[js]
+        W_chosen = map(j -> W[j], js)
         W_new = map(w -> ω * new_weight(w / ω) / m, W_chosen)
     else
         # stop gradient, biased approach

@@ -57,7 +57,7 @@ end
 
 @testset "AD and Finite Differences" begin
     h = 0.02 # finite diff
-    N = 500 # number of samples
+    N = 2000 # number of samples
     grad_fw = [ParticleFilterCore.forw_grad(θtrue, particle_filter)[1] for i in 1:N]
     # grad_bw = @time [back_grad(θtrue, particle_filter) for i in 1:N]
     grad_fd = [(ParticleFilterCore.log_likelihood(particle_filter, θtrue .+ h) -

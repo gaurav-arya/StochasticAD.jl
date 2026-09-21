@@ -42,6 +42,13 @@ mutable struct PrunedFIsState{M, W}
     end
 end
 
+# Using sentinel invalid states avoids allocations for empty or invalid perturbations
+const _EMPTY_STATE_WEIGHTS = PrunedFIsState(Val(:weights), false)
+const _EMPTY_STATE_WINS = PrunedFIsState(Val(:wins), false)
+
+_empty_state(::Val{:weights}) = _EMPTY_STATE_WEIGHTS
+_empty_state(::Val{:wins}) = _EMPTY_STATE_WINS
+
 Base.:(==)(state1::PrunedFIsState, state2::PrunedFIsState) = state1.tag == state2.tag
 Base.hash(state::PrunedFIsState, h::UInt) = hash(state.tag, h)
 
@@ -59,14 +66,13 @@ end
 
 PrunedFIs{V}(Δ::V, state::S) where {V, S <: PrunedFIsState} = PrunedFIs{V, S}(Δ, state)
 PrunedFIs{V}(state::PrunedFIsState) where {V} = PrunedFIs{V}(zero(V), state)
-# TODO: avoid allocations here
 function StochasticAD.similar_empty(Δs::PrunedFIs, V::Type)
-    PrunedFIs{V}(PrunedFIsState(Δs.state.pruning_mode, false))
+    PrunedFIs{V}(_empty_state(Δs.state.pruning_mode))
 end
 Base.empty(Δs::PrunedFIs{V}) where {V} = StochasticAD.similar_empty(Δs::PrunedFIs, V::Type)
 # we truly have no clue what the state is here, so use an invalidated state
 function Base.empty(::Type{<:PrunedFIs{V, S}}) where {V, M, S <: PrunedFIsState{M}}
-    PrunedFIs{V}(PrunedFIsState(M(), false))
+    PrunedFIs{V}(_empty_state(M()))
 end
 
 ### Create a new perturbation with infinitesimal probability
@@ -84,7 +90,7 @@ end
 ### Create Δs backend for the first stochastic triple of computation
 
 function StochasticAD.create_Δs(backend::PrunedFIsBackend, V)
-    PrunedFIs{V}(PrunedFIsState(backend.pruning_mode, false))
+    PrunedFIs{V}(_empty_state(backend.pruning_mode))
 end
 
 ### Convert type of a backend
@@ -106,12 +112,16 @@ Base.iszero(Δs::PrunedFIs{<:Tuple}) = isempty(Δs) || all(iszero.(Δs.Δ))
 isapproxzero(Δs::PrunedFIs) = isempty(Δs) || isapprox(Δs.Δ, zero(Δs.Δ))
 
 # we lazily prune, so check if empty first
+_is_cached_empty(Δs::PrunedFIs) = Δs.state === _empty_state(Δs.state.pruning_mode)
 function pruned_value(Δs::PrunedFIs{V}) where {V}
-    isempty(Δs) ? StochasticAD.structural_map(zero, Δs.Δ) : Δs.Δ
+    isempty(Δs) ?
+        (_is_cached_empty(Δs) ? Δs.Δ : StochasticAD.structural_map(zero, Δs.Δ)) : Δs.Δ
 end
 pruned_value(Δs::PrunedFIs{<:Real}) = isempty(Δs) ? zero(Δs.Δ) : Δs.Δ
-pruned_value(Δs::PrunedFIs{<:Tuple}) = isempty(Δs) ? zero.(Δs.Δ) : Δs.Δ
-pruned_value(Δs::PrunedFIs{<:AbstractArray}) = isempty(Δs) ? zero.(Δs.Δ) : Δs.Δ
+pruned_value(Δs::PrunedFIs{<:Tuple}) = isempty(Δs) ?
+    (_is_cached_empty(Δs) ? Δs.Δ : zero.(Δs.Δ)) : Δs.Δ
+pruned_value(Δs::PrunedFIs{<:AbstractArray}) = isempty(Δs) ?
+    (_is_cached_empty(Δs) ? Δs.Δ : zero.(Δs.Δ)) : Δs.Δ
 
 StochasticAD.derivative_contribution(Δs::PrunedFIs) = pruned_value(Δs) * Δs.state.weight
 function StochasticAD.perturbations(Δs::PrunedFIs)
@@ -120,9 +130,25 @@ end
 
 ### Unary propagation
 
+_zero_pruned_value(value::Real) = zero(value)
+_zero_pruned_value(value) = StochasticAD.structural_map(zero, value)
+
 function StochasticAD.weighted_map_Δs(f, Δs::PrunedFIs; kwargs...)
+    if isempty(Δs)
+        out_rep = get(kwargs, :out_rep, nothing)
+        if !isnothing(out_rep)
+            if out_rep isa StochasticAD.AbstractFIs
+                V = StochasticAD.valtype(out_rep)
+                hasmethod(zero, (Type{V},)) &&
+                    return StochasticAD.similar_empty(Δs, V)
+            else
+                return PrunedFIs(_zero_pruned_value(out_rep), Δs.state)
+            end
+        end
+        Δ_out, _ = f(pruned_value(Δs), Δs.state)
+        return PrunedFIs(_zero_pruned_value(Δ_out), Δs.state)
+    end
     Δ_out, weight_out = f(pruned_value(Δs), Δs.state)
-    # TODO: we could add a direct overload for map_Δs that elides the below line
     Δs.state.weight *= weight_out
     PrunedFIs(Δ_out, Δs.state)
 end
@@ -198,7 +224,7 @@ function get_pruned_state(Δs_all; Δ_func = nothing, rep, out_rep = nothing)
             return cur_state
         end
     end
-    dummy_state = PrunedFIsState(rep.state.pruning_mode, false) # For type stability, as well as retval if no better state found. TODO: can this be avoided?
+    dummy_state = _empty_state(rep.state.pruning_mode)
     _new_state = foldl(op, StochasticAD.structural_iterate(Δs_all); init = dummy_state)
     return _new_state::PrunedFIsState
 end

@@ -273,6 +273,108 @@ end
     Δs = StochasticAD.similar_new(StochasticAD.create_Δs(PrunedFIsBackend(), Int), 1.0, 1.0)
     st = StochasticAD.StochasticTriple{0}(1.0, 0, Δs)
     @test_throws ErrorException d[rand(Bernoulli(st))]
+
+    event1 = StochasticAD.DictFIsModule.InfinitesimalEvent(1, 1.0)
+    event2 = StochasticAD.DictFIsModule.InfinitesimalEvent(1, 2.0)
+    @test event1 == event2
+    @test isequal(event1, event2)
+    @test hash(event1) == hash(event2)
+    dict = Dict(event1 => 1)
+    dict[event2] = 2
+    @test length(dict) == 1
+end
+
+@testset "PrunedFIs cached empty state" begin
+    for backend in (PrunedFIsBackend(), PrunedFIsBackend(Val(:wins)))
+        Δs = StochasticAD.create_Δs(backend, Float64)
+        Δs_similar = StochasticAD.similar_empty(Δs, Int)
+        Δs_type = empty(typeof(Δs))
+
+        @test isempty(Δs)
+        @test_nowarn hash(Δs.state)
+        @test_nowarn hash(Δs.state, UInt(5))
+        @test hash(Δs.state, UInt(5)) == hash(Δs.state.tag, UInt(5))
+        @test Δs.state === Δs_similar.state
+        @test Δs.state === Δs_type.state
+
+        mapped_Δs = StochasticAD.weighted_map_Δs(
+            (_Δ, _state) -> (2.0, 3.0), Δs)
+        @test isempty(mapped_Δs)
+        @test mapped_Δs.state === Δs.state
+        @test Δs.state.weight == 0.0
+        @test StochasticAD.perturbations(mapped_Δs)[1].Δ == 0.0
+
+        mapped_Δs_with_rep = StochasticAD.weighted_map_Δs(
+            (_Δ, _state) -> error("the mapping function should not be called"), Δs;
+            out_rep = 1.0)
+        @test isempty(mapped_Δs_with_rep)
+        @test StochasticAD.valtype(mapped_Δs_with_rep) === Float64
+        @test mapped_Δs_with_rep.state === Δs.state
+
+        mapped_vec = StochasticAD.weighted_map_Δs(
+            (_Δ, _state) -> error("the mapping function should not be called"), Δs;
+            out_rep = zeros(4))
+        @test isempty(mapped_vec)
+        @test StochasticAD.valtype(mapped_vec) === Vector{Float64}
+        @test all(iszero, StochasticAD.perturbations(mapped_vec)[1].Δ)
+    end
+end
+
+@testset "DictFIs empty values" begin
+    Δs = StochasticAD.create_Δs(DictFIsBackend(), Float64)
+    @test isempty(Δs)
+    @test_throws ErrorException StochasticAD.scalarize(Δs)
+
+    mapped_Δs = StochasticAD.weighted_map_Δs(
+        (_Δ, _state) -> error("the mapping function should not be called"),
+        Δs;
+        out_rep = [0.0, 0.0])
+    @test mapped_Δs isa DictFIs{Vector{Float64}}
+    @test isempty(mapped_Δs)
+
+    scalarized_Δs = StochasticAD.scalarize(Δs; out_rep = [0.0, 0.0])
+    @test length(scalarized_Δs) == 2
+    @test all(isempty, scalarized_Δs)
+end
+
+@testset "DictFIs vector-valued scalarize" begin
+    Δs0 = StochasticAD.create_Δs(DictFIsBackend(), Vector{Float64})
+    Δs1 = StochasticAD.similar_new(Δs0, [1.0, 2.0], 1.0)
+    Δs2 = StochasticAD.similar_new(Δs0, [3.0, 4.0], 2.0)
+    Δs = StochasticAD.combine((Δs1, Δs2))
+
+    scalarized_Δs = StochasticAD.scalarize(Δs)
+    @test length(scalarized_Δs) == 2
+    @test all(Δ -> Δ isa DictFIs{Float64}, scalarized_Δs)
+    @test derivative_contribution.(scalarized_Δs) == [7.0, 10.0]
+end
+
+@testset "DictFIs active alternatives" begin
+    Δs0 = StochasticAD.create_Δs(DictFIsBackend(), Float64)
+    Δs1 = StochasticAD.similar_new(Δs0, 1.0, 1.0)
+    Δs2 = StochasticAD.similar_new(Δs0, 2.0, 1.0)
+    Δs_dead = StochasticAD.weighted_map_Δs((Δ, _) -> (zero(Δ), 1.0),
+        StochasticAD.combine((Δs1, Δs2)))
+
+    # Dead values are retained in the dictionary payload, but are not active.
+    @test length(Δs_dead.dict) == 2
+    @test isempty(Δs_dead.active)
+    @test length(StochasticAD.perturbations(Δs_dead)) == 2
+
+    calls = Ref(0)
+    StochasticAD.weighted_map_Δs((Δ, _) -> (calls[] += 1; (Δ, 1.0)), Δs_dead)
+    @test calls[] == 0
+
+    Δs_alive = StochasticAD.similar_new(Δs0, 3.0, 1.0)
+    @test length(StochasticAD.combine((Δs_dead, Δs_alive))) == 1
+    @test length(StochasticAD.couple((Δs_dead, Δs_alive))) == 1
+
+    Δs_vector_base = StochasticAD.create_Δs(DictFIsBackend(), Vector{Float64})
+    Δs_vector = StochasticAD.combine((
+        StochasticAD.similar_new(Δs_vector_base, [1.0, 0.0], 1.0),
+        StochasticAD.similar_new(Δs_vector_base, [0.0, 2.0], 1.0)))
+    scalarized_Δs = StochasticAD.scalarize(Δs_vector)
+    @test length.(scalarized_Δs) == [1, 1]
 end
 
 @testset "Coupled comparison" begin

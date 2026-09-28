@@ -50,7 +50,8 @@ If `forward_u` is not provided, it is randomly generated.
     * ["Reverse mode ADEV via YOLO: tangent estimators transpose to gradient estimators"](https://www.youtube.com/watch?v=pnPmk-leSsE), Becker et al. 2024
     * ["Probabilistic Programming with Programmable Variational Inference"](https://pldi24.sigplan.org/details/pldi-2024-papers/87/Probabilistic-Programming-with-Programmable-Variational-Inference), Becker et al. 2024
 """
-struct EnzymeReverseAlgorithm{B <: StochasticAD.AbstractFIsBackend}
+struct EnzymeReverseAlgorithm{B <: StochasticAD.AbstractFIsBackend} <:
+       AbstractStochasticADAlgorithm
     backend::B
 end
 

@@ -203,7 +203,7 @@ function _δtoΔs(d::Categorical,
        (derivative_coupling.mode isa Val{:always_left} && !iszero(left_sum))
         # compute left_nonzero
         if derivative_coupling.handle_zeroprob isa Val{true}
-            stop = rand() * left_sum
+            stop = rand(RNG) * left_sum
             upto = zero(eltype(δs)) # The "upto" logic handles an edge case of probability 0 events that have non-zero derivative.
             # It's a lot of logic to handle an edge case, but hopefully it's optimized away.
             left_nonzero = val
@@ -225,7 +225,7 @@ function _δtoΔs(d::Categorical,
        (derivative_coupling.mode isa Val{:always_right} && !iszero(right_sum))
         # compute right_nonzero
         if derivative_coupling.handle_zeroprob isa Val{true}
-            stop = -rand() * right_sum
+            stop = -rand(RNG) * right_sum
             upto = zero(eltype(δs))
             right_nonzero = val
             for i in (val + 1):length(p)

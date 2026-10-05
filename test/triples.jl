@@ -648,3 +648,18 @@ end
     st = stochastic_triple(f, 0.5)
     @test StochasticAD.valtype(st) == typeof(convert(Signed, f(0.5)))
 end
+
+@testset "Categorical coupling does not consume the global RNG" begin
+    # A zero-probability category makes the inversion coupling search for the nearest
+    # nonzero category, which uses randomness. That randomness must come from StochasticAD's
+    # own RNG: the user's global stream has to be left exactly where it was.
+    for probs in (p -> [p, 0.0, 1 - p], p -> [1 - p, 0.0, p]), seed in 1:50
+
+        f = p -> rand(Xoshiro(seed), Categorical(probs(p)))
+        Random.seed!(1)
+        expected = rand()
+        Random.seed!(1)
+        derivative_estimate(f, 0.3)
+        @test rand() == expected
+    end
+end

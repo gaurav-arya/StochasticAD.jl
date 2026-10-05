@@ -41,6 +41,35 @@ function strip_Δs(arg; use_dual = Val(true))
     end
 end
 
+# Stochastic triples hidden in `f` (captured variables of a closure, or fields of a callable
+# struct) are not coupled below: `f` is re-run on the alternatives with them left unperturbed,
+# so their perturbations would be silently dropped. Arrays, tuples, boxes and nested structs
+# are searched up to a small depth; element types that cannot hold a triple are skipped.
+_may_hold_triple(::Type{<:StochasticTriple}) = true
+_may_hold_triple(::Type{<:Union{Number, AbstractString, Symbol, Char}}) = false
+function _may_hold_triple(T::Type)
+    isconcretetype(T) || return true
+    isbitstype(T) && return any(_may_hold_triple, fieldtypes(T))
+    return true
+end
+
+function _captures_triple(x, depth = 0)
+    x isa StochasticTriple && return true
+    (depth > 4 || !_may_hold_triple(typeof(x))) && return false
+    if x isa Core.Box
+        return isdefined(x, :contents) && _captures_triple(x.contents, depth + 1)
+    elseif x isa AbstractArray
+        _may_hold_triple(eltype(x)) || return false
+        return any(y -> _captures_triple(y, depth + 1), x)
+    elseif x isa Union{Tuple, NamedTuple}
+        return any(y -> _captures_triple(y, depth + 1), x)
+    elseif x isa Union{Module, Type, DataType}
+        return false
+    end
+    return any(i -> isdefined(x, i) && _captures_triple(getfield(x, i), depth + 1),
+        1:nfields(x))
+end
+
 """
     propagate(f, args...; keep_deltas = Val(false))
 
@@ -48,6 +77,8 @@ Propagates `args` through a function `f`, handling stochastic triples by indepen
 and the alternatives, rather than by inspecting the internals of `f` (which may possibly be unsupported by `StochasticAD`).
 Currently handles deterministic functions `f` with any input and output that is `fmap`-able by `Functors.jl`.
 If `f` has a continuously differentiable component, provide `keep_deltas = Val(true)`.
+Stochastic triples must reach `f` through `args`: if `f` captures one (e.g. a closure over a
+stochastic triple), an `ArgumentError` is thrown, since its perturbations could not be propagated.
 
 This functionality is orthogonal to dispatch: the idea is for this function to be the "backend" for operator 
 overloading rules based on dispatch. For example:
@@ -116,15 +147,12 @@ function propagate(f,
     if !(st_rep isa StochasticTriple)
         return f(args...)
     end
+    _captures_triple(f) && throw(ArgumentError("`f` captures a stochastic triple, whose " *
+                        "perturbations `propagate` cannot track. Pass it to `propagate` as an argument instead."))
 
     primal_args = structural_map(get_value, args)
     input_args = keep_deltas isa Val{false} ? primal_args : structural_map(strip_Δs, args)
-    #= 
-    TODO: the below is dangerous is general.
-    It should be safe so long as f does not close over stochastic triples.
-    (If f is a closure, the parameters of f should be treated like any other parameters;
-    if they are stochastic triples and we are ignoring them, dangerous in general.)
-    =#
+    # f may not close over stochastic triples (checked above), so only `args` are perturbed.
     out = f(input_args...)
     val = structural_map(value, out)
     # TODO: what does the only_vals do in the below and why?

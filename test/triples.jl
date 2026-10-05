@@ -627,6 +627,41 @@ end
     end
 end
 
+struct HoldsTriple{T}
+    x::T
+end
+
+@testset "propagate rejects stochastic triples captured by f" begin
+    h(x, y) = x + y
+    function boxed(p)
+        b = rand(Bernoulli(p))
+        c = rand(Bernoulli(p))
+        g = x -> h(x, c)
+        c = 2c   # reassigning a captured variable stores it in a Core.Box
+        return StochasticAD.propagate(g, b)
+    end
+    captures = (
+        p -> (b = rand(Bernoulli(p)); c = rand(Bernoulli(p));
+            StochasticAD.propagate(x -> h(x, c), b)),
+        p -> (b = rand(Bernoulli(p)); c = (rand(Bernoulli(p)), 1);
+            StochasticAD.propagate(x -> h(x, c[1]), b)),
+        p -> (b = rand(Bernoulli(p)); c = HoldsTriple(rand(Bernoulli(p)));
+            StochasticAD.propagate(x -> h(x, c.x), b)),
+        boxed)
+    for f in captures
+        @test_throws ArgumentError derivative_estimate(f, 0.5)
+    end
+
+    # passing the triples as arguments, or capturing non-triple data, is fine
+    @test derivative_estimate(
+        p -> StochasticAD.propagate(h, rand(Bernoulli(p)), rand(Bernoulli(p))), 0.5) isa
+          Real
+    strs = ["a", "bb", "ccc"]
+    @test derivative_estimate(
+        p -> StochasticAD.propagate(i -> length(strs[i]), 1 + rand(Bernoulli(p))), 0.5) isa
+          Real
+end
+
 @testset "zero'ing of Inf/NaN (#79)" begin
     st = stochastic_triple(0.5)
     st_zero = zero(1 / zero(st))
